@@ -1,0 +1,37 @@
+name: NX Publish
+
+# Republica as libs quando a publicação encadeada ao nx-release.yml falhar. O
+# executor do Nx pula versões já presentes no registry.
+on:
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "Dist-tag de publicação (latest, beta, next)"
+        type: string
+        default: latest
+      ref:
+        description: "Commit de versão a publicar (o da tag); vazio usa a ponta da branch"
+        type: string
+        default: ""
+
+concurrency:
+  group: publish-libs
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+  packages: write
+
+jobs:
+  publish:
+    uses: ./.github/workflows/publish-libs.yaml
+    with:
+      # Vazio de propósito: o pnpm/action-setup resolve pelo packageManager, e um
+      # valor concreto aborta com ERR_PNPM_BAD_PM_VERSION.
+      pnpm_version: ""
+      node_version: "24"
+      nx_exclude: "@nx-base-template/source"
+      scope: "@mateusmacedo"
+      tag: ${{ inputs.tag || 'latest' }}
+      build_projects_filter: "tag:type:lib,!tag:stack:go"
+      ref: ${{ inputs.ref }}

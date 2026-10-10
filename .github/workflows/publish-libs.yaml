@@ -1,0 +1,145 @@
+name: Publish Libs
+
+on:
+  workflow_call:
+    inputs:
+      node_version:
+        description: "Versão do Node.js"
+        required: false
+        type: string
+        default: "24"
+      pnpm_version:
+        description: "Versão do pnpm. Vazio (padrão) usa o campo packageManager do package.json do repo chamador."
+        required: false
+        type: string
+        default: ""
+      nx_exclude:
+        description: "Projetos a excluir do build/publish (ex: @nx-base-template/source)"
+        required: false
+        type: string
+        default: ""
+      registry_url:
+        description: "URL do registry npm"
+        required: false
+        type: string
+        default: "https://npm.pkg.github.com"
+      tag:
+        description: "Dist-tag de publicação (latest, beta, next)"
+        required: false
+        type: string
+        default: "latest"
+      scope:
+        description: "Escopo npm para o registry. No GitHub Packages precisa ser o owner do repositório."
+        required: false
+        type: string
+        default: "@mateusmacedo"
+      runner:
+        description: "Runner para execução"
+        required: false
+        type: string
+        default: "ubuntu-26.04"
+      build_target:
+        description: "Target do Nx para build (ex: build)"
+        required: false
+        type: string
+        default: "build"
+      build_projects_filter:
+        description: "Filtro de projetos para build (ex: tag:type:lib)"
+        required: false
+        type: string
+        default: "tag:type:lib,!tag:stack:go"
+      timeout_minutes:
+        description: "Timeout em minutos"
+        required: false
+        type: number
+        default: 30
+      ref:
+        description: "Commit a publicar; vazio usa o do evento"
+        required: false
+        type: string
+        default: ""
+
+concurrency:
+  group: publish-libs-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+  packages: write
+
+jobs:
+  publish:
+    name: Publish libs (nx release publish)
+    runs-on: ${{ inputs.runner }}
+    timeout-minutes: ${{ inputs.timeout_minutes }}
+
+    steps:
+      - name: Checkout (commit versionado da tag)
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.ref }}
+          fetch-depth: 0
+          fetch-tags: true
+
+      - name: Credencial do GitHub Packages no .npmrc de usuário
+        run: |
+          printf '%s\n' '//npm.pkg.github.com/:_authToken=${NODE_AUTH_TOKEN}' > "$RUNNER_TEMP/npmrc"
+          echo "NPM_CONFIG_USERCONFIG=$RUNNER_TEMP/npmrc" >> "$GITHUB_ENV"
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: ${{ inputs.pnpm_version }}
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ inputs.node_version }}
+          cache: pnpm
+
+      - name: Install dependencies
+        env:
+          NODE_AUTH_TOKEN: ${{ github.token }}
+        run: pnpm install --frozen-lockfile
+
+      - name: Build libs
+        env:
+          BUILD_TARGET: ${{ inputs.build_target }}
+          PROJECTS_FILTER: ${{ inputs.build_projects_filter }}
+          NX_EXCLUDE: ${{ inputs.nx_exclude }}
+        run: |
+          EXCLUDE_ARGS=()
+          if [ -n "$NX_EXCLUDE" ]; then
+            EXCLUDE_ARGS=("--exclude=$NX_EXCLUDE")
+          fi
+          pnpm nx run-many -t "$BUILD_TARGET" --projects="$PROJECTS_FILTER" "${EXCLUDE_ARGS[@]}"
+
+      # .npmrc escrito à mão, e não pelo registry-url do setup-node: o `nx release
+      # publish` delega ao pnpm, que lê o .npmrc do projeto, não o userconfig da action.
+      - name: Configurar .npmrc do GitHub Packages
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          REGISTRY_URL: ${{ inputs.registry_url }}
+          SCOPE: ${{ inputs.scope }}
+        run: |
+          REGISTRY_HOST="${REGISTRY_URL#*://}"
+          {
+            echo "${SCOPE}:registry=${REGISTRY_URL}/"
+            echo "//${REGISTRY_HOST}/:_authToken=${NODE_AUTH_TOKEN}"
+            echo "fetch-timeout=180000"
+            echo "network-timeout=180000"
+            echo "fetch-retries=10"
+          } >> .npmrc
+
+      - name: Publish libs no GitHub Packages
+        env:
+          PROJECTS_FILTER: ${{ inputs.build_projects_filter }}
+          DIST_TAG: ${{ inputs.tag }}
+        run: |
+          set -euo pipefail
+          publicaveis="$(pnpm --silent nx show projects --with-target nx-release-publish --projects="$PROJECTS_FILTER" --json | jq -r 'join(",")')"
+          if [ -z "$publicaveis" ]; then
+            echo "::notice::Nenhum projeto de $PROJECTS_FILTER tem o target nx-release-publish (todos são privados): nada a publicar."
+            exit 0
+          fi
+          pnpm nx release publish --projects="$publicaveis" --tag "$DIST_TAG"

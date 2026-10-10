@@ -1,0 +1,90 @@
+name: CI
+
+on:
+  pull_request:
+    branches:
+      - master
+      - develop
+      - "release/**"
+    paths-ignore:
+      - "**/*.md"
+      - ".github/ISSUE_TEMPLATE/**"
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  actions: read
+  contents: read
+  packages: read
+
+env:
+  NODE_AUTH_TOKEN: ${{ github.token }}
+
+jobs:
+  main:
+    name: Nx Affected Pipeline
+    runs-on: ubuntu-26.04
+    timeout-minutes: 30
+    env:
+      NX_EXCLUDE: "@nx-base-template/source,tag:stack:go"
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Node and pnpm
+        uses: ./.github/actions/setup-node-pnpm
+        with:
+          node-version: "24"
+
+      - name: Set Nx SHAs for affected (base/head)
+        uses: nrwl/nx-set-shas@v5
+
+      - name: Check formatting and linting
+        run: pnpm biome ci .
+
+      - name: Lint (affected)
+        run: pnpm nx affected -t lint --base=$NX_BASE --head=$NX_HEAD --parallel=3 --exclude=$NX_EXCLUDE
+
+      - name: Typecheck (affected)
+        run: pnpm nx affected -t typecheck --base=$NX_BASE --head=$NX_HEAD --parallel=3 --exclude=$NX_EXCLUDE
+
+      - name: Test (affected)
+        run: pnpm nx affected -t test --base=$NX_BASE --head=$NX_HEAD --parallel=3 --ci --coverage --exclude=$NX_EXCLUDE
+
+      - name: Build (affected)
+        run: pnpm nx affected -t build --base=$NX_BASE --head=$NX_HEAD --parallel=3 --exclude=$NX_EXCLUDE
+
+      - name: E2E (affected)
+        run: pnpm nx affected -t e2e --base=$NX_BASE --head=$NX_HEAD --parallel=1 --exclude=$NX_EXCLUDE
+
+  template-smoke:
+    name: Template smoke (DMPF)
+    runs-on: ubuntu-26.04
+    timeout-minutes: 25
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node and pnpm
+        uses: ./.github/actions/setup-node-pnpm
+        with:
+          node-version: "24"
+          install: "false"
+
+      - name: Setup Go
+        uses: actions/setup-go@v6
+        with:
+          go-version-file: go.work
+          cache: true
+          cache-dependency-path: |
+            go.work
+            pnpm-lock.yaml
+
+      - name: Template smoke
+        run: bash tools/template-smoke.sh

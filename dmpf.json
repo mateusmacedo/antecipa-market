@@ -1,0 +1,15 @@
+{
+  "schema": "dmpf/workspace@1",
+  "modulePrefix": "example.com/change-me",
+  "npmScope": "@mateusmacedo",
+  "appsDir": "apps/backend",
+  "edge": "",
+  "spiffeTrustDomain": "dmpf",
+  "composeProfile": "dmpf",
+  "composeProject": "nx-base-template",
+  "imageRegistry": "registry.example.com/change-me",
+  "bufModule": "buf.build/change-me",
+  "tooling": {
+    "mode": "version"
+  }
+}

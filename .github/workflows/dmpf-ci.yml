@@ -1,0 +1,24 @@
+name: DMPF CI
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+      - master
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  actions: read
+  contents: read
+  packages: read
+
+jobs:
+  dmpf:
+    name: DMPF
+    uses: mateusmacedo/dmpf/.github/workflows/dmpf-go-ci.yml@5def4d2d749bf8d5b2ef683f3cdc97eadf354c26
+    with:
+      plugin-version: "1.0.0-rc.3"

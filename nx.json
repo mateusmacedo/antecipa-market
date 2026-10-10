@@ -1,0 +1,160 @@
+{
+  "$schema": "./node_modules/nx/schemas/nx-schema.json",
+  "defaultBase": "master",
+  "analytics": false,
+  "namedInputs": {
+    "default": ["{projectRoot}/**/*", "sharedGlobals"],
+    "production": [
+      "default",
+      "!{projectRoot}/**/?(*.)+(spec|test).[jt]s?(x)?(.snap)",
+      "!{projectRoot}/tsconfig.spec.json",
+      "!{projectRoot}/jest.config.[jt]s",
+      "!{projectRoot}/jest.config.cts",
+      "!{projectRoot}/src/test-setup.[jt]s",
+      "!{projectRoot}/test-setup.[jt]s"
+    ],
+    "sharedGlobals": [
+      "{workspaceRoot}/tsconfig.base.json",
+      "{workspaceRoot}/nx.json",
+      "{workspaceRoot}/biome.json",
+      "{workspaceRoot}/pnpm-workspace.yaml",
+      "{workspaceRoot}/pnpm-lock.yaml"
+    ],
+    "go": [
+      "{projectRoot}/**/*",
+      "!{projectRoot}/deploy/**/*",
+      "{workspaceRoot}/go.work",
+      "{workspaceRoot}/go.work.sum"
+    ]
+  },
+  "plugins": [
+    {
+      "plugin": "@nx/js/typescript",
+      "options": {
+        "typecheck": {
+          "targetName": "typecheck"
+        },
+        "build": {
+          "targetName": "build",
+          "configName": "tsconfig.lib.json",
+          "buildDepsName": "build-deps",
+          "watchDepsName": "watch-deps"
+        }
+      }
+    },
+    {
+      "plugin": "@nx/webpack/plugin",
+      "options": {
+        "buildTargetName": "build",
+        "serveTargetName": "serve",
+        "previewTargetName": "preview",
+        "buildDepsTargetName": "build-deps",
+        "watchDepsTargetName": "watch-deps",
+        "serveStaticTargetName": "serve-static"
+      }
+    },
+    {
+      "plugin": "@nx/jest/plugin",
+      "options": {
+        "targetName": "test"
+      }
+    },
+    {
+      "plugin": "@nx/docker",
+      "options": {
+        "buildTarget": {
+          "name": "docker:build"
+        },
+        "runTarget": {
+          "name": "docker:run"
+        }
+      }
+    },
+    "@nx-go/nx-go"
+  ],
+  "release": {
+    "projectsRelationship": "independent",
+    "releaseTag": {
+      "pattern": "{projectName}@{version}"
+    },
+    "git": {
+      "commit": true,
+      "tag": true,
+      "push": false,
+      "commitMessage": "chore(release): publish"
+    },
+    "version": {
+      "conventionalCommits": true,
+      "updateDependents": "always",
+      "fallbackCurrentVersionResolver": "disk"
+    },
+    "changelog": {
+      "automaticFromRef": true,
+      "projectChangelogs": {
+        "entryWhenNoChanges": "Initial release"
+      }
+    }
+  },
+  "sync": {
+    "applyChanges": true
+  },
+  "targetDefaults": {
+    "build": {
+      "dependsOn": ["^build"],
+      "cache": true
+    },
+    "test": {
+      "dependsOn": ["^build"],
+      "cache": true
+    },
+    "lint": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "biome lint {projectRoot}"
+      },
+      "cache": true,
+      "inputs": ["default", "{workspaceRoot}/biome.json"]
+    },
+    "typecheck": {
+      "dependsOn": ["^typecheck"],
+      "cache": true
+    },
+    "e2e": {
+      "cache": true
+    },
+    "deploy-env": {
+      "executor": "nx:run-commands",
+      "cache": false,
+      "options": {
+        "command": "[ -f deploy/.env ] || cp deploy/.env.example deploy/.env",
+        "cwd": "{projectRoot}"
+      }
+    },
+    "@nx-go/nx-go:generate": {
+      "options": {
+        "args": ["./..."]
+      }
+    },
+    "@nx-go/nx-go:lint": {
+      "inputs": ["go", "^go", "{workspaceRoot}/.golangci.yml"],
+      "options": {
+        "linter": "go",
+        "args": [
+          "run",
+          "github.com/golangci/golangci-lint/v2/cmd/golangci-lint@v2.13.2",
+          "run",
+          "--allow-parallel-runners"
+        ]
+      }
+    },
+    "@nx-go/nx-go:test": {
+      "dependsOn": ["^build"],
+      "cache": true,
+      "inputs": ["go", "^go"],
+      "options": {
+        "cover": true
+      }
+    }
+  },
+  "nxCloudId": "6a5d373ddbc8c8c89a15bb24"
+}
