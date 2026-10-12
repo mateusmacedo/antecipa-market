@@ -31,7 +31,7 @@ Um arquivo por decisão, numeração sequencial e slug em kebab-case:
 ```
 
 O número é o próximo livre na sequência (o último registrado abaixo é o
-`011`). O título dentro do arquivo repete o número: `# ADR-00N: <título>`.
+`022`). O título dentro do arquivo repete o número: `# ADR-00N: <título>`.
 
 ## Template
 
@@ -103,3 +103,14 @@ ADR-001.
 | ADR-009 | O template não carrega libs nem generator de exemplo | Remove `shared-types`, `shared-utils` e o generator `shared-lib` obsoleto, deixando `libs/shared/` e `tools/generators/` como destinos vazios; a infraestrutura de release fica armada com um guard para conjunto vazio. |
 | ADR-010 | Migrar a manutenção para o GitHub e o Linear | Muda a plataforma para o GitHub (`gh`, runner `ubuntu-26.04`, reutilizáveis locais), publica as libs no GitHub Packages com escopo `@mateusmacedo` num job encadeado ao release e adota o Linear como tracker; supersede a ADR-005 e partes das ADRs 004 e 008. |
 | ADR-011 | O template consome o DMPF por versão | Versiona a saída do `init` do `@mateusmacedo/dmpf-plugin` fixado no `catalog:`, autentica o GitHub Packages por npmrc de usuário, prova o template com o `template-smoke`, deixa o release sem grupos até o primeiro membro e mantém o `dmpf-ci.yml` fora dos checks obrigatórios. |
+| ADR-012 | Implantar um app por bounded context sobre o kernel DMPF | Ratifica o app por contexto do kernel (banco, role, contrato e deploy próprios; REST só no `bff`, contextos em gRPC) e descarta o monolito modular do design. |
+| ADR-013 | Isolar tenants pelo `ExecutionContext` no `postgres.Table`, com RLS só como segunda camada | Adota o choke point do kernel para o escopo de tenant; acesso e projeção entre tenants ficam pendentes da SPEC-QVDGV6J0 do kernel. |
+| ADR-014 | Persistir em PostgreSQL pelo `postgres.Table`, com persistência híbrida | Ratifica PostgreSQL por app com colunas tipadas só para filtro e `snapshot` `jsonb`; o doc 90 vale como modelo lógico. |
+| ADR-015 | Adotar Kafka como transporte-alvo dos eventos de domínio, com decisão registrada por canal | Kafka (MSK na AWS, Redpanda em dev e hmg) com critério de TRP-37 por canal e SNS/SQS nos casos de TRP-40; operação pendente da revisão de TRP-41. |
+| ADR-016 | Adotar Keycloak 26.x autogerenciado como provedor de identidade OIDC | Realm único com Organizations; condições: mapper de tenant, deny-list de sessão para revogação em 60 s e origem das permissões efetivas. |
+| ADR-017 | Versionar o portfólio por snapshot imutável com hash do conjunto e política de materialidade versionada | Fixa o mecanismo de versão do portfólio; a lista de campos fica como política v0 até as lacunas de identidade e campos canônicos. |
+| ADR-018 | Garantir a imutabilidade do Compliance Ledger em camadas — permissão, hash encadeado e selo em WORM | Role de escrita separada, hash encadeado com RFC 8785 e selo Merkle assinado em AWS KMS e gravado em S3 Object Lock. |
+| ADR-019 | Construir em Go sobre o kernel DMPF, com AWS como nuvem-alvo e floci como emulador | Ratifica Go e o deploy por app do kernel e fixa AWS e floci; front-end e produção ficam pendentes. |
+| ADR-020 | Reter o inbox pelo menos pela janela de redelivery declarada por canal | `retenção_inbox ≥ janela_redelivery` (INB-14) com fórmula por canal (TRP-23/24/24b), zonas de replay e purga com evidência. |
+| ADR-021 | Testar com dados sintéticos e simulador de parceiro, sem dado real fora de produção | Fases 0 e 1 com sintéticos, property-based, simulador e goldens, regras R1 a R7; homologação sintética; fase 2 pendente. |
+| ADR-022 | Fazer as normas do kernel DMPF prevalecerem sobre os documentos de design | Regra de precedência e tabela das 13 divergências entre `docs/design/` e o kernel, com o ADR ou a spec que trata cada uma. |
