@@ -1,6 +1,12 @@
 {
   "$schema": "https://biomejs.dev/schemas/2.4.16/schema.json",
-  "assist": { "actions": { "source": { "organizeImports": "on" } } },
+  "assist": {
+    "actions": {
+      "source": {
+        "organizeImports": "on"
+      }
+    }
+  },
   "formatter": {
     "enabled": true,
     "indentStyle": "space",
@@ -58,7 +64,8 @@
       "!dmpf.json",
       "!dmpf.rendered.json",
       "!infra",
-      "!tools/dmpf-baseline"
+      "!tools/dmpf-baseline",
+      "!.obsidian"
     ]
   }
 }
