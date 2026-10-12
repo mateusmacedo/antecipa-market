@@ -3,8 +3,8 @@
 Este guia cobre só o que é próprio de um projeto criado a partir do template. A
 referência completa de consumo do DMPF é o guia do platform na versão fixada pelo
 plugin:
-[`docs/guides/dmpf-consumo-externo.md`](https://github.com/mateusmacedo/dmpf/blob/5def4d2d749bf8d5b2ef683f3cdc97eadf354c26/docs/guides/dmpf-consumo-externo.md)
-(commit `5def4d2`, o `workflowRef` do `@mateusmacedo/dmpf-plugin` `1.0.0-rc.3`).
+[`docs/guides/dmpf-consumo-externo.md`](https://github.com/mateusmacedo/dmpf/blob/487e9de17099c0eb8d44e3e9c2dfbd58b577b958/docs/guides/dmpf-consumo-externo.md)
+(commit `487e9de`, o `workflowRef` do `@mateusmacedo/dmpf-plugin` `1.0.0-rc.4`).
 
 ## Antes de começar
 

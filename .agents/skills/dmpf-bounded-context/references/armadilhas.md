@@ -26,15 +26,15 @@ golden for regenerado e algo novo morder, a entrada nova vem para cá.
    unidade mora no `contract/dmpf-units.json` do app e o pacote entra antes
    do `generate`.
 7. **`pnpm install` deixou de ser passo do rito.** Enquanto o contexto nascia
-   em `https://github.com/mateusmacedo/dmpf/blob/5def4d2d749bf8d5b2ef683f3cdc97eadf354c26/libs/backend/go`, o `package.json` gerado o tornava importer do pnpm e
+   em `https://github.com/mateusmacedo/dmpf/blob/487e9de17099c0eb8d44e3e9c2dfbd58b577b958/libs/backend/go`, o `package.json` gerado o tornava importer do pnpm e
    os targets falhavam de forma obscura sem o install. Em `apps/backend/<name>`
    o módulo fica fora dos globs do `pnpm-workspace.yaml` (`apps/*`): o
    `package.json` continua a existir para o Nx, e só ele o lê.
 8. **O esqueleto do composition root vem do generator, mas nasce vazio.**
-   `app/wiring.go` sobe o gRPC sem nenhum método, e o `NewCatalog` recusa o
+   `app/wiring.go` sobe o gRPC sem nenhum método, e o `<Ctx>Channel` recusa o
    relay com `ErrNoChannel` até o canal existir. Compilar e passar no lint não
    quer dizer que o contexto serve alguma coisa: preencher o `ServiceDesc`, o
-   serviço de aplicação e o catálogo é parte do trabalho.
+   serviço de aplicação e o canal é parte do trabalho.
 9. **Sem pluralização automática.** O nome da tabela é o agregado no plural,
    escrito pelo autor (`bookings`, `resources`); o plural também contorna a
    palavra reservada `order`. O generator não deriva nome de tabela.
@@ -47,7 +47,7 @@ golden for regenerado e algo novo morder, a entrada nova vem para cá.
 12. **O `tb/pg` só migra e reseta o que recebe.** `pg.OpenPool(t, pg.Options{...})`
     abre o banco `<projeto>_test_<id>` do teste, migra as `Capabilities` e os `Schemas`
     pedidos e trunca só as `Tables` declaradas
-    (`https://github.com/mateusmacedo/dmpf/blob/5def4d2d749bf8d5b2ef683f3cdc97eadf354c26/libs/backend/go/testkit/tb/pg/pool.go`). Tabela do contexto fora de
+    (`https://github.com/mateusmacedo/dmpf/blob/487e9de17099c0eb8d44e3e9c2dfbd58b577b958/libs/backend/go/testkit/tb/pg/pool.go`). Tabela do contexto fora de
     `appkit.Tables` vaza linhas entre casos; schema fora de `Schemas` deixa o
     teste verde por vacuidade. O `appkit.OpenPool(t)` gerado já passa
     `provider.Schema`; o autor acrescenta as tabelas.
@@ -60,7 +60,7 @@ golden for regenerado e algo novo morder, a entrada nova vem para cá.
     do baseline, `bookings/domain → kernel/domain` reprova com
     `DMPF-D002`. Hoje a designação existe (ARQ-553, dezesseis unidades com o
     `kernel/provider-memory`); o
-    `self-test` do `https://github.com/mateusmacedo/dmpf/blob/5def4d2d749bf8d5b2ef683f3cdc97eadf354c26/tools/dmpf-harness-check.sh` sabota a lista para provar
+    `self-test` do `https://github.com/mateusmacedo/dmpf/blob/487e9de17099c0eb8d44e3e9c2dfbd58b577b958/tools/dmpf-harness-check.sh` sabota a lista para provar
     que o gate ainda morde.
 15. **Um package por bloco.** O agente tende a criar subpackages por agregado
     (`bookings/`, `resources/`) dentro do bloco. A unidade do manifesto aponta
@@ -70,8 +70,8 @@ golden for regenerado e algo novo morder, a entrada nova vem para cá.
     não um diretório.
 16. **O contexto mora em uma pasta; cada bloco é um subdiretório dela.**
     `apps/<scope>/<ctx>/<bloco>` — não `<ctx>-<bloco>` como módulo irmão, e
-    não em `https://github.com/mateusmacedo/dmpf/blob/5def4d2d749bf8d5b2ef683f3cdc97eadf354c26/libs/backend/go`, que só guarda o kernel de reuso. O `dirName` de cada bloco está em
-    `https://github.com/mateusmacedo/dmpf/blob/5def4d2d749bf8d5b2ef683f3cdc97eadf354c26/tools/dmpf-plugin/src/generators/bounded-context/blocks.ts` (`LAYOUTS`), e
+    não em `https://github.com/mateusmacedo/dmpf/blob/487e9de17099c0eb8d44e3e9c2dfbd58b577b958/libs/backend/go`, que só guarda o kernel de reuso. O `dirName` de cada bloco está em
+    `https://github.com/mateusmacedo/dmpf/blob/487e9de17099c0eb8d44e3e9c2dfbd58b577b958/tools/dmpf-plugin/src/generators/bounded-context/blocks.ts` (`LAYOUTS`), e
     é o generator que decide o caminho. O contexto é **um** módulo Go
     (`go.mod` na raiz de `<ctx>`), e o nome do projeto Nx é `<ctx>`, sem
     prefixo nem sufixo (ADR-045).
@@ -96,18 +96,18 @@ golden for regenerado e algo novo morder, a entrada nova vem para cá.
     alcance `gen/go` se conclui **regerando** pelo rito Buf, nunca editando.
 20. **Suíte sem `BaselineStore` precisa declarar o shared kernel.**
     `Input.SharedKernelUnits` só vale quando `Baseline` é nil
-    (`https://github.com/mateusmacedo/dmpf/blob/5def4d2d749bf8d5b2ef683f3cdc97eadf354c26/tools/dmpf-conformance/internal/conformance/check.go:30`) — que
+    (`https://github.com/mateusmacedo/dmpf/blob/487e9de17099c0eb8d44e3e9c2dfbd58b577b958/tools/dmpf-conformance/internal/conformance/check.go:30`) — que
     é exatamente o caso do `fitness` e do `selfcheck`, por desenho (`FIT-03`:
     a suíte julga a regra de dependência, não a autoridade sobre a
     classificação). Enquanto só existe o kernel, a omissão não aparece; o
     primeiro contexto de negócio a consumi-lo faz brotar um `DMPF-D002` por
     aresta. A correção é ler a designação do baseline governado e passá-la na
     `Input`, sem adotar o store — restar a lista no teste a faria divergir.
-21. **A prova de regressão também envelhece.** O `https://github.com/mateusmacedo/dmpf/blob/5def4d2d749bf8d5b2ef683f3cdc97eadf354c26/tools/dmpf-harness-check.sh`
+21. **A prova de regressão também envelhece.** O `https://github.com/mateusmacedo/dmpf/blob/487e9de17099c0eb8d44e3e9c2dfbd58b577b958/tools/dmpf-harness-check.sh`
     carrega o layout do golden em `MODULO`, `BLOCOS` e nos caminhos de
     comparação. Depois
     da virada para pasta por contexto, ele seguiu procurando
-    `https://github.com/mateusmacedo/dmpf/blob/5def4d2d749bf8d5b2ef683f3cdc97eadf354c26/libs/backend/go/<ctx>-<bloco>` e casando o diagnóstico por `<ctx>-domain`,
+    `https://github.com/mateusmacedo/dmpf/blob/487e9de17099c0eb8d44e3e9c2dfbd58b577b958/libs/backend/go/<ctx>-<bloco>` e casando o diagnóstico por `<ctx>-domain`,
     quando o verificador imprime `<ctx>/domain`. Rodar o `self-test` a cada
     mudança de forma é o que expõe isso — foi ele que apontou os dois.
 22. **Template com nome interpolado precisa de seção própria no gofmt.** O

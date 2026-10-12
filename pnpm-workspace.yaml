@@ -24,7 +24,7 @@ fetchRetryMintimeout: 10000
 
 catalog:
   "@biomejs/biome": 2.4.16
-  "@mateusmacedo/dmpf-plugin": 1.0.0-rc.3
+  "@mateusmacedo/dmpf-plugin": 1.0.0-rc.4
   "@nestjs/common": 11.1.28
   "@nestjs/core": 11.1.28
   "@nestjs/platform-express": 11.1.28
@@ -63,4 +63,4 @@ catalog:
   webpack-cli: 7.2.1
 
 minimumReleaseAgeExclude:
-  - '@mateusmacedo/dmpf-plugin@1.0.0-rc.3'
+  - '@mateusmacedo/dmpf-plugin@1.0.0-rc.4'

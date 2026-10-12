@@ -29,14 +29,15 @@ Leia, nesta ordem, e siga:
   `pnpm install`, o módulo não é importer do pnpm).
 - Escreve, por agregado e por comando, os blocos `domain`, `port`,
   `application`, `provider-postgres` e `app`, copiando a **forma** de
-  `https://github.com/mateusmacedo/dmpf/blob/5def4d2d749bf8d5b2ef683f3cdc97eadf354c26/apps/backend/bookings`, o golden da forma canônica (ADR-053), e de
-  `https://github.com/mateusmacedo/dmpf/blob/5def4d2d749bf8d5b2ef683f3cdc97eadf354c26/apps/backend/reservations` só no que o contexto consome (inbox e consumer).
+  `https://github.com/mateusmacedo/dmpf/blob/487e9de17099c0eb8d44e3e9c2dfbd58b577b958/apps/backend/bookings`, o golden da forma canônica (ADR-053), e de
+  `https://github.com/mateusmacedo/dmpf/blob/487e9de17099c0eb8d44e3e9c2dfbd58b577b958/apps/backend/reservations` só no que o contexto consome (inbox e consumer).
 - Preenche o esqueleto que o generator deixou: o `ServiceDesc` de
   `app/rpc/service.go` com cada método do serviço por `kernelgrpc.Unary` sobre
-  `kernelgrpc.Method`, e os handlers de comando pelo `command[R, Resp]` local;
-  o `app/wiring.go` com o serviço de aplicação, cujos comandos usam
-  `usecase.Execute` e `usecase.Decide`; o catálogo com o canal que o relay
-  drena, o `provider/schema.sql` e o `Tables` do `appkit`.
+  `kernelgrpc.Method`, e os handlers de comando pelo `kernelgrpc.Command` do kernel;
+  o `app/wiring.go` com o serviço de aplicação no `Register` do `serve.API`,
+  cujos comandos usam `usecase.Execute` e `usecase.Decide`; o
+  `<Ctx>Channel` com o canal que o relay drena, o `provider/schema.sql` e o
+  `Tables` do `appkit`.
 - Escreve o `.proto` do serviço em
   `apps/backend/<name>/contract/proto/company/<name>/service/v1/`, o de cada evento publicado em
   `apps/backend/<name>/contract/proto/company/<name>/event/v1/` e o OpenAPI em
@@ -55,7 +56,7 @@ Leia, nesta ordem, e siga:
 - Escrever ou editar `project.json`, `go.mod`, `go.work` ou `dmpf-units.json`
   além do `include` por merge — o esqueleto é do generator.
 - Regravar `tools/dmpf-baseline/units-baseline.json` ou qualquer arquivo em
-  `https://github.com/mateusmacedo/dmpf/blob/5def4d2d749bf8d5b2ef683f3cdc97eadf354c26/libs/backend/go/contracts/gen/go/` — classificação e rito Buf são
+  `https://github.com/mateusmacedo/dmpf/blob/487e9de17099c0eb8d44e3e9c2dfbd58b577b958/libs/backend/go/contracts/gen/go/` — classificação e rito Buf são
   passos humanos.
 - Executar `git commit`, `git push` ou qualquer comando que altere o histórico.
 - Editar outra app (`bff`, outro contexto) ou mudar um valor de fio já
