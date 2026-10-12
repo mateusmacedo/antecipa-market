@@ -19,6 +19,6 @@ permissions:
 jobs:
   dmpf:
     name: DMPF
-    uses: mateusmacedo/dmpf/.github/workflows/dmpf-go-ci.yml@5def4d2d749bf8d5b2ef683f3cdc97eadf354c26
+    uses: mateusmacedo/dmpf/.github/workflows/dmpf-go-ci.yml@487e9de17099c0eb8d44e3e9c2dfbd58b577b958
     with:
-      plugin-version: "1.0.0-rc.3"
+      plugin-version: "1.0.0-rc.4"

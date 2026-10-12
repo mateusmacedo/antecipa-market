@@ -14,7 +14,7 @@ Esta skill é o golden path de quem escreve um contexto de negócio — pessoa o
 o agente `dmpf-context-author`. A entrada é uma spec no template
 [`references/template-bounded-context.md`](./references/template-bounded-context.md);
 a saída é um módulo Go em `apps/backend/<name>` — um contexto de negócio é uma
-app, `type:app`; em `https://github.com/mateusmacedo/dmpf/blob/5def4d2d749bf8d5b2ef683f3cdc97eadf354c26/libs/backend/go` fica só o kernel de reuso —, com um
+app, `type:app`; em `https://github.com/mateusmacedo/dmpf/blob/487e9de17099c0eb8d44e3e9c2dfbd58b577b958/libs/backend/go` fica só o kernel de reuso —, com um
 package por bloco (`domain`, `ports`, `application`, `provider`, `app`), um
 contrato e um OpenAPI que passam pelos mesmos gates de qualquer módulo do
 workspace (ADR-045). Não existe DSL: a spec é a única fonte
@@ -72,10 +72,10 @@ não executa — ele **para e imprime** o rito restante.
    comando e por consulta, cada um por
    `kernelgrpc.Unary(ServiceName, kernelgrpc.Method(descriptor, "<Método>"), <Ctx>Server.<Método>)`,
    o `Server` sobre o serviço de aplicação (os handlers de comando passam pelo
-   `command[R, Resp]` local, que devolve o erro por `kernelgrpc.StatusOf`), o
+   `kernelgrpc.Command` do kernel, que devolve o erro por `kernelgrpc.StatusOf`), o
    `service_test.go` com `kernelgrpc.Uncovered`, a `Config` com as seções
-   `API` (`kernelgrpc.APIEnv`) e `Policies` (`kernelapp.Policies`), o wiring e
-   o catálogo;
+   `API` (`kernelgrpc.APIEnv`) e `Policies` (`kernelapp.Policies`), o wiring
+   sobre o `app/serve` do kernel e o canal do relay;
    e2e gRPC sobre Postgres. Consumer com `envelope.Unpack` **só se
    o contexto consome**. A borda REST é do `bff`, em tarefa própria.
 8. **Contrato**: `.proto` do serviço em
@@ -96,8 +96,8 @@ não executa — ele **para e imprime** o rito restante.
 
 ## Forma do código
 
-Copie a forma, não o conteúdo: `https://github.com/mateusmacedo/dmpf/blob/5def4d2d749bf8d5b2ef683f3cdc97eadf354c26/apps/backend/bookings`, o golden da forma
-canônica (ADR-053), e `https://github.com/mateusmacedo/dmpf/blob/5def4d2d749bf8d5b2ef683f3cdc97eadf354c26/apps/backend/reservations` só no que o contexto
+Copie a forma, não o conteúdo: `https://github.com/mateusmacedo/dmpf/blob/487e9de17099c0eb8d44e3e9c2dfbd58b577b958/apps/backend/bookings`, o golden da forma
+canônica (ADR-053), e `https://github.com/mateusmacedo/dmpf/blob/487e9de17099c0eb8d44e3e9c2dfbd58b577b958/apps/backend/reservations` só no que o contexto
 consome. Testes antes do código de
 cada UPR, caso de uso, repositório e rota — um cenário de aceite e um por
 rejeição, como a spec declara. Prosa em PT-BR; código, godoc e identificadores
@@ -110,5 +110,5 @@ pnpm nx run-many -t fmt-check,vet,build,lint -p <name>
 PG_DSN='postgres://postgres:postgres@localhost:5432/postgres?sslmode=disable' \
   pnpm nx run-many -t test-race,test-distributed -p <name>
 DMPF_APPS_DIR=apps/backend bash node_modules/@mateusmacedo/dmpf-plugin/scripts/dmpf-context-check.sh --context apps/backend/<name>
-go run github.com/mateusmacedo/dmpf/tools/dmpf-conformance/cmd/conformance@v1.0.0-rc.3 --root .
+go run github.com/mateusmacedo/dmpf/tools/dmpf-conformance/cmd/conformance@v1.0.0-rc.4 --root .
 ```
