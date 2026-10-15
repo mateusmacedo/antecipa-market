@@ -93,6 +93,14 @@
       "projectChangelogs": {
         "entryWhenNoChanges": "Initial release"
       }
+    },
+    "groups": {
+      "go-contract-identity": {
+        "projects": ["identity-contract"],
+        "releaseTag": {
+          "pattern": "apps/backend/identity/contract/v{version}"
+        }
+      }
     }
   },
   "sync": {

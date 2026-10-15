@@ -24,7 +24,7 @@ spec:
           args:
             - >-
               set -e; until pg_isready; do sleep 2; done;
-              for pair in; do
+              for pair in identity:$IDENTITY_PG_PASSWORD; do
               app=${pair%%:*}; pass=${pair#*:};
               if ! psql -tAc "SELECT 1 FROM pg_roles WHERE rolname = '$app'" | grep -q 1; then
               psql -c "CREATE ROLE \"$app\" LOGIN"; fi;
@@ -49,6 +49,11 @@ spec:
                 secretKeyRef:
                   name: postgres
                   key: POSTGRES_DB
+            - name: IDENTITY_PG_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: databases
+                  key: identity
           resources:
             requests:
               cpu: 10m

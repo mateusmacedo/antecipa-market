@@ -20,7 +20,7 @@ services:
     # o próprio schema sem privilégio administrativo.
     command:
       - >-
-        set -e; for pair in; do
+        set -e; for pair in identity:${IDENTITY_PG_PASSWORD:-identity-local}; do
         app=$${pair%%:*}; pass=$${pair#*:};
         if ! psql -tAc "SELECT 1 FROM pg_roles WHERE rolname = '$$app'" | grep -q 1; then
         psql -c "CREATE ROLE \"$$app\" LOGIN"; fi;
@@ -50,17 +50,18 @@ services:
         set -eu
         admin="-X admin.hosts=redpanda:9644"
         su="-X brokers=redpanda:29092 -X user=console -X pass=${KAFKA_CONSOLE_PASSWORD:-console-local} -X sasl.mechanism=SCRAM-SHA-256"
-        for user in console:${KAFKA_CONSOLE_PASSWORD:-console-local}; do
+        for user in identity:${KAFKA_IDENTITY_PASSWORD:-identity-local} console:${KAFKA_CONSOLE_PASSWORD:-console-local}; do
           rpk security user create "$${user%%:*}" -p "$${user#*:}" --mechanism SCRAM-SHA-256 $$admin || true
         done
-        for user in console; do
+        for user in identity console; do
           rpk security user list $$admin | grep -qw "$$user"
         done
         rpk cluster config set superusers '["console",""]' $$admin
-        rpk topic create $$su -p 1 -r 1 || true
-        for topic in; do
+        rpk topic create ${KAFKA_IDENTITY_TOPIC:-identity.events} ${KAFKA_IDENTITY_DLQ:-identity.events.dlq} $$su -p 1 -r 1 || true
+        for topic in ${KAFKA_IDENTITY_TOPIC:-identity.events} ${KAFKA_IDENTITY_DLQ:-identity.events.dlq}; do
           rpk topic describe "$$topic" $$su >/dev/null
         done
+        rpk security acl create --allow-principal User:identity --operation write,describe --topic ${KAFKA_IDENTITY_TOPIC:-identity.events} --topic ${KAFKA_IDENTITY_DLQ:-identity.events.dlq} $$su
         rpk cluster config set kafka_enable_authorization true $$admin
     deploy:
       resources:

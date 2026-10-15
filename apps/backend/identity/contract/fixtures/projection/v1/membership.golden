@@ -1,0 +1,740 @@
+{
+  "format_version": "1",
+  "identity": {
+    "context": "identity",
+    "aggregate": "membership"
+  },
+  "cases": [
+    {
+      "name": "invite-accepted",
+      "doc": "Ramo Accepted de Invite: organização active com kinds [client] e papel operator; o vínculo nasce invited com invitedAt = at e nenhum evento é emitido.",
+      "state_before": {
+        "membership": "mbr-1",
+        "organization": "",
+        "invitee_email": "",
+        "role": "",
+        "status": "new",
+        "invited_by": "",
+        "invited_at": "0",
+        "invitation_expires_at": "0",
+        "user": "",
+        "person": "",
+        "verification_level": "",
+        "granted_at": "0",
+        "revoked_at": "0",
+        "revocation_reason": ""
+      },
+      "command": {
+        "upr": "invite",
+        "organization": "org-1",
+        "organization_status": "active",
+        "organization_kinds": "client",
+        "invitee_email": "ana.sintetica@example.test",
+        "role": "operator",
+        "invited_by": "sub-admin",
+        "invitation_expires_at": "1756036800000000000",
+        "at": "1755432000000000000"
+      },
+      "expected": {
+        "branch": "accepted",
+        "response": {
+          "membership": "mbr-1"
+        },
+        "events": [],
+        "state_after": {
+          "membership": "mbr-1",
+          "organization": "org-1",
+          "invitee_email": "ana.sintetica@example.test",
+          "role": "operator",
+          "status": "invited",
+          "invited_by": "sub-admin",
+          "invited_at": "1755432000000000000",
+          "invitation_expires_at": "1756036800000000000",
+          "user": "",
+          "person": "",
+          "verification_level": "",
+          "granted_at": "0",
+          "revoked_at": "0",
+          "revocation_reason": ""
+        }
+      }
+    },
+    {
+      "name": "invite-invitee-email-empty",
+      "doc": "Ramo Rejected de Invite: e-mail só de espaços; estado inalterado.",
+      "state_before": {
+        "membership": "mbr-1",
+        "organization": "",
+        "invitee_email": "",
+        "role": "",
+        "status": "new",
+        "invited_by": "",
+        "invited_at": "0",
+        "invitation_expires_at": "0",
+        "user": "",
+        "person": "",
+        "verification_level": "",
+        "granted_at": "0",
+        "revoked_at": "0",
+        "revocation_reason": ""
+      },
+      "command": {
+        "upr": "invite",
+        "organization": "org-1",
+        "organization_status": "active",
+        "organization_kinds": "client",
+        "invitee_email": "  ",
+        "role": "operator",
+        "invited_by": "sub-admin",
+        "invitation_expires_at": "1756036800000000000",
+        "at": "1755432000000000000"
+      },
+      "expected": {
+        "branch": "rejected",
+        "rejection": {
+          "code": "identity-organization/membership/invitee-email-empty",
+          "message": "invitee email must not be empty",
+          "details": {}
+        },
+        "events": [],
+        "state_after": {
+          "membership": "mbr-1",
+          "organization": "",
+          "invitee_email": "",
+          "role": "",
+          "status": "new",
+          "invited_by": "",
+          "invited_at": "0",
+          "invitation_expires_at": "0",
+          "user": "",
+          "person": "",
+          "verification_level": "",
+          "granted_at": "0",
+          "revoked_at": "0",
+          "revocation_reason": ""
+        }
+      }
+    },
+    {
+      "name": "invite-invitation-expiry-invalid",
+      "doc": "Ramo Rejected de Invite: a expiração igual a at não é posterior ao convite; estado inalterado.",
+      "state_before": {
+        "membership": "mbr-1",
+        "organization": "",
+        "invitee_email": "",
+        "role": "",
+        "status": "new",
+        "invited_by": "",
+        "invited_at": "0",
+        "invitation_expires_at": "0",
+        "user": "",
+        "person": "",
+        "verification_level": "",
+        "granted_at": "0",
+        "revoked_at": "0",
+        "revocation_reason": ""
+      },
+      "command": {
+        "upr": "invite",
+        "organization": "org-1",
+        "organization_status": "active",
+        "organization_kinds": "client",
+        "invitee_email": "ana.sintetica@example.test",
+        "role": "operator",
+        "invited_by": "sub-admin",
+        "invitation_expires_at": "1755432000000000000",
+        "at": "1755432000000000000"
+      },
+      "expected": {
+        "branch": "rejected",
+        "rejection": {
+          "code": "identity-organization/membership/invitation-expiry-invalid",
+          "message": "the invitation must expire after it is made",
+          "details": {}
+        },
+        "events": [],
+        "state_after": {
+          "membership": "mbr-1",
+          "organization": "",
+          "invitee_email": "",
+          "role": "",
+          "status": "new",
+          "invited_by": "",
+          "invited_at": "0",
+          "invitation_expires_at": "0",
+          "user": "",
+          "person": "",
+          "verification_level": "",
+          "granted_at": "0",
+          "revoked_at": "0",
+          "revocation_reason": ""
+        }
+      }
+    },
+    {
+      "name": "invite-organization-suspended",
+      "doc": "Ramo Rejected de Invite: a organização lida pelo caso de uso está suspended (nota †); estado inalterado.",
+      "state_before": {
+        "membership": "mbr-1",
+        "organization": "",
+        "invitee_email": "",
+        "role": "",
+        "status": "new",
+        "invited_by": "",
+        "invited_at": "0",
+        "invitation_expires_at": "0",
+        "user": "",
+        "person": "",
+        "verification_level": "",
+        "granted_at": "0",
+        "revoked_at": "0",
+        "revocation_reason": ""
+      },
+      "command": {
+        "upr": "invite",
+        "organization": "org-1",
+        "organization_status": "suspended",
+        "organization_kinds": "client",
+        "invitee_email": "ana.sintetica@example.test",
+        "role": "operator",
+        "invited_by": "sub-admin",
+        "invitation_expires_at": "1756036800000000000",
+        "at": "1755432000000000000"
+      },
+      "expected": {
+        "branch": "rejected",
+        "rejection": {
+          "code": "identity-organization/membership/organization-not-active",
+          "message": "organization must exist and be active",
+          "details": {
+            "organization": "org-1"
+          }
+        },
+        "events": [],
+        "state_after": {
+          "membership": "mbr-1",
+          "organization": "",
+          "invitee_email": "",
+          "role": "",
+          "status": "new",
+          "invited_by": "",
+          "invited_at": "0",
+          "invitation_expires_at": "0",
+          "user": "",
+          "person": "",
+          "verification_level": "",
+          "granted_at": "0",
+          "revoked_at": "0",
+          "revocation_reason": ""
+        }
+      }
+    },
+    {
+      "name": "invite-role-kind-mismatch",
+      "doc": "Ramo Rejected de Invite: papel de cliente numa organização só funder; estado inalterado.",
+      "state_before": {
+        "membership": "mbr-1",
+        "organization": "",
+        "invitee_email": "",
+        "role": "",
+        "status": "new",
+        "invited_by": "",
+        "invited_at": "0",
+        "invitation_expires_at": "0",
+        "user": "",
+        "person": "",
+        "verification_level": "",
+        "granted_at": "0",
+        "revoked_at": "0",
+        "revocation_reason": ""
+      },
+      "command": {
+        "upr": "invite",
+        "organization": "org-1",
+        "organization_status": "active",
+        "organization_kinds": "funder",
+        "invitee_email": "ana.sintetica@example.test",
+        "role": "operator",
+        "invited_by": "sub-admin",
+        "invitation_expires_at": "1756036800000000000",
+        "at": "1755432000000000000"
+      },
+      "expected": {
+        "branch": "rejected",
+        "rejection": {
+          "code": "identity-organization/membership/role-kind-mismatch",
+          "message": "the role does not fit the kinds of the organization",
+          "details": {
+            "role": "operator",
+            "organization": "org-1"
+          }
+        },
+        "events": [],
+        "state_after": {
+          "membership": "mbr-1",
+          "organization": "",
+          "invitee_email": "",
+          "role": "",
+          "status": "new",
+          "invited_by": "",
+          "invited_at": "0",
+          "invitation_expires_at": "0",
+          "user": "",
+          "person": "",
+          "verification_level": "",
+          "granted_at": "0",
+          "revoked_at": "0",
+          "revocation_reason": ""
+        }
+      }
+    },
+    {
+      "name": "grant-accepted",
+      "doc": "Ramo Accepted de Grant: vínculo operator invited, canal confirmado e personal_data_checked; vai a active com grantedAt = at, e o membership.granted leva papel e nível, nunca o e-mail.",
+      "state_before": {
+        "membership": "mbr-1",
+        "organization": "org-1",
+        "invitee_email": "ana.sintetica@example.test",
+        "role": "operator",
+        "status": "invited",
+        "invited_by": "sub-admin",
+        "invited_at": "1755345600000000000",
+        "invitation_expires_at": "1755950400000000000",
+        "user": "",
+        "person": "",
+        "verification_level": "",
+        "granted_at": "0",
+        "revoked_at": "0",
+        "revocation_reason": ""
+      },
+      "command": {
+        "upr": "grant",
+        "user": "sub-1",
+        "user_status": "active",
+        "person": "per-1",
+        "channel_confirmed": "true",
+        "verification_level": "personal_data_checked",
+        "at": "1755432000000000000"
+      },
+      "expected": {
+        "branch": "accepted",
+        "response": {
+          "membership": "mbr-1"
+        },
+        "events": [
+          {
+            "name": "identity-organization.membership.granted",
+            "fields": {
+              "membership": "mbr-1",
+              "organization": "org-1",
+              "user": "sub-1",
+              "role": "operator",
+              "verification_level": "personal_data_checked",
+              "at": "1755432000000000000"
+            }
+          }
+        ],
+        "state_after": {
+          "membership": "mbr-1",
+          "organization": "org-1",
+          "invitee_email": "ana.sintetica@example.test",
+          "role": "operator",
+          "status": "active",
+          "invited_by": "sub-admin",
+          "invited_at": "1755345600000000000",
+          "invitation_expires_at": "1755950400000000000",
+          "user": "sub-1",
+          "person": "per-1",
+          "verification_level": "personal_data_checked",
+          "granted_at": "1755432000000000000",
+          "revoked_at": "0",
+          "revocation_reason": ""
+        }
+      }
+    },
+    {
+      "name": "grant-not-invited",
+      "doc": "Ramo Rejected de Grant: o vínculo já está active; estado inalterado.",
+      "state_before": {
+        "membership": "mbr-1",
+        "organization": "org-1",
+        "invitee_email": "ana.sintetica@example.test",
+        "role": "operator",
+        "status": "active",
+        "invited_by": "sub-admin",
+        "invited_at": "1755345600000000000",
+        "invitation_expires_at": "1755950400000000000",
+        "user": "sub-1",
+        "person": "per-1",
+        "verification_level": "personal_data_checked",
+        "granted_at": "1755349200000000000",
+        "revoked_at": "0",
+        "revocation_reason": ""
+      },
+      "command": {
+        "upr": "grant",
+        "user": "sub-1",
+        "user_status": "active",
+        "person": "per-1",
+        "channel_confirmed": "true",
+        "verification_level": "personal_data_checked",
+        "at": "1755432000000000000"
+      },
+      "expected": {
+        "branch": "rejected",
+        "rejection": {
+          "code": "identity-organization/membership/not-invited",
+          "message": "membership must be invited",
+          "details": {}
+        },
+        "events": [],
+        "state_after": {
+          "membership": "mbr-1",
+          "organization": "org-1",
+          "invitee_email": "ana.sintetica@example.test",
+          "role": "operator",
+          "status": "active",
+          "invited_by": "sub-admin",
+          "invited_at": "1755345600000000000",
+          "invitation_expires_at": "1755950400000000000",
+          "user": "sub-1",
+          "person": "per-1",
+          "verification_level": "personal_data_checked",
+          "granted_at": "1755349200000000000",
+          "revoked_at": "0",
+          "revocation_reason": ""
+        }
+      }
+    },
+    {
+      "name": "grant-invitation-expired",
+      "doc": "Ramo Rejected de Grant: at igual à expiração do convite; estado inalterado.",
+      "state_before": {
+        "membership": "mbr-1",
+        "organization": "org-1",
+        "invitee_email": "ana.sintetica@example.test",
+        "role": "operator",
+        "status": "invited",
+        "invited_by": "sub-admin",
+        "invited_at": "1755345600000000000",
+        "invitation_expires_at": "1755950400000000000",
+        "user": "",
+        "person": "",
+        "verification_level": "",
+        "granted_at": "0",
+        "revoked_at": "0",
+        "revocation_reason": ""
+      },
+      "command": {
+        "upr": "grant",
+        "user": "sub-1",
+        "user_status": "active",
+        "person": "per-1",
+        "channel_confirmed": "true",
+        "verification_level": "personal_data_checked",
+        "at": "1755950400000000000"
+      },
+      "expected": {
+        "branch": "rejected",
+        "rejection": {
+          "code": "identity-organization/membership/invitation-expired",
+          "message": "the invitation has expired",
+          "details": {}
+        },
+        "events": [],
+        "state_after": {
+          "membership": "mbr-1",
+          "organization": "org-1",
+          "invitee_email": "ana.sintetica@example.test",
+          "role": "operator",
+          "status": "invited",
+          "invited_by": "sub-admin",
+          "invited_at": "1755345600000000000",
+          "invitation_expires_at": "1755950400000000000",
+          "user": "",
+          "person": "",
+          "verification_level": "",
+          "granted_at": "0",
+          "revoked_at": "0",
+          "revocation_reason": ""
+        }
+      }
+    },
+    {
+      "name": "grant-channel-not-confirmed",
+      "doc": "Ramo Rejected de Grant: a borda não confirmou a posse do canal; estado inalterado.",
+      "state_before": {
+        "membership": "mbr-1",
+        "organization": "org-1",
+        "invitee_email": "ana.sintetica@example.test",
+        "role": "operator",
+        "status": "invited",
+        "invited_by": "sub-admin",
+        "invited_at": "1755345600000000000",
+        "invitation_expires_at": "1755950400000000000",
+        "user": "",
+        "person": "",
+        "verification_level": "",
+        "granted_at": "0",
+        "revoked_at": "0",
+        "revocation_reason": ""
+      },
+      "command": {
+        "upr": "grant",
+        "user": "sub-1",
+        "user_status": "active",
+        "person": "per-1",
+        "channel_confirmed": "false",
+        "verification_level": "personal_data_checked",
+        "at": "1755432000000000000"
+      },
+      "expected": {
+        "branch": "rejected",
+        "rejection": {
+          "code": "identity-organization/membership/channel-not-confirmed",
+          "message": "the ownership of the channel must be confirmed",
+          "details": {}
+        },
+        "events": [],
+        "state_after": {
+          "membership": "mbr-1",
+          "organization": "org-1",
+          "invitee_email": "ana.sintetica@example.test",
+          "role": "operator",
+          "status": "invited",
+          "invited_by": "sub-admin",
+          "invited_at": "1755345600000000000",
+          "invitation_expires_at": "1755950400000000000",
+          "user": "",
+          "person": "",
+          "verification_level": "",
+          "granted_at": "0",
+          "revoked_at": "0",
+          "revocation_reason": ""
+        }
+      }
+    },
+    {
+      "name": "grant-verification-insufficient",
+      "doc": "Ramo Rejected de Grant: operator exige personal_data_checked e chega channel_ownership; estado inalterado.",
+      "state_before": {
+        "membership": "mbr-1",
+        "organization": "org-1",
+        "invitee_email": "ana.sintetica@example.test",
+        "role": "operator",
+        "status": "invited",
+        "invited_by": "sub-admin",
+        "invited_at": "1755345600000000000",
+        "invitation_expires_at": "1755950400000000000",
+        "user": "",
+        "person": "",
+        "verification_level": "",
+        "granted_at": "0",
+        "revoked_at": "0",
+        "revocation_reason": ""
+      },
+      "command": {
+        "upr": "grant",
+        "user": "sub-1",
+        "user_status": "active",
+        "person": "per-1",
+        "channel_confirmed": "true",
+        "verification_level": "channel_ownership",
+        "at": "1755432000000000000"
+      },
+      "expected": {
+        "branch": "rejected",
+        "rejection": {
+          "code": "identity-organization/membership/verification-insufficient",
+          "message": "the verification level is below the minimum of the role",
+          "details": {
+            "role": "operator"
+          }
+        },
+        "events": [],
+        "state_after": {
+          "membership": "mbr-1",
+          "organization": "org-1",
+          "invitee_email": "ana.sintetica@example.test",
+          "role": "operator",
+          "status": "invited",
+          "invited_by": "sub-admin",
+          "invited_at": "1755345600000000000",
+          "invitation_expires_at": "1755950400000000000",
+          "user": "",
+          "person": "",
+          "verification_level": "",
+          "granted_at": "0",
+          "revoked_at": "0",
+          "revocation_reason": ""
+        }
+      }
+    },
+    {
+      "name": "grant-user-suspended",
+      "doc": "Ramo Rejected de Grant: a conta lida pelo caso de uso está suspended (nota †); estado inalterado.",
+      "state_before": {
+        "membership": "mbr-1",
+        "organization": "org-1",
+        "invitee_email": "ana.sintetica@example.test",
+        "role": "operator",
+        "status": "invited",
+        "invited_by": "sub-admin",
+        "invited_at": "1755345600000000000",
+        "invitation_expires_at": "1755950400000000000",
+        "user": "",
+        "person": "",
+        "verification_level": "",
+        "granted_at": "0",
+        "revoked_at": "0",
+        "revocation_reason": ""
+      },
+      "command": {
+        "upr": "grant",
+        "user": "sub-1",
+        "user_status": "suspended",
+        "person": "per-1",
+        "channel_confirmed": "true",
+        "verification_level": "personal_data_checked",
+        "at": "1755432000000000000"
+      },
+      "expected": {
+        "branch": "rejected",
+        "rejection": {
+          "code": "identity-organization/membership/user-not-active",
+          "message": "user account must exist and be active",
+          "details": {
+            "user": "sub-1"
+          }
+        },
+        "events": [],
+        "state_after": {
+          "membership": "mbr-1",
+          "organization": "org-1",
+          "invitee_email": "ana.sintetica@example.test",
+          "role": "operator",
+          "status": "invited",
+          "invited_by": "sub-admin",
+          "invited_at": "1755345600000000000",
+          "invitation_expires_at": "1755950400000000000",
+          "user": "",
+          "person": "",
+          "verification_level": "",
+          "granted_at": "0",
+          "revoked_at": "0",
+          "revocation_reason": ""
+        }
+      }
+    },
+    {
+      "name": "revoke-accepted",
+      "doc": "Ramo Accepted de Revoke: vínculo active vai a revoked com revokedAt = at e o motivo, e o membership.revoked leva usuário, papel e motivo.",
+      "state_before": {
+        "membership": "mbr-1",
+        "organization": "org-1",
+        "invitee_email": "ana.sintetica@example.test",
+        "role": "operator",
+        "status": "active",
+        "invited_by": "sub-admin",
+        "invited_at": "1755345600000000000",
+        "invitation_expires_at": "1755950400000000000",
+        "user": "sub-1",
+        "person": "per-1",
+        "verification_level": "personal_data_checked",
+        "granted_at": "1755349200000000000",
+        "revoked_at": "0",
+        "revocation_reason": ""
+      },
+      "command": {
+        "upr": "revoke",
+        "reason": "left the company",
+        "at": "1755432000000000000"
+      },
+      "expected": {
+        "branch": "accepted",
+        "response": {
+          "membership": "mbr-1"
+        },
+        "events": [
+          {
+            "name": "identity-organization.membership.revoked",
+            "fields": {
+              "membership": "mbr-1",
+              "organization": "org-1",
+              "user": "sub-1",
+              "role": "operator",
+              "reason": "left the company",
+              "at": "1755432000000000000"
+            }
+          }
+        ],
+        "state_after": {
+          "membership": "mbr-1",
+          "organization": "org-1",
+          "invitee_email": "ana.sintetica@example.test",
+          "role": "operator",
+          "status": "revoked",
+          "invited_by": "sub-admin",
+          "invited_at": "1755345600000000000",
+          "invitation_expires_at": "1755950400000000000",
+          "user": "sub-1",
+          "person": "per-1",
+          "verification_level": "personal_data_checked",
+          "granted_at": "1755349200000000000",
+          "revoked_at": "1755432000000000000",
+          "revocation_reason": "left the company"
+        }
+      }
+    },
+    {
+      "name": "revoke-not-active",
+      "doc": "Ramo Rejected de Revoke: o vínculo ainda está invited; estado inalterado.",
+      "state_before": {
+        "membership": "mbr-1",
+        "organization": "org-1",
+        "invitee_email": "ana.sintetica@example.test",
+        "role": "operator",
+        "status": "invited",
+        "invited_by": "sub-admin",
+        "invited_at": "1755345600000000000",
+        "invitation_expires_at": "1755950400000000000",
+        "user": "",
+        "person": "",
+        "verification_level": "",
+        "granted_at": "0",
+        "revoked_at": "0",
+        "revocation_reason": ""
+      },
+      "command": {
+        "upr": "revoke",
+        "reason": "left the company",
+        "at": "1755432000000000000"
+      },
+      "expected": {
+        "branch": "rejected",
+        "rejection": {
+          "code": "identity-organization/membership/not-active",
+          "message": "membership must be active",
+          "details": {}
+        },
+        "events": [],
+        "state_after": {
+          "membership": "mbr-1",
+          "organization": "org-1",
+          "invitee_email": "ana.sintetica@example.test",
+          "role": "operator",
+          "status": "invited",
+          "invited_by": "sub-admin",
+          "invited_at": "1755345600000000000",
+          "invitation_expires_at": "1755950400000000000",
+          "user": "",
+          "person": "",
+          "verification_level": "",
+          "granted_at": "0",
+          "revoked_at": "0",
+          "revocation_reason": ""
+        }
+      }
+    }
+  ]
+}

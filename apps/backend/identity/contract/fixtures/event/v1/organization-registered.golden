@@ -1,0 +1,139 @@
+{
+  "format_version": "1",
+  "identity": {
+    "fixture": "identity/event/v1/organization-registered",
+    "contract": {
+      "package": "company.identity.event.v1",
+      "message": "OrganizationRegistered"
+    },
+    "type": "com.company.identity.organization-registered.v1",
+    "dataschema": "type.googleapis.com/company.identity.event.v1.OrganizationRegistered"
+  },
+  "covers": {
+    "profile_major": "1",
+    "contract_major": "v1"
+  },
+  "cases": [
+    {
+      "name": "all-conditionals-present",
+      "doc": "Caminho típico com os três atributos condicionais presentes (aggregateversion, tenantid, tracestate).",
+      "envelope": {
+        "aggregateversion": "7",
+        "causationid": "evt-0001",
+        "correlationid": "corr-0001",
+        "datacontenttype": "application/protobuf",
+        "dataschema": "type.googleapis.com/company.identity.event.v1.OrganizationRegistered",
+        "id": "evt-0001",
+        "partitionkey": "c-42",
+        "source": "urn:dmpf:reference-identity",
+        "specversion": "1.0",
+        "subject": "org-1001",
+        "tenantid": "tenant-a",
+        "time": "2026-09-02T12:00:00Z",
+        "traceparent": "00-0af7651916cd43dd8448eb211c80319c-b7ad6b7169203331-01",
+        "tracestate": "vendor=1",
+        "type": "com.company.identity.organization-registered.v1"
+      },
+      "payload": {
+        "jurisdiction": "BR",
+        "kinds": "ORGANIZATION_KIND_CLIENT",
+        "organization_id": "org-1001",
+        "registered_at": "2026-09-02T12:00:00Z",
+        "tax_id_hash": "4a455609da3a3d6d689b65257f38532e3868396abc39d3b92311b18489f169dc",
+        "tax_id_masked": "**.***.***/**DE-35",
+        "tax_id_type": "TAX_ID_TYPE_CNPJ"
+      },
+      "payload_bytes_hex": "0a086f72672d313030311201011a02425220012a403461343535363039646133613364366436383962363532353766333835333265333836383339366162633339643362393233313162313834383966313639646332122a2a2e2a2a2a2e2a2a2a2f2a2a44452d33353a0608c09fe0d406",
+      "payload_hash": "711c66f5207560f9a81b77fb884a9dfc2e7834d87428986f02303d0f964a6389"
+    },
+    {
+      "name": "all-conditionals-absent",
+      "doc": "Os três condicionais ausentes: nenhum entra no mapa de atributos (ENV-12, sem valor de preenchimento).",
+      "envelope": {
+        "causationid": "evt-0001",
+        "correlationid": "corr-0001",
+        "datacontenttype": "application/protobuf",
+        "dataschema": "type.googleapis.com/company.identity.event.v1.OrganizationRegistered",
+        "id": "evt-0002",
+        "partitionkey": "c-42",
+        "source": "urn:dmpf:reference-identity",
+        "specversion": "1.0",
+        "subject": "org-1001",
+        "time": "2026-09-02T12:00:00Z",
+        "traceparent": "00-0af7651916cd43dd8448eb211c80319c-b7ad6b7169203331-01",
+        "type": "com.company.identity.organization-registered.v1"
+      },
+      "payload": {
+        "jurisdiction": "BR",
+        "kinds": "ORGANIZATION_KIND_FUNDER,ORGANIZATION_KIND_PARTNER",
+        "organization_id": "org-1002",
+        "registered_at": "2026-09-02T12:00:01Z",
+        "tax_id_hash": "accdef5fa5a63d40218f9b3fb5abdfc9eeb4036cbdbe46cff36bff2ec9462a3d",
+        "tax_id_masked": "***.***.*89-09",
+        "tax_id_type": "TAX_ID_TYPE_CPF"
+      },
+      "payload_bytes_hex": "0a086f72672d31303032120202031a02425220022a4061636364656635666135613633643430323138663962336662356162646663396565623430333663626462653436636666333662666632656339343632613364320e2a2a2a2e2a2a2a2e2a38392d30393a0608c19fe0d406",
+      "payload_hash": "2f9faab6a7925c1a3109e267f6e082570a302c51421d1cf688c3c033d41e5f60"
+    }
+  ],
+  "discriminators": [
+    {
+      "name": "unknown-field",
+      "doc": "Bytes canônicos mais um campo de número 99 (varint 42) que o contrato não conhece: a desserialização o preserva (PTB-10) e o hash o cobre (ENV-17).",
+      "envelope": {
+        "causationid": "evt-0001",
+        "correlationid": "corr-0001",
+        "datacontenttype": "application/protobuf",
+        "dataschema": "type.googleapis.com/company.identity.event.v1.OrganizationRegistered",
+        "id": "evt-2001",
+        "partitionkey": "c-42",
+        "source": "urn:dmpf:reference-identity",
+        "specversion": "1.0",
+        "subject": "org-1001",
+        "time": "2026-09-02T12:00:00Z",
+        "traceparent": "00-0af7651916cd43dd8448eb211c80319c-b7ad6b7169203331-01",
+        "type": "com.company.identity.organization-registered.v1"
+      },
+      "payload": {
+        "jurisdiction": "PT",
+        "kinds": "ORGANIZATION_KIND_PLATFORM",
+        "organization_id": "org-2001",
+        "registered_at": "2026-09-02T12:00:02Z",
+        "tax_id_hash": "2ad689d9d2bdfa27268b09d5f0bd86e01cc7545bfb72a11b4c28450f3098b053",
+        "tax_id_masked": "**.***.***/**01-81",
+        "tax_id_type": "TAX_ID_TYPE_CNPJ"
+      },
+      "payload_bytes_hex": "0a086f72672d323030311201041a02505420012a403261643638396439643262646661323732363862303964356630626438366530316363373534356266623732613131623463323834353066333039386230353332122a2a2e2a2a2a2e2a2a2a2f2a2a30312d38313a0608c29fe0d40698062a",
+      "payload_hash": "c665feead8e7fe1e83a5280f16185ed41b4ea82e67cf9726f1224ae73d217975"
+    },
+    {
+      "name": "non-canonical-field-order",
+      "doc": "Campos em ordem decrescente de número, o instante como sub-mensagem: decodifica no mesmo valor, mas o hash é o dos bytes transportados e difere do hash de uma reserialização (ENV-18). Campo repetido fica vazio, porque o codificador não canônico do kit cobre só escalares e mensagens.",
+      "envelope": {
+        "causationid": "evt-0001",
+        "correlationid": "corr-0001",
+        "datacontenttype": "application/protobuf",
+        "dataschema": "type.googleapis.com/company.identity.event.v1.OrganizationRegistered",
+        "id": "evt-2002",
+        "partitionkey": "c-42",
+        "source": "urn:dmpf:reference-identity",
+        "specversion": "1.0",
+        "subject": "org-1001",
+        "time": "2026-09-02T12:00:00Z",
+        "traceparent": "00-0af7651916cd43dd8448eb211c80319c-b7ad6b7169203331-01",
+        "type": "com.company.identity.organization-registered.v1"
+      },
+      "payload": {
+        "jurisdiction": "BR",
+        "kinds": "",
+        "organization_id": "org-2002",
+        "registered_at": "2026-09-02T12:00:03.123456789Z",
+        "tax_id_hash": "d9e740ecc0099261fc6176681ef8f152dd08514d121084cef8a2de3d6a2f44d3",
+        "tax_id_masked": "***.***.*21-00",
+        "tax_id_type": "TAX_ID_TYPE_CPF"
+      },
+      "payload_bytes_hex": "3a0b08c39fe0d40610959aef3a320e2a2a2a2e2a2a2a2e2a32312d30302a406439653734306563633030393932363166633631373636383165663866313532646430383531346431323130383463656638613264653364366132663434643320021a0242520a086f72672d32303032",
+      "payload_hash": "67007ab7d99f5bb2d5aedcb2f06a31d432652c0d261b252a794d6d25c9209cc0"
+    }
+  ]
+}

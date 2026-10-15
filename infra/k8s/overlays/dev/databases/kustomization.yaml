@@ -10,5 +10,6 @@ resources:
 secretGenerator:
   - name: databases
     literals:
+      - identity=identity-dev
     options:
       disableNameSuffixHash: true

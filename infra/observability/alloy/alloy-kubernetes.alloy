@@ -16,6 +16,12 @@ discovery.relabel "pods" {
   targets = discovery.kubernetes.pods.targets
 
   rule {
+    source_labels = ["__meta_kubernetes_pod_label_app_kubernetes_io_name"]
+    regex         = "identity"
+    action        = "drop"
+  }
+
+  rule {
     source_labels = ["__meta_kubernetes_namespace"]
     target_label  = "namespace"
   }

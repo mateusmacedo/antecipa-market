@@ -69,7 +69,7 @@ linters:
           allow:
             # o próprio universo verificável do repositório
             - github.com/mateusmacedo/dmpf/
-            - example.com/change-me/
+            - github.com/mateusmacedo/antecipa-market/
             # stdlib de computação determinística (RFC §7: capability `pure`)
             - errors
             - fmt
@@ -157,7 +157,7 @@ linters:
           allow:
             # o próprio universo verificável do repositório
             - github.com/mateusmacedo/dmpf/
-            - example.com/change-me/
+            - github.com/mateusmacedo/antecipa-market/
             # stdlib de computação determinística (RFC §7: capability `pure`)
             - errors
             - fmt
@@ -245,7 +245,7 @@ linters:
           allow:
             # o próprio universo verificável do repositório
             - github.com/mateusmacedo/dmpf/
-            - example.com/change-me/
+            - github.com/mateusmacedo/antecipa-market/
             # stdlib de computação determinística (RFC §7: capability `pure`)
             - errors
             - fmt
@@ -337,7 +337,7 @@ linters:
           allow:
             # o próprio universo verificável do repositório
             - github.com/mateusmacedo/dmpf/
-            - example.com/change-me/
+            - github.com/mateusmacedo/antecipa-market/
             # stdlib de computação determinística (RFC §7: capability `pure`)
             - errors
             - fmt
@@ -479,7 +479,7 @@ formatters:
       sections:
         - standard
         - default
-        - prefix(example.com/change-me)
+        - prefix(github.com/mateusmacedo/antecipa-market)
   exclusions:
     paths:
       - contracts?/gen/

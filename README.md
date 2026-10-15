@@ -121,12 +121,11 @@ nx-base-template/
 ├── tools/
 │   ├── generators/              # Nx generators do workspace (vazio)
 │   ├── executors/               # Nx executors customizados
-│   ├── dmpf-baseline/           # Baseline de conformidade (saída do dmpf-plugin)
-│   └── template-smoke.sh        # Smoke do template (gera e valida um contexto descartável)
+│   └── dmpf-baseline/           # Baseline de conformidade (saída do dmpf-plugin)
 ├── infra/                       # Infra local, k8s e observabilidade (saída do dmpf-plugin)
 ├── docs/
 │   └── adr/                     # Architecture Decision Records
-├── .github/workflows/ci.yml     # CI com nx affected + template-smoke
+├── .github/workflows/ci.yml     # CI com nx affected
 ├── .github/workflows/dmpf-ci.yml # CI Go do DMPF (workflow reutilizável do platform)
 ├── dmpf.json                    # Configuração do DMPF (saída do init)
 ├── go.work                      # Workspace Go (diretiva do dmpf-plugin)
@@ -218,10 +217,6 @@ Os projetos Go (`tag:stack:go`) ficam fora desse pipeline e passam pelo
 `.github/workflows/dmpf-ci.yml`, que chama o workflow reutilizável do platform fixado por
 SHA. No template, sem nenhum módulo Go, o gate de conformance desse workflow falha: ele não é
 check obrigatório e passa a valer no projeto derivado a partir do primeiro contexto.
-
-O job `template-smoke` do `ci.yml` roda `tools/template-smoke.sh`, que copia o working tree
-para um repositório descartável, gera um bounded context e passa pelos gates do DMPF. Para
-rodar localmente: `bash tools/template-smoke.sh`.
 
 ## Testes
 

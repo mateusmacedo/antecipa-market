@@ -1,0 +1,123 @@
+{
+  "format_version": "1",
+  "identity": {
+    "fixture": "identity/event/v1/user-suspended",
+    "contract": {
+      "package": "company.identity.event.v1",
+      "message": "UserSuspended"
+    },
+    "type": "com.company.identity.user-suspended.v1",
+    "dataschema": "type.googleapis.com/company.identity.event.v1.UserSuspended"
+  },
+  "covers": {
+    "profile_major": "1",
+    "contract_major": "v1"
+  },
+  "cases": [
+    {
+      "name": "all-conditionals-present",
+      "doc": "Caminho típico com os três atributos condicionais presentes (aggregateversion, tenantid, tracestate).",
+      "envelope": {
+        "aggregateversion": "7",
+        "causationid": "evt-0001",
+        "correlationid": "corr-0001",
+        "datacontenttype": "application/protobuf",
+        "dataschema": "type.googleapis.com/company.identity.event.v1.UserSuspended",
+        "id": "evt-0001",
+        "partitionkey": "c-42",
+        "source": "urn:dmpf:reference-identity",
+        "specversion": "1.0",
+        "subject": "sub-1001",
+        "tenantid": "tenant-a",
+        "time": "2026-09-02T12:00:00Z",
+        "traceparent": "00-0af7651916cd43dd8448eb211c80319c-b7ad6b7169203331-01",
+        "tracestate": "vendor=1",
+        "type": "com.company.identity.user-suspended.v1"
+      },
+      "payload": {
+        "reason": "fraud review",
+        "suspended_at": "2026-09-02T12:00:00Z",
+        "user_id": "sub-1001"
+      },
+      "payload_bytes_hex": "0a087375622d31303031120c6672617564207265766965771a0608c09fe0d406",
+      "payload_hash": "69dde02a88eff1eefc658b3a2be82ec97d4061bc7fa00a5c7345c6a8af019b21"
+    },
+    {
+      "name": "all-conditionals-absent",
+      "doc": "Os três condicionais ausentes: nenhum entra no mapa de atributos (ENV-12, sem valor de preenchimento).",
+      "envelope": {
+        "causationid": "evt-0001",
+        "correlationid": "corr-0001",
+        "datacontenttype": "application/protobuf",
+        "dataschema": "type.googleapis.com/company.identity.event.v1.UserSuspended",
+        "id": "evt-0002",
+        "partitionkey": "c-42",
+        "source": "urn:dmpf:reference-identity",
+        "specversion": "1.0",
+        "subject": "sub-1001",
+        "time": "2026-09-02T12:00:00Z",
+        "traceparent": "00-0af7651916cd43dd8448eb211c80319c-b7ad6b7169203331-01",
+        "type": "com.company.identity.user-suspended.v1"
+      },
+      "payload": {
+        "reason": "left the company",
+        "suspended_at": "2026-09-02T12:00:01Z",
+        "user_id": "sub-1002"
+      },
+      "payload_bytes_hex": "0a087375622d3130303212106c6566742074686520636f6d70616e791a0608c19fe0d406",
+      "payload_hash": "96062c4a5e7e2f5195b00498c06c259559f34b593148781689dce64d3b317086"
+    }
+  ],
+  "discriminators": [
+    {
+      "name": "unknown-field",
+      "doc": "Bytes canônicos mais um campo de número 99 (varint 42) que o contrato não conhece: a desserialização o preserva (PTB-10) e o hash o cobre (ENV-17).",
+      "envelope": {
+        "causationid": "evt-0001",
+        "correlationid": "corr-0001",
+        "datacontenttype": "application/protobuf",
+        "dataschema": "type.googleapis.com/company.identity.event.v1.UserSuspended",
+        "id": "evt-2001",
+        "partitionkey": "c-42",
+        "source": "urn:dmpf:reference-identity",
+        "specversion": "1.0",
+        "subject": "sub-1001",
+        "time": "2026-09-02T12:00:00Z",
+        "traceparent": "00-0af7651916cd43dd8448eb211c80319c-b7ad6b7169203331-01",
+        "type": "com.company.identity.user-suspended.v1"
+      },
+      "payload": {
+        "reason": "credential leak",
+        "suspended_at": "2026-09-02T12:00:02Z",
+        "user_id": "sub-2001"
+      },
+      "payload_bytes_hex": "0a087375622d32303031120f63726564656e7469616c206c65616b1a0608c29fe0d40698062a",
+      "payload_hash": "00404c79621115c1db9e9d7b14ed0b14380ea8013cc0e9191aa28078bda49852"
+    },
+    {
+      "name": "non-canonical-field-order",
+      "doc": "Campos em ordem decrescente de número, o instante como sub-mensagem: decodifica no mesmo valor, mas o hash é o dos bytes transportados e difere do hash de uma reserialização (ENV-18). Campo repetido fica vazio, porque o codificador não canônico do kit cobre só escalares e mensagens.",
+      "envelope": {
+        "causationid": "evt-0001",
+        "correlationid": "corr-0001",
+        "datacontenttype": "application/protobuf",
+        "dataschema": "type.googleapis.com/company.identity.event.v1.UserSuspended",
+        "id": "evt-2002",
+        "partitionkey": "c-42",
+        "source": "urn:dmpf:reference-identity",
+        "specversion": "1.0",
+        "subject": "sub-1001",
+        "time": "2026-09-02T12:00:00Z",
+        "traceparent": "00-0af7651916cd43dd8448eb211c80319c-b7ad6b7169203331-01",
+        "type": "com.company.identity.user-suspended.v1"
+      },
+      "payload": {
+        "reason": "access review",
+        "suspended_at": "2026-09-02T12:00:03.123456789Z",
+        "user_id": "sub-2002"
+      },
+      "payload_bytes_hex": "1a0b08c39fe0d40610959aef3a120d616363657373207265766965770a087375622d32303032",
+      "payload_hash": "11e66e7770408ed37bff7c4588afdafb677cc5b379f6408d057609fbb8ee8e0f"
+    }
+  ]
+}

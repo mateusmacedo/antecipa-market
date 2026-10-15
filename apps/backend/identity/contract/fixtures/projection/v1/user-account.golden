@@ -1,0 +1,248 @@
+{
+  "format_version": "1",
+  "identity": {
+    "context": "identity",
+    "aggregate": "user-account"
+  },
+  "cases": [
+    {
+      "name": "provision-accepted",
+      "doc": "Ramo Accepted de Provision: conta ausente nasce active com provisionedAt = at e o personId do comando; nenhum evento é emitido.",
+      "state_before": {
+        "user": "sub-1",
+        "person": "",
+        "status": "new",
+        "provisioned_at": "0",
+        "suspended_at": "0",
+        "suspension_reason": ""
+      },
+      "command": {
+        "upr": "provision",
+        "person": "per-1",
+        "at": "1755432000000000000"
+      },
+      "expected": {
+        "branch": "accepted",
+        "response": {
+          "user": "sub-1"
+        },
+        "events": [],
+        "state_after": {
+          "user": "sub-1",
+          "person": "per-1",
+          "status": "active",
+          "provisioned_at": "1755432000000000000",
+          "suspended_at": "0",
+          "suspension_reason": ""
+        }
+      }
+    },
+    {
+      "name": "provision-accepted-present-unchanged",
+      "doc": "Ramo Accepted de Provision sobre conta presente: inicializa só se ausente, então aceita sem efeito de negócio e sem evento, mesmo com outro personId.",
+      "state_before": {
+        "user": "sub-1",
+        "person": "per-1",
+        "status": "active",
+        "provisioned_at": "1755345600000000000",
+        "suspended_at": "0",
+        "suspension_reason": ""
+      },
+      "command": {
+        "upr": "provision",
+        "person": "per-2",
+        "at": "1755432000000000000"
+      },
+      "expected": {
+        "branch": "accepted",
+        "response": {
+          "user": "sub-1"
+        },
+        "events": [],
+        "state_after": {
+          "user": "sub-1",
+          "person": "per-1",
+          "status": "active",
+          "provisioned_at": "1755345600000000000",
+          "suspended_at": "0",
+          "suspension_reason": ""
+        }
+      }
+    },
+    {
+      "name": "provision-accepted-suspended-unchanged",
+      "doc": "Ramo Accepted de Provision sobre conta suspended: a provisão não reativa a conta; aceita sem efeito e sem evento.",
+      "state_before": {
+        "user": "sub-1",
+        "person": "per-1",
+        "status": "suspended",
+        "provisioned_at": "1755345600000000000",
+        "suspended_at": "1755349200000000000",
+        "suspension_reason": "fraud review"
+      },
+      "command": {
+        "upr": "provision",
+        "person": "per-1",
+        "at": "1755432000000000000"
+      },
+      "expected": {
+        "branch": "accepted",
+        "response": {
+          "user": "sub-1"
+        },
+        "events": [],
+        "state_after": {
+          "user": "sub-1",
+          "person": "per-1",
+          "status": "suspended",
+          "provisioned_at": "1755345600000000000",
+          "suspended_at": "1755349200000000000",
+          "suspension_reason": "fraud review"
+        }
+      }
+    },
+    {
+      "name": "provision-subject-empty",
+      "doc": "Ramo Rejected de Provision: subject só de espaços; estado inalterado.",
+      "state_before": {
+        "user": "  ",
+        "person": "",
+        "status": "new",
+        "provisioned_at": "0",
+        "suspended_at": "0",
+        "suspension_reason": ""
+      },
+      "command": {
+        "upr": "provision",
+        "person": "per-1",
+        "at": "1755432000000000000"
+      },
+      "expected": {
+        "branch": "rejected",
+        "rejection": {
+          "code": "identity-organization/user-account/subject-empty",
+          "message": "subject must not be empty",
+          "details": {}
+        },
+        "events": [],
+        "state_after": {
+          "user": "  ",
+          "person": "",
+          "status": "new",
+          "provisioned_at": "0",
+          "suspended_at": "0",
+          "suspension_reason": ""
+        }
+      }
+    },
+    {
+      "name": "suspend-accepted",
+      "doc": "Ramo Accepted de Suspend: a conta vai a suspended com suspendedAt = at e o motivo, e o user-account.suspended leva o subject e o motivo.",
+      "state_before": {
+        "user": "sub-1",
+        "person": "per-1",
+        "status": "active",
+        "provisioned_at": "1755345600000000000",
+        "suspended_at": "0",
+        "suspension_reason": ""
+      },
+      "command": {
+        "upr": "suspend",
+        "reason": "fraud review",
+        "at": "1755432000000000000"
+      },
+      "expected": {
+        "branch": "accepted",
+        "response": {
+          "user": "sub-1"
+        },
+        "events": [
+          {
+            "name": "identity-organization.user-account.suspended",
+            "fields": {
+              "user": "sub-1",
+              "reason": "fraud review",
+              "at": "1755432000000000000"
+            }
+          }
+        ],
+        "state_after": {
+          "user": "sub-1",
+          "person": "per-1",
+          "status": "suspended",
+          "provisioned_at": "1755345600000000000",
+          "suspended_at": "1755432000000000000",
+          "suspension_reason": "fraud review"
+        }
+      }
+    },
+    {
+      "name": "suspend-not-active",
+      "doc": "Ramo Rejected de Suspend: a conta já está suspended; estado inalterado.",
+      "state_before": {
+        "user": "sub-1",
+        "person": "per-1",
+        "status": "suspended",
+        "provisioned_at": "1755345600000000000",
+        "suspended_at": "1755349200000000000",
+        "suspension_reason": "fraud review"
+      },
+      "command": {
+        "upr": "suspend",
+        "reason": "second review",
+        "at": "1755432000000000000"
+      },
+      "expected": {
+        "branch": "rejected",
+        "rejection": {
+          "code": "identity-organization/user-account/not-active",
+          "message": "user account must be active",
+          "details": {}
+        },
+        "events": [],
+        "state_after": {
+          "user": "sub-1",
+          "person": "per-1",
+          "status": "suspended",
+          "provisioned_at": "1755345600000000000",
+          "suspended_at": "1755349200000000000",
+          "suspension_reason": "fraud review"
+        }
+      }
+    },
+    {
+      "name": "suspend-reason-empty",
+      "doc": "Ramo Rejected de Suspend: motivo só de espaços sobre conta active; estado inalterado.",
+      "state_before": {
+        "user": "sub-1",
+        "person": "per-1",
+        "status": "active",
+        "provisioned_at": "1755345600000000000",
+        "suspended_at": "0",
+        "suspension_reason": ""
+      },
+      "command": {
+        "upr": "suspend",
+        "reason": "  ",
+        "at": "1755432000000000000"
+      },
+      "expected": {
+        "branch": "rejected",
+        "rejection": {
+          "code": "identity-organization/user-account/reason-empty",
+          "message": "reason must not be empty",
+          "details": {}
+        },
+        "events": [],
+        "state_after": {
+          "user": "sub-1",
+          "person": "per-1",
+          "status": "active",
+          "provisioned_at": "1755345600000000000",
+          "suspended_at": "0",
+          "suspension_reason": ""
+        }
+      }
+    }
+  ]
+}

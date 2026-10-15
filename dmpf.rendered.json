@@ -12,7 +12,7 @@
     ".claude/rules/dmpf-bounded-context.md": "2f9df18f519741308cbb3a5799d7ccd6f9159d5f037781749ee1251acae04ad6",
     ".env.example": "59ad9e8f2c7101c898ed68ddd19fe8ff46f43e84be53dea98707bc2921bcf93c",
     ".github/workflows/dmpf-ci.yml": "f00f0e02d6f0cad1341677af6a24297377677bf365e054a337e6690def8ad8dd",
-    ".golangci.yml": "4fbcef77bb404a1cabfaf7d79e75d0d4148be2efa14a9c936549febff9ef6cc5",
+    ".golangci.yml": "edf570d70d85c190ee225ae7c8945884d08227215c9377dcf2c076fa3af9c0e0",
     "infra/k8s/base/postgres/kustomization.yaml": "d4da97a6cade44badc2bf4264d38c275d1cd2e5c6e43e963293acb7c8c094934",
     "infra/k8s/base/postgres/service.yaml": "a45b60ea18278282ff39b95d1f778b0ac8b3ffc67cc3349073c6122749136404",
     "infra/k8s/base/postgres/statefulset.yaml": "f482ef5119a81451e39a895f231a3010259987d44eadfed36742d5180ccdc158",
@@ -67,6 +67,6 @@
     "infra/observability/tempo/service.yaml": "08a5bb2ff16c3e81abf97de994d03a8745182ea2d545930705628c9c0c0eb06a",
     "infra/observability/tempo/statefulset.yaml": "a781a3a8e525c1698fa8a58bc6bf37c6fa56cd1ee469339afbbd7096d53c679d",
     "infra/observability/tempo/tempo.yaml": "361bba90d66766c4c4cc0edd2fb072c240ab41d11ccae954dfa4d236fe29fd10",
-    "infra/test/compose.yml": "e56b02c40ece168e458770b8d7a9ebe16c50aed97b7cfae3ed3a17dace1326be"
+    "infra/test/compose.yml": "69364e346e8321f5b2c3ec17a76f0ed60d963bb20a51d462c0a6b1cc58523070"
   }
 }

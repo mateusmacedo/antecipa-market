@@ -1,0 +1,54 @@
+# Processos do identity na topologia local (ADR-044): api gRPC, que aplica o
+# schema (MIGRATE=true), e relay da própria outbox.
+x-image: &image
+  build:
+    context: ../../../..
+    dockerfile: apps/backend/identity/Dockerfile
+  image: ${IDENTITY_IMAGE:-identity:local}
+
+x-env: &env
+  OTEL_SERVICE_NAME: identity
+  PG_DSN: postgres://identity:${IDENTITY_PG_PASSWORD:-identity-local}@postgres:5432/identity?sslmode=disable
+
+services:
+  dmpf-identity-api:
+    <<: *image
+    extends:
+      file: ../../../../infra/local/compose/app-base.yml
+      service: dmpf-grpc-api
+    stop_grace_period: 30s
+    environment:
+      <<: *env
+      OTEL_RESOURCE_ATTRIBUTES: ${OTEL_RESOURCE_ATTRIBUTES:-service.version=local,deployment.environment.name=local},service.instance.id=identity-api,dmpf.process.role=api
+      GRPC_TLS_CERT_FILE: /pki/dmpf-identity-api.crt
+      GRPC_TLS_KEY_FILE: /pki/dmpf-identity-api.key
+      IDENTITY_IDENTIFIER_HMAC_KEY: ${IDENTITY_IDENTIFIER_HMAC_KEY:-identity-local-identifier-hmac-key-0001}
+      IDENTITY_IDENTIFIER_HMAC_KEY_VERSION: ${IDENTITY_IDENTIFIER_HMAC_KEY_VERSION:-1}
+    depends_on:
+      pki-init:
+        condition: service_completed_successfully
+      postgres-init:
+        condition: service_completed_successfully
+      otel-collector:
+        condition: service_started
+
+  dmpf-identity-relay:
+    <<: *image
+    extends:
+      file: ../../../../infra/local/compose/app-base.yml
+      service: dmpf-kafka-worker
+    stop_grace_period: 30s
+    command: ['--role', 'relay']
+    environment:
+      <<: *env
+      OTEL_RESOURCE_ATTRIBUTES: ${OTEL_RESOURCE_ATTRIBUTES:-service.version=local,deployment.environment.name=local},service.instance.id=identity-relay,dmpf.process.role=relay
+      KAFKA_SASL_USERNAME: identity
+      KAFKA_SASL_PASSWORD: ${KAFKA_IDENTITY_PASSWORD:-identity-local}
+      KAFKA_GROUP: identity
+      KAFKA_IDENTITY_TOPIC: ${KAFKA_IDENTITY_TOPIC:-identity.events}
+      KAFKA_IDENTITY_DLQ: ${KAFKA_IDENTITY_DLQ:-identity.events.dlq}
+    depends_on:
+      redpanda-init:
+        condition: service_completed_successfully
+      dmpf-identity-api:
+        condition: service_started

@@ -1,0 +1,135 @@
+{
+  "format_version": "1",
+  "identity": {
+    "fixture": "identity/event/v1/membership-granted",
+    "contract": {
+      "package": "company.identity.event.v1",
+      "message": "MembershipGranted"
+    },
+    "type": "com.company.identity.membership-granted.v1",
+    "dataschema": "type.googleapis.com/company.identity.event.v1.MembershipGranted"
+  },
+  "covers": {
+    "profile_major": "1",
+    "contract_major": "v1"
+  },
+  "cases": [
+    {
+      "name": "all-conditionals-present",
+      "doc": "Caminho típico com os três atributos condicionais presentes (aggregateversion, tenantid, tracestate).",
+      "envelope": {
+        "aggregateversion": "7",
+        "causationid": "evt-0001",
+        "correlationid": "corr-0001",
+        "datacontenttype": "application/protobuf",
+        "dataschema": "type.googleapis.com/company.identity.event.v1.MembershipGranted",
+        "id": "evt-0001",
+        "partitionkey": "c-42",
+        "source": "urn:dmpf:reference-identity",
+        "specversion": "1.0",
+        "subject": "mbr-1001",
+        "tenantid": "tenant-a",
+        "time": "2026-09-02T12:00:00Z",
+        "traceparent": "00-0af7651916cd43dd8448eb211c80319c-b7ad6b7169203331-01",
+        "tracestate": "vendor=1",
+        "type": "com.company.identity.membership-granted.v1"
+      },
+      "payload": {
+        "granted_at": "2026-09-02T12:00:00Z",
+        "membership_id": "mbr-1001",
+        "organization_id": "org-1001",
+        "role": "MEMBERSHIP_ROLE_OPERATOR",
+        "user_id": "sub-1001",
+        "verification_level": "VERIFICATION_LEVEL_PERSONAL_DATA_CHECKED"
+      },
+      "payload_bytes_hex": "0a086d62722d3130303112086f72672d313030311a087375622d3130303120012802320608c09fe0d406",
+      "payload_hash": "500f587ef905d75eb09b2c75eeb3d0633f60da69b70411a1993430d159f9af6c"
+    },
+    {
+      "name": "all-conditionals-absent",
+      "doc": "Os três condicionais ausentes: nenhum entra no mapa de atributos (ENV-12, sem valor de preenchimento).",
+      "envelope": {
+        "causationid": "evt-0001",
+        "correlationid": "corr-0001",
+        "datacontenttype": "application/protobuf",
+        "dataschema": "type.googleapis.com/company.identity.event.v1.MembershipGranted",
+        "id": "evt-0002",
+        "partitionkey": "c-42",
+        "source": "urn:dmpf:reference-identity",
+        "specversion": "1.0",
+        "subject": "mbr-1001",
+        "time": "2026-09-02T12:00:00Z",
+        "traceparent": "00-0af7651916cd43dd8448eb211c80319c-b7ad6b7169203331-01",
+        "type": "com.company.identity.membership-granted.v1"
+      },
+      "payload": {
+        "granted_at": "2026-09-02T12:00:01Z",
+        "membership_id": "mbr-1002",
+        "organization_id": "org-1001",
+        "role": "MEMBERSHIP_ROLE_AUDITOR",
+        "user_id": "sub-1002",
+        "verification_level": "VERIFICATION_LEVEL_CHANNEL_OWNERSHIP"
+      },
+      "payload_bytes_hex": "0a086d62722d3130303212086f72672d313030311a087375622d3130303220022801320608c19fe0d406",
+      "payload_hash": "c96bd80dd50c93b817b9ab2c2484d6f4bc5d9c4db599e8cbab19f60316163492"
+    }
+  ],
+  "discriminators": [
+    {
+      "name": "unknown-field",
+      "doc": "Bytes canônicos mais um campo de número 99 (varint 42) que o contrato não conhece: a desserialização o preserva (PTB-10) e o hash o cobre (ENV-17).",
+      "envelope": {
+        "causationid": "evt-0001",
+        "correlationid": "corr-0001",
+        "datacontenttype": "application/protobuf",
+        "dataschema": "type.googleapis.com/company.identity.event.v1.MembershipGranted",
+        "id": "evt-2001",
+        "partitionkey": "c-42",
+        "source": "urn:dmpf:reference-identity",
+        "specversion": "1.0",
+        "subject": "mbr-1001",
+        "time": "2026-09-02T12:00:00Z",
+        "traceparent": "00-0af7651916cd43dd8448eb211c80319c-b7ad6b7169203331-01",
+        "type": "com.company.identity.membership-granted.v1"
+      },
+      "payload": {
+        "granted_at": "2026-09-02T12:00:02Z",
+        "membership_id": "mbr-2001",
+        "organization_id": "org-2001",
+        "role": "MEMBERSHIP_ROLE_AUDITOR",
+        "user_id": "sub-2001",
+        "verification_level": "VERIFICATION_LEVEL_PERSONAL_DATA_CHECKED"
+      },
+      "payload_bytes_hex": "0a086d62722d3230303112086f72672d323030311a087375622d3230303120022802320608c29fe0d40698062a",
+      "payload_hash": "be67334a3558d97eb0c8f2657ffce3d04cc6d94349b7e21e8b0d9dff87c78ee9"
+    },
+    {
+      "name": "non-canonical-field-order",
+      "doc": "Campos em ordem decrescente de número, o instante como sub-mensagem: decodifica no mesmo valor, mas o hash é o dos bytes transportados e difere do hash de uma reserialização (ENV-18). Campo repetido fica vazio, porque o codificador não canônico do kit cobre só escalares e mensagens.",
+      "envelope": {
+        "causationid": "evt-0001",
+        "correlationid": "corr-0001",
+        "datacontenttype": "application/protobuf",
+        "dataschema": "type.googleapis.com/company.identity.event.v1.MembershipGranted",
+        "id": "evt-2002",
+        "partitionkey": "c-42",
+        "source": "urn:dmpf:reference-identity",
+        "specversion": "1.0",
+        "subject": "mbr-1001",
+        "time": "2026-09-02T12:00:00Z",
+        "traceparent": "00-0af7651916cd43dd8448eb211c80319c-b7ad6b7169203331-01",
+        "type": "com.company.identity.membership-granted.v1"
+      },
+      "payload": {
+        "granted_at": "2026-09-02T12:00:03.123456789Z",
+        "membership_id": "mbr-2002",
+        "organization_id": "org-2001",
+        "role": "MEMBERSHIP_ROLE_OPERATOR",
+        "user_id": "sub-2002",
+        "verification_level": "VERIFICATION_LEVEL_PERSONAL_DATA_CHECKED"
+      },
+      "payload_bytes_hex": "320b08c39fe0d40610959aef3a280220011a087375622d3230303212086f72672d323030310a086d62722d32303032",
+      "payload_hash": "39fd641476ac75a8e393f79af9fb38fc357d77feca42d326cef1af8a94687b63"
+    }
+  ]
+}

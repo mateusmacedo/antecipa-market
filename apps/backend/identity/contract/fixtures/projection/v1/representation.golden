@@ -1,0 +1,422 @@
+{
+  "format_version": "1",
+  "identity": {
+    "context": "identity",
+    "aggregate": "representation"
+  },
+  "cases": [
+    {
+      "name": "register-accepted-with-scope",
+      "doc": "Ramo Accepted de Register: procuração com alçada completa e vigência fechada; nasce declared e não emite evento.",
+      "state_before": {
+        "representation": "rep-1",
+        "organization": "",
+        "person": "",
+        "power_type": "",
+        "source_type": "",
+        "source_evidence": "",
+        "scope_currency": "",
+        "scope_max_amount_minor": "0",
+        "scope_act_types": "",
+        "valid_from": "0",
+        "valid_until": "0",
+        "verification_status": "new",
+        "proposed_by": ""
+      },
+      "command": {
+        "upr": "register",
+        "organization": "org-1",
+        "organization_status": "active",
+        "person": "per-1",
+        "person_found": "true",
+        "power_type": "attorney_in_fact",
+        "source_type": "power_of_attorney",
+        "source_evidence": "evd-0001",
+        "scope_currency": "BRL",
+        "scope_max_amount_minor": "10000000",
+        "scope_act_types": "assignment,consent",
+        "valid_from": "1755432000000000000",
+        "valid_until": "1786968000000000000",
+        "proposed_by": "usr-1"
+      },
+      "expected": {
+        "branch": "accepted",
+        "response": {
+          "representation": "rep-1"
+        },
+        "events": [],
+        "state_after": {
+          "representation": "rep-1",
+          "organization": "org-1",
+          "person": "per-1",
+          "power_type": "attorney_in_fact",
+          "source_type": "power_of_attorney",
+          "source_evidence": "evd-0001",
+          "scope_currency": "BRL",
+          "scope_max_amount_minor": "10000000",
+          "scope_act_types": "assignment,consent",
+          "valid_from": "1755432000000000000",
+          "valid_until": "1786968000000000000",
+          "verification_status": "declared",
+          "proposed_by": "usr-1"
+        }
+      }
+    },
+    {
+      "name": "register-accepted-indefinite-without-scope",
+      "doc": "Ramo Accepted de Register: representante legal pelo contrato social, sem alçada e com validUntil zero, a vigência indeterminada.",
+      "state_before": {
+        "representation": "rep-1",
+        "organization": "",
+        "person": "",
+        "power_type": "",
+        "source_type": "",
+        "source_evidence": "",
+        "scope_currency": "",
+        "scope_max_amount_minor": "0",
+        "scope_act_types": "",
+        "valid_from": "0",
+        "valid_until": "0",
+        "verification_status": "new",
+        "proposed_by": ""
+      },
+      "command": {
+        "upr": "register",
+        "organization": "org-1",
+        "organization_status": "active",
+        "person": "per-1",
+        "person_found": "true",
+        "power_type": "legal_representative",
+        "source_type": "articles_of_association",
+        "source_evidence": "evd-0001",
+        "scope_currency": "",
+        "scope_max_amount_minor": "0",
+        "scope_act_types": "",
+        "valid_from": "1755432000000000000",
+        "valid_until": "0",
+        "proposed_by": "usr-1"
+      },
+      "expected": {
+        "branch": "accepted",
+        "response": {
+          "representation": "rep-1"
+        },
+        "events": [],
+        "state_after": {
+          "representation": "rep-1",
+          "organization": "org-1",
+          "person": "per-1",
+          "power_type": "legal_representative",
+          "source_type": "articles_of_association",
+          "source_evidence": "evd-0001",
+          "scope_currency": "",
+          "scope_max_amount_minor": "0",
+          "scope_act_types": "",
+          "valid_from": "1755432000000000000",
+          "valid_until": "0",
+          "verification_status": "declared",
+          "proposed_by": "usr-1"
+        }
+      }
+    },
+    {
+      "name": "register-source-evidence-missing",
+      "doc": "Ramo Rejected de Register: evidência só de espaços.",
+      "state_before": {
+        "representation": "rep-1",
+        "organization": "",
+        "person": "",
+        "power_type": "",
+        "source_type": "",
+        "source_evidence": "",
+        "scope_currency": "",
+        "scope_max_amount_minor": "0",
+        "scope_act_types": "",
+        "valid_from": "0",
+        "valid_until": "0",
+        "verification_status": "new",
+        "proposed_by": ""
+      },
+      "command": {
+        "upr": "register",
+        "organization": "org-1",
+        "organization_status": "active",
+        "person": "per-1",
+        "person_found": "true",
+        "power_type": "attorney_in_fact",
+        "source_type": "power_of_attorney",
+        "source_evidence": " ",
+        "scope_currency": "BRL",
+        "scope_max_amount_minor": "10000000",
+        "scope_act_types": "assignment,consent",
+        "valid_from": "1755432000000000000",
+        "valid_until": "1786968000000000000",
+        "proposed_by": "usr-1"
+      },
+      "expected": {
+        "branch": "rejected",
+        "rejection": {
+          "code": "identity-organization/representation/source-evidence-missing",
+          "message": "the evidence of the powers must be informed",
+          "details": {}
+        },
+        "events": [],
+        "state_after": {
+          "representation": "rep-1",
+          "organization": "",
+          "person": "",
+          "power_type": "",
+          "source_type": "",
+          "source_evidence": "",
+          "scope_currency": "",
+          "scope_max_amount_minor": "0",
+          "scope_act_types": "",
+          "valid_from": "0",
+          "valid_until": "0",
+          "verification_status": "new",
+          "proposed_by": ""
+        }
+      }
+    },
+    {
+      "name": "register-validity-invalid",
+      "doc": "Ramo Rejected de Register: validUntil igual a validFrom não é vigência.",
+      "state_before": {
+        "representation": "rep-1",
+        "organization": "",
+        "person": "",
+        "power_type": "",
+        "source_type": "",
+        "source_evidence": "",
+        "scope_currency": "",
+        "scope_max_amount_minor": "0",
+        "scope_act_types": "",
+        "valid_from": "0",
+        "valid_until": "0",
+        "verification_status": "new",
+        "proposed_by": ""
+      },
+      "command": {
+        "upr": "register",
+        "organization": "org-1",
+        "organization_status": "active",
+        "person": "per-1",
+        "person_found": "true",
+        "power_type": "attorney_in_fact",
+        "source_type": "power_of_attorney",
+        "source_evidence": "evd-0001",
+        "scope_currency": "BRL",
+        "scope_max_amount_minor": "10000000",
+        "scope_act_types": "assignment,consent",
+        "valid_from": "1755432000000000000",
+        "valid_until": "1755432000000000000",
+        "proposed_by": "usr-1"
+      },
+      "expected": {
+        "branch": "rejected",
+        "rejection": {
+          "code": "identity-organization/representation/validity-invalid",
+          "message": "valid until must come after valid from",
+          "details": {}
+        },
+        "events": [],
+        "state_after": {
+          "representation": "rep-1",
+          "organization": "",
+          "person": "",
+          "power_type": "",
+          "source_type": "",
+          "source_evidence": "",
+          "scope_currency": "",
+          "scope_max_amount_minor": "0",
+          "scope_act_types": "",
+          "valid_from": "0",
+          "valid_until": "0",
+          "verification_status": "new",
+          "proposed_by": ""
+        }
+      }
+    },
+    {
+      "name": "register-scope-invalid",
+      "doc": "Ramo Rejected de Register: valor máximo sem moeda.",
+      "state_before": {
+        "representation": "rep-1",
+        "organization": "",
+        "person": "",
+        "power_type": "",
+        "source_type": "",
+        "source_evidence": "",
+        "scope_currency": "",
+        "scope_max_amount_minor": "0",
+        "scope_act_types": "",
+        "valid_from": "0",
+        "valid_until": "0",
+        "verification_status": "new",
+        "proposed_by": ""
+      },
+      "command": {
+        "upr": "register",
+        "organization": "org-1",
+        "organization_status": "active",
+        "person": "per-1",
+        "person_found": "true",
+        "power_type": "attorney_in_fact",
+        "source_type": "power_of_attorney",
+        "source_evidence": "evd-0001",
+        "scope_currency": "",
+        "scope_max_amount_minor": "10000000",
+        "scope_act_types": "assignment,consent",
+        "valid_from": "1755432000000000000",
+        "valid_until": "1786968000000000000",
+        "proposed_by": "usr-1"
+      },
+      "expected": {
+        "branch": "rejected",
+        "rejection": {
+          "code": "identity-organization/representation/scope-invalid",
+          "message": "the scope needs a positive amount with its currency, or neither",
+          "details": {}
+        },
+        "events": [],
+        "state_after": {
+          "representation": "rep-1",
+          "organization": "",
+          "person": "",
+          "power_type": "",
+          "source_type": "",
+          "source_evidence": "",
+          "scope_currency": "",
+          "scope_max_amount_minor": "0",
+          "scope_act_types": "",
+          "valid_from": "0",
+          "valid_until": "0",
+          "verification_status": "new",
+          "proposed_by": ""
+        }
+      }
+    },
+    {
+      "name": "register-organization-offboarded",
+      "doc": "Ramo Rejected de Register: a organização lida pelo caso de uso está offboarded (nota †).",
+      "state_before": {
+        "representation": "rep-1",
+        "organization": "",
+        "person": "",
+        "power_type": "",
+        "source_type": "",
+        "source_evidence": "",
+        "scope_currency": "",
+        "scope_max_amount_minor": "0",
+        "scope_act_types": "",
+        "valid_from": "0",
+        "valid_until": "0",
+        "verification_status": "new",
+        "proposed_by": ""
+      },
+      "command": {
+        "upr": "register",
+        "organization": "org-1",
+        "organization_status": "offboarded",
+        "person": "per-1",
+        "person_found": "true",
+        "power_type": "attorney_in_fact",
+        "source_type": "power_of_attorney",
+        "source_evidence": "evd-0001",
+        "scope_currency": "BRL",
+        "scope_max_amount_minor": "10000000",
+        "scope_act_types": "assignment,consent",
+        "valid_from": "1755432000000000000",
+        "valid_until": "1786968000000000000",
+        "proposed_by": "usr-1"
+      },
+      "expected": {
+        "branch": "rejected",
+        "rejection": {
+          "code": "identity-organization/representation/organization-not-active",
+          "message": "organization must exist and be active",
+          "details": {
+            "organization": "org-1"
+          }
+        },
+        "events": [],
+        "state_after": {
+          "representation": "rep-1",
+          "organization": "",
+          "person": "",
+          "power_type": "",
+          "source_type": "",
+          "source_evidence": "",
+          "scope_currency": "",
+          "scope_max_amount_minor": "0",
+          "scope_act_types": "",
+          "valid_from": "0",
+          "valid_until": "0",
+          "verification_status": "new",
+          "proposed_by": ""
+        }
+      }
+    },
+    {
+      "name": "register-person-not-found",
+      "doc": "Ramo Rejected de Register: a pessoa não foi encontrada pelo caso de uso (nota †).",
+      "state_before": {
+        "representation": "rep-1",
+        "organization": "",
+        "person": "",
+        "power_type": "",
+        "source_type": "",
+        "source_evidence": "",
+        "scope_currency": "",
+        "scope_max_amount_minor": "0",
+        "scope_act_types": "",
+        "valid_from": "0",
+        "valid_until": "0",
+        "verification_status": "new",
+        "proposed_by": ""
+      },
+      "command": {
+        "upr": "register",
+        "organization": "org-1",
+        "organization_status": "active",
+        "person": "per-1",
+        "person_found": "false",
+        "power_type": "attorney_in_fact",
+        "source_type": "power_of_attorney",
+        "source_evidence": "evd-0001",
+        "scope_currency": "BRL",
+        "scope_max_amount_minor": "10000000",
+        "scope_act_types": "assignment,consent",
+        "valid_from": "1755432000000000000",
+        "valid_until": "1786968000000000000",
+        "proposed_by": "usr-1"
+      },
+      "expected": {
+        "branch": "rejected",
+        "rejection": {
+          "code": "identity-organization/representation/person-not-found",
+          "message": "person must exist",
+          "details": {
+            "person": "per-1"
+          }
+        },
+        "events": [],
+        "state_after": {
+          "representation": "rep-1",
+          "organization": "",
+          "person": "",
+          "power_type": "",
+          "source_type": "",
+          "source_evidence": "",
+          "scope_currency": "",
+          "scope_max_amount_minor": "0",
+          "scope_act_types": "",
+          "valid_from": "0",
+          "valid_until": "0",
+          "verification_status": "new",
+          "proposed_by": ""
+        }
+      }
+    }
+  ]
+}

@@ -1,0 +1,17 @@
+syntax = "proto3";
+
+package company.identity.event.v1;
+
+import "company/identity/event/v1/types.proto";
+import "google/protobuf/timestamp.proto";
+
+// An establishment was added to an organization in the identity-organization
+// bounded context. The tax id crosses the context only as its hash.
+message EstablishmentAdded {
+  string establishment_id = 1;
+  string organization_id = 2;
+  TaxIdType tax_id_type = 3;
+  string tax_id_hash = 4;
+  bool receiver = 5;
+  google.protobuf.Timestamp added_at = 6;
+}

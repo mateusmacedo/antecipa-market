@@ -1,6 +1,83 @@
 {
   "schema": "dmpf/units-baseline@1",
-  "digest": "sha256:374708fff7719dd5979ec875d56cd2286f6d3cf7ec317a3b25632aab28ec37bb",
-  "entries": [],
+  "digest": "sha256:90fe0a093f759e7ed07f29efa08986fcb71e5603ec4a62c7e04e55109adb98b3",
+  "entries": [
+    {
+      "unit": "identity-organization/app",
+      "module": "github.com/mateusmacedo/antecipa-market/apps/backend/identity",
+      "block": "app",
+      "bounded_context": "identity-organization",
+      "membership": [
+        "github.com/mateusmacedo/antecipa-market/apps/backend/identity/app",
+        "github.com/mateusmacedo/antecipa-market/apps/backend/identity/app/rpc",
+        "github.com/mateusmacedo/antecipa-market/apps/backend/identity/cmd"
+      ]
+    },
+    {
+      "unit": "identity-organization/appkit",
+      "module": "github.com/mateusmacedo/antecipa-market/apps/backend/identity",
+      "block": "app",
+      "bounded_context": "identity-organization",
+      "membership": [
+        "github.com/mateusmacedo/antecipa-market/apps/backend/identity/appkit"
+      ]
+    },
+    {
+      "unit": "identity-organization/application",
+      "module": "github.com/mateusmacedo/antecipa-market/apps/backend/identity",
+      "block": "application",
+      "bounded_context": "identity-organization",
+      "membership": [
+        "github.com/mateusmacedo/antecipa-market/apps/backend/identity/application"
+      ]
+    },
+    {
+      "unit": "identity-organization/distkit",
+      "module": "github.com/mateusmacedo/antecipa-market/apps/backend/identity",
+      "block": "app",
+      "bounded_context": "identity-organization",
+      "membership": [
+        "github.com/mateusmacedo/antecipa-market/apps/backend/identity/distkit"
+      ]
+    },
+    {
+      "unit": "identity-organization/domain",
+      "module": "github.com/mateusmacedo/antecipa-market/apps/backend/identity",
+      "block": "domain",
+      "bounded_context": "identity-organization",
+      "membership": [
+        "github.com/mateusmacedo/antecipa-market/apps/backend/identity/domain"
+      ]
+    },
+    {
+      "unit": "identity-organization/ports",
+      "module": "github.com/mateusmacedo/antecipa-market/apps/backend/identity",
+      "block": "port",
+      "bounded_context": "identity-organization",
+      "membership": [
+        "github.com/mateusmacedo/antecipa-market/apps/backend/identity/ports"
+      ]
+    },
+    {
+      "unit": "identity-organization/provider-postgres",
+      "module": "github.com/mateusmacedo/antecipa-market/apps/backend/identity",
+      "block": "provider",
+      "bounded_context": "identity-organization",
+      "membership": [
+        "github.com/mateusmacedo/antecipa-market/apps/backend/identity/provider"
+      ]
+    },
+    {
+      "unit": "identity-organization/contract",
+      "module": "github.com/mateusmacedo/antecipa-market/apps/backend/identity/contract",
+      "block": "contract",
+      "bounded_context": "identity-organization",
+      "membership": [
+        "github.com/mateusmacedo/antecipa-market/apps/backend/identity/contract",
+        "github.com/mateusmacedo/antecipa-market/apps/backend/identity/contract/gen/go/company/identity/event/v1",
+        "github.com/mateusmacedo/antecipa-market/apps/backend/identity/contract/gen/go/company/identity/service/v1"
+      ]
+    }
+  ],
   "shared_kernel_units": []
 }

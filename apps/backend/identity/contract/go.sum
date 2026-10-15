@@ -1,0 +1,10 @@
+github.com/google/go-cmp v0.7.0 h1:wk8382ETsv4JYUZwIsn6YpYiWiBsYLSJiTsyBybVuN8=
+github.com/google/go-cmp v0.7.0/go.mod h1:pXiqmnSA92OHEEa9HXL2W4E7lf9JzCmGVUdgjX3N/iU=
+github.com/mateusmacedo/dmpf/libs/backend/go/contracts v1.0.0-rc.4 h1:sck447nweSG16VdbJxagibG30Lw2WKRa5yz0f9v4QL4=
+github.com/mateusmacedo/dmpf/libs/backend/go/contracts v1.0.0-rc.4/go.mod h1:kZQm/om71hKfkgBHYU9x6cgs0RF75P9rT4wIXfD9qtw=
+github.com/mateusmacedo/dmpf/libs/backend/go/domain v1.0.0-rc.4 h1:ApCZ73MDSfacny82LASLNsJiHC4JZ9lknNZbcdEd3Ig=
+github.com/mateusmacedo/dmpf/libs/backend/go/domain v1.0.0-rc.4/go.mod h1:LF2zSfStnF4Rz6T5Kz9DWntRsf5f63Y4KqLKUG3PfLc=
+github.com/mateusmacedo/dmpf/libs/backend/go/testkit v1.0.0-rc.4 h1:iDONqonEOIrGZEVJZoBebv/3bZv5wnDSjccWAUQCc24=
+github.com/mateusmacedo/dmpf/libs/backend/go/testkit v1.0.0-rc.4/go.mod h1:J8tR6N4q36U0SrRObRr0jkwkVlRjC/6+8V7ALK2G3hk=
+google.golang.org/protobuf v1.36.12 h1:pJOKDDOyeXErUroCihFAd5LQuwXBSpVnKGrj5o/fwxc=
+google.golang.org/protobuf v1.36.12/go.mod h1:HTf+CrKn2C3g5S8VImy6tdcUvCska2kB7j23XfzDpco=

@@ -1,0 +1,16 @@
+syntax = "proto3";
+
+package company.identity.event.v1;
+
+import "google/protobuf/timestamp.proto";
+
+// A change of the bank account of an organization was requested in the
+// identity-organization bounded context. The bank data never crosses here:
+// only the id of the evidence of the destination does.
+message BankAccountChangeRequested {
+  string bank_account_change_id = 1;
+  string organization_id = 2;
+  string destination_evidence_id = 3;
+  string requested_by_user_id = 4;
+  google.protobuf.Timestamp requested_at = 5;
+}
