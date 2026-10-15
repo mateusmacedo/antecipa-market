@@ -124,8 +124,7 @@ nx-base-template/
 │   ├── docker/                     # Dockerfile de referência
 │   └── local/, k8s/, observability/, test/  # saída do dmpf-plugin — não editar à mão
 ├── tools/                          # generators, executors e scripts do workspace
-│   ├── dmpf-baseline/              # baseline de conformidade (saída do dmpf-plugin)
-│   └── template-smoke.sh           # smoke do template (contexto descartável)
+│   └── dmpf-baseline/              # baseline de conformidade (saída do dmpf-plugin)
 ├── .agents/skills/                 # skills de workspace (Nx) e dmpf-* (saída do dmpf-plugin)
 ├── .claude/                        # agents, skills e rules para assistentes
 ├── dmpf.json                       # configuração do DMPF (saída do init)
@@ -230,7 +229,7 @@ Scripts raiz (`pnpm lint`, `pnpm typecheck`, `pnpm test`, `pnpm build`, `pnpm fo
   - `nx-publish-libs.yml` é a republicação **manual** (dispatch com os inputs `tag` e `ref`), pelo mesmo `publish-libs.yaml`, para quando a publicação encadeada falhar.
   - A publicação das libs vai para o GitHub Packages (`https://npm.pkg.github.com`, escopo `@mateusmacedo`), autenticada no CI só com `secrets.GITHUB_TOKEN` (`packages: write`). Quem consome libs publicadas usa um token com `read:packages` no `~/.npmrc` (`//npm.pkg.github.com/:_authToken=${NODE_AUTH_TOKEN}`) e `@mateusmacedo:registry=https://npm.pkg.github.com` no `.npmrc` do projeto.
   - A separação entre versionamento e publicação vem da ADR-004; o alvo de publicação e o runner atuais seguem a ADR-010, que a supersede em parte.
-- **CI:** `.github/workflows/ci.yml` roda em PRs para `master`, `develop` e `release/**` (ignora mudanças só em `**/*.md` e em `.github/ISSUE_TEMPLATE/**`), no runner `ubuntu-26.04`: `biome ci`, depois `nx affected` de lint, typecheck, test (com `--ci --coverage`), build e e2e, excluindo `tag:stack:go`; em paralelo, o job `template-smoke` roda `tools/template-smoke.sh`. Os projetos Go passam pelo `.github/workflows/dmpf-ci.yml`, saída do `init` que chama o reutilizável do platform fixado por SHA; no template, sem módulo Go, ele falha no gate de conformance e não é check obrigatório.
+- **CI:** `.github/workflows/ci.yml` roda em PRs para `master`, `develop` e `release/**` (ignora mudanças só em `**/*.md` e em `.github/ISSUE_TEMPLATE/**`), no runner `ubuntu-26.04`: `biome ci`, depois `nx affected` de lint, typecheck, test (com `--ci --coverage`), build e e2e, excluindo `tag:stack:go`. Os projetos Go passam pelo `.github/workflows/dmpf-ci.yml`, saída do `init` que chama o reutilizável do platform fixado por SHA; no template, sem módulo Go, ele falha no gate de conformance e não é check obrigatório.
 - **Demais workflows:** `publish-libs.yaml` e `detect-apps.yaml` são reutilizáveis **locais** (`on: workflow_call`), chamados por `uses: ./.github/workflows/...`. O `cd-dev-hmg.yml` é um **template de CD desligado**, com apenas `workflow_dispatch` e o job de deploy comentado (ver `docs/ci-cd/`); seu job `detect` usa o `detect-apps.yaml` local, e o deploy comentado aponta para `./.github/workflows/deploy-eks.yaml`, reutilizável que **não existe** neste repositório. Ele deve ser criado quando o CD for ligado, com roles AWS, registry e repositório de infraestrutura do próprio projeto; o mesmo vale para os modelos ECS, on-premises e Lambda.
 
 ---

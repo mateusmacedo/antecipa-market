@@ -57,7 +57,7 @@ message PingResponse {}
 
 ## 3. Rodar os gates
 
-A mesma sequência do `tools/template-smoke.sh`:
+Na raiz do workspace:
 
 ```bash
 go list -m -f '{{.Path}}/...' | xargs go build
@@ -78,7 +78,7 @@ pnpm nx run-many -t buf-lint
 O contexto gerado já tem o bloco `provider`, que depende do módulo Postgres do kernel; o
 context-check lê o DDL desse módulo no cache de módulos do Go.
 
-No PR, o `ci.yml` cobre as stacks JS e o `template-smoke`; o `dmpf-ci.yml` cobre os
+No PR, o `ci.yml` cobre as stacks JS; o `dmpf-ci.yml` cobre os
 projetos Go e passa a valer a partir deste primeiro contexto.
 
 ## 4. Release
