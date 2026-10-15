@@ -9,5 +9,25 @@
   },
   "enabledPlugins": {
     "nx@nx-claude-plugins": true
+  },
+  "permissions": {
+    "allow": [
+      "mcp__plugin_linear_linear__get_issue",
+      "Bash(pnpm biome ci *)",
+      "Bash(gofmt -l *)",
+      "Bash(go vet .)",
+      "Bash(go vet ./...)",
+      "Bash(go version)",
+      "Bash(go doc *)",
+      "mcp__plugin_context-mode_context-mode__ctx_search",
+      "mcp__plugin_linear_linear__list_issues",
+      "Bash(pnpm config get *)",
+      "Bash(docker compose ls *)",
+      "mcp__plugin_linear_linear__get_team",
+      "mcp__plugin_linear_linear__list_issue_labels",
+      "mcp__plugin_linear_linear__get_workspace",
+      "mcp__plugin_linear_linear__list_issue_statuses",
+      "mcp__plugin_serena_serena__search_for_pattern"
+    ]
   }
 }
