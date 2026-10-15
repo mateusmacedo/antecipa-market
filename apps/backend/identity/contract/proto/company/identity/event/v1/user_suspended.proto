@@ -1,0 +1,14 @@
+syntax = "proto3";
+
+package company.identity.event.v1;
+
+import "google/protobuf/timestamp.proto";
+
+// A user account was suspended in the identity-organization bounded context;
+// it reaches the account of the tenant where it happened, alone.
+message UserSuspended {
+  // The subject of the user, the natural identity of the account in the tenant.
+  string user_id = 1;
+  string reason = 2;
+  google.protobuf.Timestamp suspended_at = 3;
+}

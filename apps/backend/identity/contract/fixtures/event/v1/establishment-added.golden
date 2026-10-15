@@ -1,0 +1,135 @@
+{
+  "format_version": "1",
+  "identity": {
+    "fixture": "identity/event/v1/establishment-added",
+    "contract": {
+      "package": "company.identity.event.v1",
+      "message": "EstablishmentAdded"
+    },
+    "type": "com.company.identity.establishment-added.v1",
+    "dataschema": "type.googleapis.com/company.identity.event.v1.EstablishmentAdded"
+  },
+  "covers": {
+    "profile_major": "1",
+    "contract_major": "v1"
+  },
+  "cases": [
+    {
+      "name": "all-conditionals-present",
+      "doc": "Caminho típico com os três atributos condicionais presentes (aggregateversion, tenantid, tracestate).",
+      "envelope": {
+        "aggregateversion": "7",
+        "causationid": "evt-0001",
+        "correlationid": "corr-0001",
+        "datacontenttype": "application/protobuf",
+        "dataschema": "type.googleapis.com/company.identity.event.v1.EstablishmentAdded",
+        "id": "evt-0001",
+        "partitionkey": "c-42",
+        "source": "urn:dmpf:reference-identity",
+        "specversion": "1.0",
+        "subject": "est-1001",
+        "tenantid": "tenant-a",
+        "time": "2026-09-02T12:00:00Z",
+        "traceparent": "00-0af7651916cd43dd8448eb211c80319c-b7ad6b7169203331-01",
+        "tracestate": "vendor=1",
+        "type": "com.company.identity.establishment-added.v1"
+      },
+      "payload": {
+        "added_at": "2026-09-02T12:00:00Z",
+        "establishment_id": "est-1001",
+        "organization_id": "org-1001",
+        "receiver": "true",
+        "tax_id_hash": "9c1185a5c5e9fc54612808977ee8f548b2258d31b6e2e9a4e5a3ab4c2c4e0f11",
+        "tax_id_type": "TAX_ID_TYPE_CNPJ"
+      },
+      "payload_bytes_hex": "0a086573742d3130303112086f72672d3130303118012240396331313835613563356539666335343631323830383937376565386635343862323235386433316236653265396134653561336162346332633465306631312801320608c09fe0d406",
+      "payload_hash": "fc48f2e70bc9b42c115b0f667e6b3347fa382c5ec7fa1eefbf2948cf69e3b6f6"
+    },
+    {
+      "name": "all-conditionals-absent",
+      "doc": "Os três condicionais ausentes: nenhum entra no mapa de atributos (ENV-12, sem valor de preenchimento).",
+      "envelope": {
+        "causationid": "evt-0001",
+        "correlationid": "corr-0001",
+        "datacontenttype": "application/protobuf",
+        "dataschema": "type.googleapis.com/company.identity.event.v1.EstablishmentAdded",
+        "id": "evt-0002",
+        "partitionkey": "c-42",
+        "source": "urn:dmpf:reference-identity",
+        "specversion": "1.0",
+        "subject": "est-1001",
+        "time": "2026-09-02T12:00:00Z",
+        "traceparent": "00-0af7651916cd43dd8448eb211c80319c-b7ad6b7169203331-01",
+        "type": "com.company.identity.establishment-added.v1"
+      },
+      "payload": {
+        "added_at": "2026-09-02T12:00:01Z",
+        "establishment_id": "est-1002",
+        "organization_id": "org-1001",
+        "receiver": "false",
+        "tax_id_hash": "5b2d0f0e4c8f1a9e7d36c2b4a1f0e9d8c7b6a5f4e3d2c1b0a9f8e7d6c5b4a392",
+        "tax_id_type": "TAX_ID_TYPE_CPF"
+      },
+      "payload_bytes_hex": "0a086573742d3130303212086f72672d313030311802224035623264306630653463386631613965376433366332623461316630653964386337623661356634653364326331623061396638653764366335623461333932320608c19fe0d406",
+      "payload_hash": "9739ddd7cae854854437055bbd756df7c78e6c1951fbdc436bbdd649a3ad29b0"
+    }
+  ],
+  "discriminators": [
+    {
+      "name": "unknown-field",
+      "doc": "Bytes canônicos mais um campo de número 99 (varint 42) que o contrato não conhece: a desserialização o preserva (PTB-10) e o hash o cobre (ENV-17).",
+      "envelope": {
+        "causationid": "evt-0001",
+        "correlationid": "corr-0001",
+        "datacontenttype": "application/protobuf",
+        "dataschema": "type.googleapis.com/company.identity.event.v1.EstablishmentAdded",
+        "id": "evt-2001",
+        "partitionkey": "c-42",
+        "source": "urn:dmpf:reference-identity",
+        "specversion": "1.0",
+        "subject": "est-1001",
+        "time": "2026-09-02T12:00:00Z",
+        "traceparent": "00-0af7651916cd43dd8448eb211c80319c-b7ad6b7169203331-01",
+        "type": "com.company.identity.establishment-added.v1"
+      },
+      "payload": {
+        "added_at": "2026-09-02T12:00:02Z",
+        "establishment_id": "est-2001",
+        "organization_id": "org-2001",
+        "receiver": "true",
+        "tax_id_hash": "e7a1c3b5d7f9e1a3c5b7d9f1e3a5c7b9d1f3e5a7c9b1d3f5e7a9c1b3d5f7e901",
+        "tax_id_type": "TAX_ID_TYPE_CNPJ"
+      },
+      "payload_bytes_hex": "0a086573742d3230303112086f72672d3230303118012240653761316333623564376639653161336335623764396631653361356337623964316633653561376339623164336635653761396331623364356637653930312801320608c29fe0d40698062a",
+      "payload_hash": "32f491af78748384987f8fb318be23ec2924597172cc1fa8b58c8f64295d9f00"
+    },
+    {
+      "name": "non-canonical-field-order",
+      "doc": "Campos em ordem decrescente de número, o instante como sub-mensagem: decodifica no mesmo valor, mas o hash é o dos bytes transportados e difere do hash de uma reserialização (ENV-18). Campo repetido fica vazio, porque o codificador não canônico do kit cobre só escalares e mensagens.",
+      "envelope": {
+        "causationid": "evt-0001",
+        "correlationid": "corr-0001",
+        "datacontenttype": "application/protobuf",
+        "dataschema": "type.googleapis.com/company.identity.event.v1.EstablishmentAdded",
+        "id": "evt-2002",
+        "partitionkey": "c-42",
+        "source": "urn:dmpf:reference-identity",
+        "specversion": "1.0",
+        "subject": "est-1001",
+        "time": "2026-09-02T12:00:00Z",
+        "traceparent": "00-0af7651916cd43dd8448eb211c80319c-b7ad6b7169203331-01",
+        "type": "com.company.identity.establishment-added.v1"
+      },
+      "payload": {
+        "added_at": "2026-09-02T12:00:03.123456789Z",
+        "establishment_id": "est-2002",
+        "organization_id": "org-2001",
+        "receiver": "false",
+        "tax_id_hash": "0f1e2d3c4b5a69788796a5b4c3d2e1f00f1e2d3c4b5a69788796a5b4c3d2e1f0",
+        "tax_id_type": "TAX_ID_TYPE_CPF"
+      },
+      "payload_bytes_hex": "320b08c39fe0d40610959aef3a224030663165326433633462356136393738383739366135623463336432653166303066316532643363346235613639373838373936613562346333643265316630180212086f72672d323030310a086573742d32303032",
+      "payload_hash": "eef5cae96174f28b7555f23b927cb02b01240d76ad29f947e20e36377abaf703"
+    }
+  ]
+}

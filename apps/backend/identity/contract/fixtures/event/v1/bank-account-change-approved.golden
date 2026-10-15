@@ -1,0 +1,127 @@
+{
+  "format_version": "1",
+  "identity": {
+    "fixture": "identity/event/v1/bank-account-change-approved",
+    "contract": {
+      "package": "company.identity.event.v1",
+      "message": "BankAccountChangeApproved"
+    },
+    "type": "com.company.identity.bank-account-change-approved.v1",
+    "dataschema": "type.googleapis.com/company.identity.event.v1.BankAccountChangeApproved"
+  },
+  "covers": {
+    "profile_major": "1",
+    "contract_major": "v1"
+  },
+  "cases": [
+    {
+      "name": "all-conditionals-present",
+      "doc": "Caminho típico com os três atributos condicionais presentes (aggregateversion, tenantid, tracestate).",
+      "envelope": {
+        "aggregateversion": "7",
+        "causationid": "evt-0001",
+        "correlationid": "corr-0001",
+        "datacontenttype": "application/protobuf",
+        "dataschema": "type.googleapis.com/company.identity.event.v1.BankAccountChangeApproved",
+        "id": "evt-0001",
+        "partitionkey": "c-42",
+        "source": "urn:dmpf:reference-identity",
+        "specversion": "1.0",
+        "subject": "bac-1001",
+        "tenantid": "tenant-a",
+        "time": "2026-09-02T12:00:00Z",
+        "traceparent": "00-0af7651916cd43dd8448eb211c80319c-b7ad6b7169203331-01",
+        "tracestate": "vendor=1",
+        "type": "com.company.identity.bank-account-change-approved.v1"
+      },
+      "payload": {
+        "approved_at": "2026-09-02T12:00:00Z",
+        "approved_by_user_id": "sub-1002",
+        "bank_account_change_id": "bac-1001",
+        "organization_id": "org-1001"
+      },
+      "payload_bytes_hex": "0a086261632d3130303112086f72672d313030311a087375622d31303032220608c09fe0d406",
+      "payload_hash": "bed234af210069f80cba7ba4f65adbdeaa714a623037ba88211711958b4bfc58"
+    },
+    {
+      "name": "all-conditionals-absent",
+      "doc": "Os três condicionais ausentes: nenhum entra no mapa de atributos (ENV-12, sem valor de preenchimento).",
+      "envelope": {
+        "causationid": "evt-0001",
+        "correlationid": "corr-0001",
+        "datacontenttype": "application/protobuf",
+        "dataschema": "type.googleapis.com/company.identity.event.v1.BankAccountChangeApproved",
+        "id": "evt-0002",
+        "partitionkey": "c-42",
+        "source": "urn:dmpf:reference-identity",
+        "specversion": "1.0",
+        "subject": "bac-1001",
+        "time": "2026-09-02T12:00:00Z",
+        "traceparent": "00-0af7651916cd43dd8448eb211c80319c-b7ad6b7169203331-01",
+        "type": "com.company.identity.bank-account-change-approved.v1"
+      },
+      "payload": {
+        "approved_at": "2026-09-02T12:00:01Z",
+        "approved_by_user_id": "sub-1001",
+        "bank_account_change_id": "bac-1002",
+        "organization_id": "org-1001"
+      },
+      "payload_bytes_hex": "0a086261632d3130303212086f72672d313030311a087375622d31303031220608c19fe0d406",
+      "payload_hash": "96bdbaa32a7ad1c3dccac1add1978efbc3f42d8be14b165ad9ac6d33dddc7131"
+    }
+  ],
+  "discriminators": [
+    {
+      "name": "unknown-field",
+      "doc": "Bytes canônicos mais um campo de número 99 (varint 42) que o contrato não conhece: a desserialização o preserva (PTB-10) e o hash o cobre (ENV-17).",
+      "envelope": {
+        "causationid": "evt-0001",
+        "correlationid": "corr-0001",
+        "datacontenttype": "application/protobuf",
+        "dataschema": "type.googleapis.com/company.identity.event.v1.BankAccountChangeApproved",
+        "id": "evt-2001",
+        "partitionkey": "c-42",
+        "source": "urn:dmpf:reference-identity",
+        "specversion": "1.0",
+        "subject": "bac-1001",
+        "time": "2026-09-02T12:00:00Z",
+        "traceparent": "00-0af7651916cd43dd8448eb211c80319c-b7ad6b7169203331-01",
+        "type": "com.company.identity.bank-account-change-approved.v1"
+      },
+      "payload": {
+        "approved_at": "2026-09-02T12:00:02Z",
+        "approved_by_user_id": "sub-2002",
+        "bank_account_change_id": "bac-2001",
+        "organization_id": "org-2001"
+      },
+      "payload_bytes_hex": "0a086261632d3230303112086f72672d323030311a087375622d32303032220608c29fe0d40698062a",
+      "payload_hash": "04fc2058e3edc8c73237b37c3764d567d29c99a9c4132a54fe1372497c94765b"
+    },
+    {
+      "name": "non-canonical-field-order",
+      "doc": "Campos em ordem decrescente de número, o instante como sub-mensagem: decodifica no mesmo valor, mas o hash é o dos bytes transportados e difere do hash de uma reserialização (ENV-18). Campo repetido fica vazio, porque o codificador não canônico do kit cobre só escalares e mensagens.",
+      "envelope": {
+        "causationid": "evt-0001",
+        "correlationid": "corr-0001",
+        "datacontenttype": "application/protobuf",
+        "dataschema": "type.googleapis.com/company.identity.event.v1.BankAccountChangeApproved",
+        "id": "evt-2002",
+        "partitionkey": "c-42",
+        "source": "urn:dmpf:reference-identity",
+        "specversion": "1.0",
+        "subject": "bac-1001",
+        "time": "2026-09-02T12:00:00Z",
+        "traceparent": "00-0af7651916cd43dd8448eb211c80319c-b7ad6b7169203331-01",
+        "type": "com.company.identity.bank-account-change-approved.v1"
+      },
+      "payload": {
+        "approved_at": "2026-09-02T12:00:03.123456789Z",
+        "approved_by_user_id": "sub-2001",
+        "bank_account_change_id": "bac-2002",
+        "organization_id": "org-2001"
+      },
+      "payload_bytes_hex": "220b08c39fe0d40610959aef3a1a087375622d3230303112086f72672d323030310a086261632d32303032",
+      "payload_hash": "d849e47860bef790ab48b2fcc01a18720b452d139a160d4f022846f084579719"
+    }
+  ]
+}

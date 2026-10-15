@@ -1,0 +1,135 @@
+{
+  "format_version": "1",
+  "identity": {
+    "fixture": "identity/event/v1/membership-revoked",
+    "contract": {
+      "package": "company.identity.event.v1",
+      "message": "MembershipRevoked"
+    },
+    "type": "com.company.identity.membership-revoked.v1",
+    "dataschema": "type.googleapis.com/company.identity.event.v1.MembershipRevoked"
+  },
+  "covers": {
+    "profile_major": "1",
+    "contract_major": "v1"
+  },
+  "cases": [
+    {
+      "name": "all-conditionals-present",
+      "doc": "Caminho típico com os três atributos condicionais presentes (aggregateversion, tenantid, tracestate).",
+      "envelope": {
+        "aggregateversion": "7",
+        "causationid": "evt-0001",
+        "correlationid": "corr-0001",
+        "datacontenttype": "application/protobuf",
+        "dataschema": "type.googleapis.com/company.identity.event.v1.MembershipRevoked",
+        "id": "evt-0001",
+        "partitionkey": "c-42",
+        "source": "urn:dmpf:reference-identity",
+        "specversion": "1.0",
+        "subject": "mbr-1001",
+        "tenantid": "tenant-a",
+        "time": "2026-09-02T12:00:00Z",
+        "traceparent": "00-0af7651916cd43dd8448eb211c80319c-b7ad6b7169203331-01",
+        "tracestate": "vendor=1",
+        "type": "com.company.identity.membership-revoked.v1"
+      },
+      "payload": {
+        "membership_id": "mbr-1001",
+        "organization_id": "org-1001",
+        "reason": "left the company",
+        "revoked_at": "2026-09-02T12:00:00Z",
+        "role": "MEMBERSHIP_ROLE_OPERATOR",
+        "user_id": "sub-1001"
+      },
+      "payload_bytes_hex": "0a086d62722d3130303112086f72672d313030311a087375622d3130303120012a106c6566742074686520636f6d70616e79320608c09fe0d406",
+      "payload_hash": "293ec63a0fbb555818920a24d19453f19f85550e83d8e87f23b9543a250c6564"
+    },
+    {
+      "name": "all-conditionals-absent",
+      "doc": "Os três condicionais ausentes: nenhum entra no mapa de atributos (ENV-12, sem valor de preenchimento).",
+      "envelope": {
+        "causationid": "evt-0001",
+        "correlationid": "corr-0001",
+        "datacontenttype": "application/protobuf",
+        "dataschema": "type.googleapis.com/company.identity.event.v1.MembershipRevoked",
+        "id": "evt-0002",
+        "partitionkey": "c-42",
+        "source": "urn:dmpf:reference-identity",
+        "specversion": "1.0",
+        "subject": "mbr-1001",
+        "time": "2026-09-02T12:00:00Z",
+        "traceparent": "00-0af7651916cd43dd8448eb211c80319c-b7ad6b7169203331-01",
+        "type": "com.company.identity.membership-revoked.v1"
+      },
+      "payload": {
+        "membership_id": "mbr-1002",
+        "organization_id": "org-1001",
+        "reason": "audit concluded",
+        "revoked_at": "2026-09-02T12:00:01Z",
+        "role": "MEMBERSHIP_ROLE_AUDITOR",
+        "user_id": "sub-1002"
+      },
+      "payload_bytes_hex": "0a086d62722d3130303212086f72672d313030311a087375622d3130303220022a0f617564697420636f6e636c75646564320608c19fe0d406",
+      "payload_hash": "0b969a97a762b76aee271d73d5421ed5ee25445049d97998ce200a4c762497a2"
+    }
+  ],
+  "discriminators": [
+    {
+      "name": "unknown-field",
+      "doc": "Bytes canônicos mais um campo de número 99 (varint 42) que o contrato não conhece: a desserialização o preserva (PTB-10) e o hash o cobre (ENV-17).",
+      "envelope": {
+        "causationid": "evt-0001",
+        "correlationid": "corr-0001",
+        "datacontenttype": "application/protobuf",
+        "dataschema": "type.googleapis.com/company.identity.event.v1.MembershipRevoked",
+        "id": "evt-2001",
+        "partitionkey": "c-42",
+        "source": "urn:dmpf:reference-identity",
+        "specversion": "1.0",
+        "subject": "mbr-1001",
+        "time": "2026-09-02T12:00:00Z",
+        "traceparent": "00-0af7651916cd43dd8448eb211c80319c-b7ad6b7169203331-01",
+        "type": "com.company.identity.membership-revoked.v1"
+      },
+      "payload": {
+        "membership_id": "mbr-2001",
+        "organization_id": "org-2001",
+        "reason": "role changed",
+        "revoked_at": "2026-09-02T12:00:02Z",
+        "role": "MEMBERSHIP_ROLE_AUDITOR",
+        "user_id": "sub-2001"
+      },
+      "payload_bytes_hex": "0a086d62722d3230303112086f72672d323030311a087375622d3230303120022a0c726f6c65206368616e676564320608c29fe0d40698062a",
+      "payload_hash": "46e4aacaa039cf2336966da1148bc8172f5a094fe305456cf0b6ede23bfca651"
+    },
+    {
+      "name": "non-canonical-field-order",
+      "doc": "Campos em ordem decrescente de número, o instante como sub-mensagem: decodifica no mesmo valor, mas o hash é o dos bytes transportados e difere do hash de uma reserialização (ENV-18). Campo repetido fica vazio, porque o codificador não canônico do kit cobre só escalares e mensagens.",
+      "envelope": {
+        "causationid": "evt-0001",
+        "correlationid": "corr-0001",
+        "datacontenttype": "application/protobuf",
+        "dataschema": "type.googleapis.com/company.identity.event.v1.MembershipRevoked",
+        "id": "evt-2002",
+        "partitionkey": "c-42",
+        "source": "urn:dmpf:reference-identity",
+        "specversion": "1.0",
+        "subject": "mbr-1001",
+        "time": "2026-09-02T12:00:00Z",
+        "traceparent": "00-0af7651916cd43dd8448eb211c80319c-b7ad6b7169203331-01",
+        "type": "com.company.identity.membership-revoked.v1"
+      },
+      "payload": {
+        "membership_id": "mbr-2002",
+        "organization_id": "org-2001",
+        "reason": "access review",
+        "revoked_at": "2026-09-02T12:00:03.123456789Z",
+        "role": "MEMBERSHIP_ROLE_OPERATOR",
+        "user_id": "sub-2002"
+      },
+      "payload_bytes_hex": "320b08c39fe0d40610959aef3a2a0d6163636573732072657669657720011a087375622d3230303212086f72672d323030310a086d62722d32303032",
+      "payload_hash": "81c693615e4cd16c9889be2140415f0a20a153a9a9421157087eabcf314e91ff"
+    }
+  ]
+}

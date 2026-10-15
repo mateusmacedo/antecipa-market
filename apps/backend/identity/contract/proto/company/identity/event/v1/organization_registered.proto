@@ -1,0 +1,19 @@
+syntax = "proto3";
+
+package company.identity.event.v1;
+
+import "company/identity/event/v1/types.proto";
+import "google/protobuf/timestamp.proto";
+
+// An organization was registered in the identity-organization bounded context.
+// The tax id crosses the context only as hash and mask, never in clear.
+message OrganizationRegistered {
+  string organization_id = 1;
+  repeated OrganizationKind kinds = 2;
+  // ISO 3166-1 alpha-2.
+  string jurisdiction = 3;
+  TaxIdType tax_id_type = 4;
+  string tax_id_hash = 5;
+  string tax_id_masked = 6;
+  google.protobuf.Timestamp registered_at = 7;
+}

@@ -1,0 +1,14 @@
+syntax = "proto3";
+
+package company.identity.event.v1;
+
+import "google/protobuf/timestamp.proto";
+
+// A requested change of the bank account of an organization was approved, by a
+// user other than the requester, in the identity-organization bounded context.
+message BankAccountChangeApproved {
+  string bank_account_change_id = 1;
+  string organization_id = 2;
+  string approved_by_user_id = 3;
+  google.protobuf.Timestamp approved_at = 4;
+}

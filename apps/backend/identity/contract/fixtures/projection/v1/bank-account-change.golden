@@ -1,0 +1,308 @@
+{
+  "format_version": "1",
+  "identity": {
+    "context": "identity",
+    "aggregate": "bank-account-change"
+  },
+  "cases": [
+    {
+      "name": "request-accepted",
+      "doc": "Ramo Accepted de Request: a mudança nasce requested com requestedAt = at e os campos do comando, e o bank-account-change.requested leva só o id da evidência do destino, nunca o dado bancário.",
+      "state_before": {
+        "bank_account_change": "bac-1",
+        "organization": "",
+        "destination_evidence": "",
+        "requested_by": "",
+        "approved_by": "",
+        "status": "new",
+        "requested_at": "0",
+        "approved_at": "0"
+      },
+      "command": {
+        "upr": "request",
+        "organization": "org-1",
+        "organization_status": "active",
+        "destination_evidence": "evd-1",
+        "requested_by": "sub-1",
+        "at": "1755432000000000000"
+      },
+      "expected": {
+        "branch": "accepted",
+        "response": {
+          "bank_account_change": "bac-1"
+        },
+        "events": [
+          {
+            "name": "identity-organization.bank-account-change.requested",
+            "fields": {
+              "bank_account_change": "bac-1",
+              "organization": "org-1",
+              "destination_evidence": "evd-1",
+              "requested_by": "sub-1",
+              "at": "1755432000000000000"
+            }
+          }
+        ],
+        "state_after": {
+          "bank_account_change": "bac-1",
+          "organization": "org-1",
+          "destination_evidence": "evd-1",
+          "requested_by": "sub-1",
+          "approved_by": "",
+          "status": "requested",
+          "requested_at": "1755432000000000000",
+          "approved_at": "0"
+        }
+      }
+    },
+    {
+      "name": "request-destination-evidence-missing",
+      "doc": "Ramo Rejected de Request: evidência do destino só de espaços; a checagem vem antes da organização, então recusa mesmo com organização active; estado inalterado.",
+      "state_before": {
+        "bank_account_change": "bac-1",
+        "organization": "",
+        "destination_evidence": "",
+        "requested_by": "",
+        "approved_by": "",
+        "status": "new",
+        "requested_at": "0",
+        "approved_at": "0"
+      },
+      "command": {
+        "upr": "request",
+        "organization": "org-1",
+        "organization_status": "active",
+        "destination_evidence": "  ",
+        "requested_by": "sub-1",
+        "at": "1755432000000000000"
+      },
+      "expected": {
+        "branch": "rejected",
+        "rejection": {
+          "code": "identity-organization/bank-account-change/destination-evidence-missing",
+          "message": "the evidence of the destination must be informed",
+          "details": {}
+        },
+        "events": [],
+        "state_after": {
+          "bank_account_change": "bac-1",
+          "organization": "",
+          "destination_evidence": "",
+          "requested_by": "",
+          "approved_by": "",
+          "status": "new",
+          "requested_at": "0",
+          "approved_at": "0"
+        }
+      }
+    },
+    {
+      "name": "request-organization-not-active",
+      "doc": "Ramo Rejected de Request: organização suspended (†); estado inalterado.",
+      "state_before": {
+        "bank_account_change": "bac-1",
+        "organization": "",
+        "destination_evidence": "",
+        "requested_by": "",
+        "approved_by": "",
+        "status": "new",
+        "requested_at": "0",
+        "approved_at": "0"
+      },
+      "command": {
+        "upr": "request",
+        "organization": "org-1",
+        "organization_status": "suspended",
+        "destination_evidence": "evd-1",
+        "requested_by": "sub-1",
+        "at": "1755432000000000000"
+      },
+      "expected": {
+        "branch": "rejected",
+        "rejection": {
+          "code": "identity-organization/bank-account-change/organization-not-active",
+          "message": "organization must exist and be active",
+          "details": {
+            "organization": "org-1"
+          }
+        },
+        "events": [],
+        "state_after": {
+          "bank_account_change": "bac-1",
+          "organization": "",
+          "destination_evidence": "",
+          "requested_by": "",
+          "approved_by": "",
+          "status": "new",
+          "requested_at": "0",
+          "approved_at": "0"
+        }
+      }
+    },
+    {
+      "name": "request-organization-not-found",
+      "doc": "Ramo Rejected de Request: organização não encontrada, que o caso de uso entrega como new (†); estado inalterado.",
+      "state_before": {
+        "bank_account_change": "bac-1",
+        "organization": "",
+        "destination_evidence": "",
+        "requested_by": "",
+        "approved_by": "",
+        "status": "new",
+        "requested_at": "0",
+        "approved_at": "0"
+      },
+      "command": {
+        "upr": "request",
+        "organization": "org-1",
+        "organization_status": "new",
+        "destination_evidence": "evd-1",
+        "requested_by": "sub-1",
+        "at": "1755432000000000000"
+      },
+      "expected": {
+        "branch": "rejected",
+        "rejection": {
+          "code": "identity-organization/bank-account-change/organization-not-active",
+          "message": "organization must exist and be active",
+          "details": {
+            "organization": "org-1"
+          }
+        },
+        "events": [],
+        "state_after": {
+          "bank_account_change": "bac-1",
+          "organization": "",
+          "destination_evidence": "",
+          "requested_by": "",
+          "approved_by": "",
+          "status": "new",
+          "requested_at": "0",
+          "approved_at": "0"
+        }
+      }
+    },
+    {
+      "name": "approve-accepted",
+      "doc": "Ramo Accepted de Approve: U2 aprova a mudança que U1 pediu; vai a approved com approvedAt = at e o aprovador, e o bank-account-change.approved leva a organização do estado.",
+      "state_before": {
+        "bank_account_change": "bac-1",
+        "organization": "org-1",
+        "destination_evidence": "evd-1",
+        "requested_by": "sub-1",
+        "approved_by": "",
+        "status": "requested",
+        "requested_at": "1755345600000000000",
+        "approved_at": "0"
+      },
+      "command": {
+        "upr": "approve",
+        "approved_by": "sub-2",
+        "at": "1755432000000000000"
+      },
+      "expected": {
+        "branch": "accepted",
+        "response": {
+          "bank_account_change": "bac-1"
+        },
+        "events": [
+          {
+            "name": "identity-organization.bank-account-change.approved",
+            "fields": {
+              "bank_account_change": "bac-1",
+              "organization": "org-1",
+              "approved_by": "sub-2",
+              "at": "1755432000000000000"
+            }
+          }
+        ],
+        "state_after": {
+          "bank_account_change": "bac-1",
+          "organization": "org-1",
+          "destination_evidence": "evd-1",
+          "requested_by": "sub-1",
+          "approved_by": "sub-2",
+          "status": "approved",
+          "requested_at": "1755345600000000000",
+          "approved_at": "1755432000000000000"
+        }
+      }
+    },
+    {
+      "name": "approve-not-requested",
+      "doc": "Ramo Rejected de Approve: a mudança já está approved; a segunda aprovação, mesmo por um terceiro, é recusada; estado inalterado.",
+      "state_before": {
+        "bank_account_change": "bac-1",
+        "organization": "org-1",
+        "destination_evidence": "evd-1",
+        "requested_by": "sub-1",
+        "approved_by": "sub-2",
+        "status": "approved",
+        "requested_at": "1755345600000000000",
+        "approved_at": "1755345600000000000"
+      },
+      "command": {
+        "upr": "approve",
+        "approved_by": "sub-3",
+        "at": "1755432000000000000"
+      },
+      "expected": {
+        "branch": "rejected",
+        "rejection": {
+          "code": "identity-organization/bank-account-change/not-requested",
+          "message": "the bank account change must be requested",
+          "details": {}
+        },
+        "events": [],
+        "state_after": {
+          "bank_account_change": "bac-1",
+          "organization": "org-1",
+          "destination_evidence": "evd-1",
+          "requested_by": "sub-1",
+          "approved_by": "sub-2",
+          "status": "approved",
+          "requested_at": "1755345600000000000",
+          "approved_at": "1755345600000000000"
+        }
+      }
+    },
+    {
+      "name": "approve-same-actor",
+      "doc": "Ramo Rejected de Approve: U1 tenta aprovar a mudança que ele mesmo pediu (segregação de funções); estado inalterado.",
+      "state_before": {
+        "bank_account_change": "bac-1",
+        "organization": "org-1",
+        "destination_evidence": "evd-1",
+        "requested_by": "sub-1",
+        "approved_by": "",
+        "status": "requested",
+        "requested_at": "1755345600000000000",
+        "approved_at": "0"
+      },
+      "command": {
+        "upr": "approve",
+        "approved_by": "sub-1",
+        "at": "1755432000000000000"
+      },
+      "expected": {
+        "branch": "rejected",
+        "rejection": {
+          "code": "identity-organization/bank-account-change/same-actor-approval",
+          "message": "the approver must not be the requester",
+          "details": {}
+        },
+        "events": [],
+        "state_after": {
+          "bank_account_change": "bac-1",
+          "organization": "org-1",
+          "destination_evidence": "evd-1",
+          "requested_by": "sub-1",
+          "approved_by": "",
+          "status": "requested",
+          "requested_at": "1755345600000000000",
+          "approved_at": "0"
+        }
+      }
+    }
+  ]
+}

@@ -1,0 +1,18 @@
+syntax = "proto3";
+
+package company.identity.event.v1;
+
+import "company/identity/event/v1/types.proto";
+import "google/protobuf/timestamp.proto";
+
+// A membership of an organization was revoked in the identity-organization
+// bounded context; the role leaves with it.
+message MembershipRevoked {
+  string membership_id = 1;
+  string organization_id = 2;
+  // The subject of the user, the natural identity of the account in the tenant.
+  string user_id = 3;
+  MembershipRole role = 4;
+  string reason = 5;
+  google.protobuf.Timestamp revoked_at = 6;
+}

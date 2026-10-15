@@ -1,0 +1,32 @@
+syntax = "proto3";
+
+package company.identity.event.v1;
+
+// Shared by every event of the context, in its own file so that adding an
+// event never moves a type between files (buf-breaking FILE rule).
+enum OrganizationKind {
+  ORGANIZATION_KIND_UNSPECIFIED = 0;
+  ORGANIZATION_KIND_CLIENT = 1;
+  ORGANIZATION_KIND_FUNDER = 2;
+  ORGANIZATION_KIND_PARTNER = 3;
+  ORGANIZATION_KIND_PLATFORM = 4;
+}
+
+enum TaxIdType {
+  TAX_ID_TYPE_UNSPECIFIED = 0;
+  TAX_ID_TYPE_CNPJ = 1;
+  TAX_ID_TYPE_CPF = 2;
+}
+
+enum MembershipRole {
+  MEMBERSHIP_ROLE_UNSPECIFIED = 0;
+  MEMBERSHIP_ROLE_OPERATOR = 1;
+  MEMBERSHIP_ROLE_AUDITOR = 2;
+}
+
+// Ordered: personal_data_checked is above channel_ownership.
+enum VerificationLevel {
+  VERIFICATION_LEVEL_UNSPECIFIED = 0;
+  VERIFICATION_LEVEL_CHANNEL_OWNERSHIP = 1;
+  VERIFICATION_LEVEL_PERSONAL_DATA_CHECKED = 2;
+}

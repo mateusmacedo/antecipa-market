@@ -1,0 +1,1555 @@
+openapi: 3.1.0
+info:
+  title: Identity — identity-organization bounded context
+  version: 1.0.0
+  description: >-
+    Public REST edge of the identity-organization context, served by
+    apps/backend/bff, which calls company.identity.service.v1.IdentityService
+    over gRPC, one operation per RPC (RST-04). Writes are idempotent by
+    Idempotency-Key (RST-02); reads run outside any transaction (UOW-11). The
+    bff fills every *ByUserId field from the verified token (CTX-06), so no
+    request body carries one. Schemas bound the form only, and no value they
+    admit exceeds a byte ceiling of the context: codes and tax ids are
+    printable ASCII, where characters and bytes coincide. Within those bounds,
+    the emptiness and format refusals the spec declares come back from the
+    domain as 422 rejections. A clear tax id or person document travels only in the request
+    that needs it; the person document never comes back. The contract is not
+    covered by the Buf gates.
+servers:
+  - url: http://localhost:8080
+    description: local bff
+security:
+  - bearerAuth: []
+paths:
+  /identity/organizations:
+    post:
+      operationId: registerOrganization
+      summary: Register an organization
+      parameters:
+        - $ref: '#/components/parameters/IdempotencyKey'
+        - $ref: '#/components/parameters/CorrelationID'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RegisterOrganizationRequest'
+      responses:
+        '201':
+          description: Organization registered
+          headers:
+            Idempotent-Replayed:
+              $ref: '#/components/headers/IdempotentReplayed'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RegisteredOrganization'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/CreateConflict'
+        '422':
+          $ref: '#/components/responses/Rejected'
+        '429':
+          $ref: '#/components/responses/AdmissionRefused'
+        '503':
+          $ref: '#/components/responses/Unavailable'
+        '504':
+          $ref: '#/components/responses/Timeout'
+        default:
+          $ref: '#/components/responses/Failure'
+  /identity/organization-lookups:
+    post:
+      operationId: findOrganizationByTaxId
+      summary: Read an organization by its tax id
+      description: >-
+        A read sent as POST so the clear tax id travels in the body, never in a
+        URL. The edge demands an Idempotency-Key on every POST and refuses its
+        absence with 400 (RST-02); the read runs outside any transaction, so the
+        context neither stores nor replays its answer.
+      parameters:
+        - $ref: '#/components/parameters/LookupIdempotencyKey'
+        - $ref: '#/components/parameters/CorrelationID'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/FindOrganizationByTaxIdRequest'
+      responses:
+        '200':
+          description: Current snapshot of the organization
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Organization'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '429':
+          $ref: '#/components/responses/AdmissionRefused'
+        '503':
+          $ref: '#/components/responses/Unavailable'
+        '504':
+          $ref: '#/components/responses/Timeout'
+        default:
+          $ref: '#/components/responses/Failure'
+  /identity/organizations/{organizationId}:
+    get:
+      operationId: findOrganization
+      summary: Read the observable state of an organization
+      parameters:
+        - $ref: '#/components/parameters/OrganizationID'
+        - $ref: '#/components/parameters/CorrelationID'
+      responses:
+        '200':
+          description: Current snapshot of the organization
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Organization'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '429':
+          $ref: '#/components/responses/AdmissionRefused'
+        '503':
+          $ref: '#/components/responses/Unavailable'
+        '504':
+          $ref: '#/components/responses/Timeout'
+        default:
+          $ref: '#/components/responses/Failure'
+  /identity/organizations/{organizationId}/establishments:
+    post:
+      operationId: addEstablishment
+      summary: Add an establishment to an active organization
+      parameters:
+        - $ref: '#/components/parameters/OrganizationID'
+        - $ref: '#/components/parameters/IdempotencyKey'
+        - $ref: '#/components/parameters/CorrelationID'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AddEstablishmentRequest'
+      responses:
+        '201':
+          description: Establishment added
+          headers:
+            Idempotent-Replayed:
+              $ref: '#/components/headers/IdempotentReplayed'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AddedEstablishment'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/CreateConflict'
+        '422':
+          $ref: '#/components/responses/Rejected'
+        '429':
+          $ref: '#/components/responses/AdmissionRefused'
+        '503':
+          $ref: '#/components/responses/Unavailable'
+        '504':
+          $ref: '#/components/responses/Timeout'
+        default:
+          $ref: '#/components/responses/Failure'
+    get:
+      operationId: findEstablishmentsByOrganization
+      summary: List the establishments of an organization
+      parameters:
+        - $ref: '#/components/parameters/OrganizationID'
+        - $ref: '#/components/parameters/CorrelationID'
+      responses:
+        '200':
+          description: Establishments of the organization
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Establishment'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '429':
+          $ref: '#/components/responses/AdmissionRefused'
+        '503':
+          $ref: '#/components/responses/Unavailable'
+        '504':
+          $ref: '#/components/responses/Timeout'
+        default:
+          $ref: '#/components/responses/Failure'
+  /identity/organizations/{organizationId}/representations:
+    post:
+      operationId: registerRepresentation
+      summary: Register a declared representation of an organization
+      parameters:
+        - $ref: '#/components/parameters/OrganizationID'
+        - $ref: '#/components/parameters/IdempotencyKey'
+        - $ref: '#/components/parameters/CorrelationID'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RegisterRepresentationRequest'
+      responses:
+        '201':
+          description: Representation registered
+          headers:
+            Idempotent-Replayed:
+              $ref: '#/components/headers/IdempotentReplayed'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RegisteredRepresentation'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/CreateConflict'
+        '422':
+          $ref: '#/components/responses/Rejected'
+        '429':
+          $ref: '#/components/responses/AdmissionRefused'
+        '503':
+          $ref: '#/components/responses/Unavailable'
+        '504':
+          $ref: '#/components/responses/Timeout'
+        default:
+          $ref: '#/components/responses/Failure'
+    get:
+      operationId: findRepresentationsByOrganization
+      summary: List the representations of an organization
+      parameters:
+        - $ref: '#/components/parameters/OrganizationID'
+        - $ref: '#/components/parameters/ValidAtQuery'
+        - $ref: '#/components/parameters/CorrelationID'
+      responses:
+        '200':
+          description: Representations of the organization
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Representation'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '429':
+          $ref: '#/components/responses/AdmissionRefused'
+        '503':
+          $ref: '#/components/responses/Unavailable'
+        '504':
+          $ref: '#/components/responses/Timeout'
+        default:
+          $ref: '#/components/responses/Failure'
+  /identity/organizations/{organizationId}/memberships:
+    post:
+      operationId: inviteUser
+      summary: Invite a user to an organization
+      parameters:
+        - $ref: '#/components/parameters/OrganizationID'
+        - $ref: '#/components/parameters/IdempotencyKey'
+        - $ref: '#/components/parameters/CorrelationID'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/InviteUserRequest'
+      responses:
+        '201':
+          description: User invited
+          headers:
+            Idempotent-Replayed:
+              $ref: '#/components/headers/IdempotentReplayed'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/InvitedUser'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/CreateConflict'
+        '422':
+          $ref: '#/components/responses/Rejected'
+        '429':
+          $ref: '#/components/responses/AdmissionRefused'
+        '503':
+          $ref: '#/components/responses/Unavailable'
+        '504':
+          $ref: '#/components/responses/Timeout'
+        default:
+          $ref: '#/components/responses/Failure'
+    get:
+      operationId: findMembershipsByOrganization
+      summary: List the memberships of an organization
+      parameters:
+        - $ref: '#/components/parameters/OrganizationID'
+        - $ref: '#/components/parameters/CorrelationID'
+      responses:
+        '200':
+          description: Memberships of the organization
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Membership'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '429':
+          $ref: '#/components/responses/AdmissionRefused'
+        '503':
+          $ref: '#/components/responses/Unavailable'
+        '504':
+          $ref: '#/components/responses/Timeout'
+        default:
+          $ref: '#/components/responses/Failure'
+  /identity/organizations/{organizationId}/bank-account-changes:
+    post:
+      operationId: requestBankAccountChange
+      summary: Request a change of the bank account of an organization
+      parameters:
+        - $ref: '#/components/parameters/OrganizationID'
+        - $ref: '#/components/parameters/IdempotencyKey'
+        - $ref: '#/components/parameters/CorrelationID'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RequestBankAccountChangeRequest'
+      responses:
+        '201':
+          description: Bank account change requested
+          headers:
+            Idempotent-Replayed:
+              $ref: '#/components/headers/IdempotentReplayed'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RequestedBankAccountChange'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/CreateConflict'
+        '422':
+          $ref: '#/components/responses/Rejected'
+        '429':
+          $ref: '#/components/responses/AdmissionRefused'
+        '503':
+          $ref: '#/components/responses/Unavailable'
+        '504':
+          $ref: '#/components/responses/Timeout'
+        default:
+          $ref: '#/components/responses/Failure'
+    get:
+      operationId: findBankAccountChangesByOrganization
+      summary: List the bank account changes of an organization
+      parameters:
+        - $ref: '#/components/parameters/OrganizationID'
+        - $ref: '#/components/parameters/CorrelationID'
+      responses:
+        '200':
+          description: Bank account changes of the organization
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/BankAccountChange'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '429':
+          $ref: '#/components/responses/AdmissionRefused'
+        '503':
+          $ref: '#/components/responses/Unavailable'
+        '504':
+          $ref: '#/components/responses/Timeout'
+        default:
+          $ref: '#/components/responses/Failure'
+  /identity/persons:
+    post:
+      operationId: registerPerson
+      summary: Register a person
+      parameters:
+        - $ref: '#/components/parameters/IdempotencyKey'
+        - $ref: '#/components/parameters/CorrelationID'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RegisterPersonRequest'
+      responses:
+        '201':
+          description: Person registered
+          headers:
+            Idempotent-Replayed:
+              $ref: '#/components/headers/IdempotentReplayed'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RegisteredPerson'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/CreateConflict'
+        '422':
+          $ref: '#/components/responses/Rejected'
+        '429':
+          $ref: '#/components/responses/AdmissionRefused'
+        '503':
+          $ref: '#/components/responses/Unavailable'
+        '504':
+          $ref: '#/components/responses/Timeout'
+        default:
+          $ref: '#/components/responses/Failure'
+  /identity/persons/{personId}:
+    get:
+      operationId: findPerson
+      summary: Read the observable state of a person
+      parameters:
+        - $ref: '#/components/parameters/PersonID'
+        - $ref: '#/components/parameters/CorrelationID'
+      responses:
+        '200':
+          description: Current snapshot of the person
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Person'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '429':
+          $ref: '#/components/responses/AdmissionRefused'
+        '503':
+          $ref: '#/components/responses/Unavailable'
+        '504':
+          $ref: '#/components/responses/Timeout'
+        default:
+          $ref: '#/components/responses/Failure'
+  /identity/representations/{representationId}:
+    get:
+      operationId: findRepresentation
+      summary: Read the observable state of a representation
+      parameters:
+        - $ref: '#/components/parameters/RepresentationID'
+        - $ref: '#/components/parameters/CorrelationID'
+      responses:
+        '200':
+          description: Current snapshot of the representation
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Representation'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '429':
+          $ref: '#/components/responses/AdmissionRefused'
+        '503':
+          $ref: '#/components/responses/Unavailable'
+        '504':
+          $ref: '#/components/responses/Timeout'
+        default:
+          $ref: '#/components/responses/Failure'
+  /identity/users:
+    post:
+      operationId: provisionUserAccount
+      summary: Provision the user account of a subject, if absent
+      description: >-
+        A repetition with another Idempotency-Key is accepted with no event; two
+        concurrent first provisions of the same subject may end one of them in
+        409 (replay the request).
+      parameters:
+        - $ref: '#/components/parameters/IdempotencyKey'
+        - $ref: '#/components/parameters/CorrelationID'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ProvisionUserAccountRequest'
+      responses:
+        '201':
+          description: User account provisioned, or already present
+          headers:
+            Idempotent-Replayed:
+              $ref: '#/components/headers/IdempotentReplayed'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProvisionedUserAccount'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/VersionConflict'
+        '422':
+          $ref: '#/components/responses/Rejected'
+        '429':
+          $ref: '#/components/responses/AdmissionRefused'
+        '503':
+          $ref: '#/components/responses/Unavailable'
+        '504':
+          $ref: '#/components/responses/Timeout'
+        default:
+          $ref: '#/components/responses/Failure'
+  /identity/users/{userId}/suspend:
+    post:
+      operationId: suspendUser
+      summary: Suspend an active user account
+      parameters:
+        - $ref: '#/components/parameters/UserID'
+        - $ref: '#/components/parameters/IdempotencyKey'
+        - $ref: '#/components/parameters/CorrelationID'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SuspendUserRequest'
+      responses:
+        '200':
+          description: User account suspended
+          headers:
+            Idempotent-Replayed:
+              $ref: '#/components/headers/IdempotentReplayed'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuspendedUser'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/VersionConflict'
+        '422':
+          $ref: '#/components/responses/Rejected'
+        '429':
+          $ref: '#/components/responses/AdmissionRefused'
+        '503':
+          $ref: '#/components/responses/Unavailable'
+        '504':
+          $ref: '#/components/responses/Timeout'
+        default:
+          $ref: '#/components/responses/Failure'
+  /identity/users/{userId}/memberships:
+    get:
+      operationId: findMembershipsByUser
+      summary: List the memberships of a user
+      parameters:
+        - $ref: '#/components/parameters/UserID'
+        - $ref: '#/components/parameters/CorrelationID'
+      responses:
+        '200':
+          description: Memberships of the user
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Membership'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '429':
+          $ref: '#/components/responses/AdmissionRefused'
+        '503':
+          $ref: '#/components/responses/Unavailable'
+        '504':
+          $ref: '#/components/responses/Timeout'
+        default:
+          $ref: '#/components/responses/Failure'
+  /identity/users/{userId}/permissions:
+    get:
+      operationId: findEffectivePermissions
+      summary: Resolve the effective permissions of a user
+      description: >-
+        The bff resolves them on every request, with no cache in any hop
+        (CTX-16); an absent or suspended account answers an empty list.
+      parameters:
+        - $ref: '#/components/parameters/UserID'
+        - $ref: '#/components/parameters/CorrelationID'
+      responses:
+        '200':
+          description: Effective permissions of the user in the tenant of the request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EffectivePermissions'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '429':
+          $ref: '#/components/responses/AdmissionRefused'
+        '503':
+          $ref: '#/components/responses/Unavailable'
+        '504':
+          $ref: '#/components/responses/Timeout'
+        default:
+          $ref: '#/components/responses/Failure'
+  /identity/memberships/{membershipId}/grant:
+    post:
+      operationId: grantMembership
+      summary: Grant an invited membership
+      description: >-
+        The bff conducts the verification of the channel and of the personal
+        data, and sets channel_confirmed and verification_level on the gRPC
+        call from what it verified; this body carries neither, so the caller
+        never declares its own verification level.
+      parameters:
+        - $ref: '#/components/parameters/MembershipID'
+        - $ref: '#/components/parameters/IdempotencyKey'
+        - $ref: '#/components/parameters/CorrelationID'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/GrantMembershipRequest'
+      responses:
+        '200':
+          description: Membership granted
+          headers:
+            Idempotent-Replayed:
+              $ref: '#/components/headers/IdempotentReplayed'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GrantedMembership'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/VersionConflict'
+        '422':
+          $ref: '#/components/responses/Rejected'
+        '429':
+          $ref: '#/components/responses/AdmissionRefused'
+        '503':
+          $ref: '#/components/responses/Unavailable'
+        '504':
+          $ref: '#/components/responses/Timeout'
+        default:
+          $ref: '#/components/responses/Failure'
+  /identity/memberships/{membershipId}/revoke:
+    post:
+      operationId: revokeMembership
+      summary: Revoke an active membership
+      parameters:
+        - $ref: '#/components/parameters/MembershipID'
+        - $ref: '#/components/parameters/IdempotencyKey'
+        - $ref: '#/components/parameters/CorrelationID'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RevokeMembershipRequest'
+      responses:
+        '200':
+          description: Membership revoked
+          headers:
+            Idempotent-Replayed:
+              $ref: '#/components/headers/IdempotentReplayed'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RevokedMembership'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/VersionConflict'
+        '422':
+          $ref: '#/components/responses/Rejected'
+        '429':
+          $ref: '#/components/responses/AdmissionRefused'
+        '503':
+          $ref: '#/components/responses/Unavailable'
+        '504':
+          $ref: '#/components/responses/Timeout'
+        default:
+          $ref: '#/components/responses/Failure'
+  /identity/bank-account-changes/{bankAccountChangeId}:
+    get:
+      operationId: findBankAccountChange
+      summary: Read the observable state of a bank account change
+      parameters:
+        - $ref: '#/components/parameters/BankAccountChangeID'
+        - $ref: '#/components/parameters/CorrelationID'
+      responses:
+        '200':
+          description: Current snapshot of the bank account change
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BankAccountChange'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '429':
+          $ref: '#/components/responses/AdmissionRefused'
+        '503':
+          $ref: '#/components/responses/Unavailable'
+        '504':
+          $ref: '#/components/responses/Timeout'
+        default:
+          $ref: '#/components/responses/Failure'
+  /identity/bank-account-changes/{bankAccountChangeId}/approve:
+    post:
+      operationId: approveBankAccountChange
+      summary: Approve a requested bank account change
+      description: >-
+        The approver is the authenticated user, set by the bff from the token;
+        it must differ from the requester.
+      parameters:
+        - $ref: '#/components/parameters/BankAccountChangeID'
+        - $ref: '#/components/parameters/IdempotencyKey'
+        - $ref: '#/components/parameters/CorrelationID'
+      responses:
+        '200':
+          description: Bank account change approved
+          headers:
+            Idempotent-Replayed:
+              $ref: '#/components/headers/IdempotentReplayed'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApprovedBankAccountChange'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/VersionConflict'
+        '422':
+          $ref: '#/components/responses/Rejected'
+        '429':
+          $ref: '#/components/responses/AdmissionRefused'
+        '503':
+          $ref: '#/components/responses/Unavailable'
+        '504':
+          $ref: '#/components/responses/Timeout'
+        default:
+          $ref: '#/components/responses/Failure'
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      description: >-
+        Access token of the authorization server the bff verifies (OIDC). The
+        tenant comes only from the verified token (IDN-01, CTX-06). Each route
+        requires the permission identity:<operation in kebab-case>, for example
+        identity:request-bank-account-change, checked against the effective
+        permissions the bff resolves on every request (ADR-016).
+  parameters:
+    OrganizationID:
+      name: organizationId
+      in: path
+      required: true
+      description: Identifier of the organization; the client mints it on registration
+      schema:
+        $ref: '#/components/schemas/Identifier'
+    PersonID:
+      name: personId
+      in: path
+      required: true
+      description: Identifier of the person; the client mints it on registration
+      schema:
+        $ref: '#/components/schemas/Identifier'
+    RepresentationID:
+      name: representationId
+      in: path
+      required: true
+      description: Identifier of the representation; the client mints it on registration
+      schema:
+        $ref: '#/components/schemas/Identifier'
+    UserID:
+      name: userId
+      in: path
+      required: true
+      description: Identifier of the user account, the sub claim of the realm
+      schema:
+        $ref: '#/components/schemas/Identifier'
+    MembershipID:
+      name: membershipId
+      in: path
+      required: true
+      description: Identifier of the membership; the client mints it on the invitation
+      schema:
+        $ref: '#/components/schemas/Identifier'
+    BankAccountChangeID:
+      name: bankAccountChangeId
+      in: path
+      required: true
+      description: Identifier of the bank account change; the client mints it on the request
+      schema:
+        $ref: '#/components/schemas/Identifier'
+    ValidAtQuery:
+      name: validAt
+      in: query
+      required: false
+      description: >-
+        Lists only the representations in force at this instant, in nanoseconds
+        since the Unix epoch; absent or zero lists every representation
+      schema:
+        type: integer
+        format: int64
+        minimum: 0
+    IdempotencyKey:
+      name: Idempotency-Key
+      in: header
+      required: true
+      description: >-
+        Client-chosen key that makes a command POST idempotent (RST-02, FND-04 §7.6).
+        A POST without it, or with a key outside this format, is refused with
+        400 before any call to the context. The edge scopes the key to the
+        authenticated subject. Within 24h, the same key with the same request
+        answers the stored response, marked by the Idempotent-Replayed header;
+        with another request it is refused with 422 reused-idempotency-key, and
+        while the first request is still in progress with 409
+        in-flight-idempotency-key.
+      schema:
+        type: string
+        minLength: 1
+        maxLength: 128
+        pattern: '^[A-Za-z0-9._-]{1,128}$'
+    LookupIdempotencyKey:
+      name: Idempotency-Key
+      in: header
+      required: true
+      description: >-
+        The edge demands the key on every POST and refuses its absence, or a
+        key outside this format, with 400 (RST-02). On this read the key makes
+        nothing idempotent: no answer is stored nor replayed.
+      schema:
+        type: string
+        minLength: 1
+        maxLength: 128
+        pattern: '^[A-Za-z0-9._-]{1,128}$'
+    CorrelationID:
+      name: X-Correlation-ID
+      in: header
+      required: false
+      description: >-
+        Correlation of the whole chain the request starts (ENV-08). When
+        absent or outside this shape the edge mints one.
+      schema:
+        type: string
+        minLength: 1
+        maxLength: 128
+        pattern: '^[A-Za-z0-9._-]+$'
+  schemas:
+    Identifier:
+      type: string
+      minLength: 1
+      maxLength: 128
+      pattern: '^[A-Za-z0-9._:-]+$'
+    Name:
+      type: string
+      maxLength: 256
+      pattern: '^[^\x00-\x1F\x7F-\x9F]*$'
+      description: At most 256 characters, none of them a control character
+    TaxId:
+      type: string
+      maxLength: 32
+      pattern: '^[\x20-\x7E]*$'
+      description: >-
+        In clear on this hop only; it never leaves the context in an event or a
+        log. At most 32 bytes of printable ASCII, the ceiling the context applies
+    Instant:
+      type: integer
+      format: int64
+      description: Nanoseconds since the Unix epoch, the domain's instant
+    OrganizationKind:
+      type: string
+      enum: [client, funder, partner, platform]
+    TaxIdType:
+      type: string
+      enum: [cnpj, cpf]
+    OrganizationStatus:
+      type: string
+      enum: [active, suspended, offboarded]
+    ExternalSystem:
+      type: string
+      enum: [registry, bookkeeper, acquirer, funder, depository]
+    ExternalReferenceType:
+      type: string
+      enum: [asset, effect, authorization, command, settlement]
+    PowerType:
+      type: string
+      enum: [legal_representative, attorney_in_fact, operator]
+    SourceType:
+      type: string
+      enum: [articles_of_association, power_of_attorney, board_resolution, internal_delegation]
+    RepresentationVerificationStatus:
+      type: string
+      enum: [declared]
+    MembershipRole:
+      type: string
+      enum: [operator, auditor]
+    VerificationLevel:
+      type: string
+      enum: [channel_ownership, personal_data_checked]
+    MembershipStatus:
+      type: string
+      enum: [invited, active, revoked]
+    BankAccountChangeStatus:
+      type: string
+      enum: [requested, approved]
+    RegisterOrganizationRequest:
+      type: object
+      required: [organizationId, kinds, jurisdiction, taxIdType, taxId, legalName]
+      additionalProperties: false
+      properties:
+        organizationId:
+          $ref: '#/components/schemas/Identifier'
+        kinds:
+          type: array
+          maxItems: 4
+          uniqueItems: true
+          items:
+            $ref: '#/components/schemas/OrganizationKind'
+        jurisdiction:
+          type: string
+          maxLength: 8
+          pattern: '^[\x20-\x7E]*$'
+          description: >-
+            ISO 3166-1 alpha-2. At most 8 bytes of printable ASCII, the ceiling
+            the context applies
+        taxIdType:
+          $ref: '#/components/schemas/TaxIdType'
+        taxId:
+          $ref: '#/components/schemas/TaxId'
+        legalName:
+          $ref: '#/components/schemas/Name'
+        tradeName:
+          $ref: '#/components/schemas/Name'
+    FindOrganizationByTaxIdRequest:
+      type: object
+      required: [taxIdType, taxId, jurisdiction]
+      additionalProperties: false
+      description: The type travels with the value because the protected hash depends on it
+      properties:
+        taxIdType:
+          $ref: '#/components/schemas/TaxIdType'
+        taxId:
+          $ref: '#/components/schemas/TaxId'
+          minLength: 1
+        jurisdiction:
+          type: string
+          pattern: '^[A-Z]{2}$'
+          description: ISO 3166-1 alpha-2
+    AddEstablishmentRequest:
+      type: object
+      required: [establishmentId, taxIdType, taxId, receiver]
+      additionalProperties: false
+      properties:
+        establishmentId:
+          $ref: '#/components/schemas/Identifier'
+        taxIdType:
+          $ref: '#/components/schemas/TaxIdType'
+        taxId:
+          $ref: '#/components/schemas/TaxId'
+        tradeName:
+          $ref: '#/components/schemas/Name'
+        receiver:
+          type: boolean
+        externalReferences:
+          type: array
+          maxItems: 32
+          items:
+            $ref: '#/components/schemas/ExternalReference'
+    ExternalReference:
+      type: object
+      required: [providerId, system, referenceType, reference, asOf]
+      additionalProperties: false
+      description: The identity of an object in a partner system
+      properties:
+        providerId:
+          type: string
+          maxLength: 256
+          pattern: '^[^\x00-\x1F\x7F-\x9F]*$'
+          description: At most 256 characters, none of them a control character
+        system:
+          $ref: '#/components/schemas/ExternalSystem'
+        referenceType:
+          $ref: '#/components/schemas/ExternalReferenceType'
+        reference:
+          type: string
+          maxLength: 256
+          pattern: '^[^\x00-\x1F\x7F-\x9F]*$'
+          description: >-
+            The partner's value exactly, never normalized. At most 256
+            characters, none of them a control character
+        asOf:
+          $ref: '#/components/schemas/Instant'
+          description: Nanoseconds since the Unix epoch, when the reference was obtained
+        observedVersion:
+          type: string
+          maxLength: 256
+          pattern: '^[^\x00-\x1F\x7F-\x9F]*$'
+          description: At most 256 characters, none of them a control character
+    ExternalReferenceView:
+      type: object
+      required: [providerId, system, referenceType, reference, asOf]
+      description: The identity of an object in a partner system, as the context stored it
+      properties:
+        providerId:
+          type: string
+        system:
+          $ref: '#/components/schemas/ExternalSystem'
+        referenceType:
+          $ref: '#/components/schemas/ExternalReferenceType'
+        reference:
+          type: string
+          description: The partner's value exactly, never normalized
+        asOf:
+          $ref: '#/components/schemas/Instant'
+        observedVersion:
+          type: string
+    RegisterPersonRequest:
+      type: object
+      required: [personId, fullName, document]
+      additionalProperties: false
+      properties:
+        personId:
+          $ref: '#/components/schemas/Identifier'
+        fullName:
+          $ref: '#/components/schemas/Name'
+        document:
+          type: string
+          maxLength: 32
+          pattern: '^[\x20-\x7E]*$'
+          writeOnly: true
+          description: >-
+            In clear on this hop only: it derives the hash and the mask, and is
+            never stored nor returned. At most 32 bytes of printable ASCII, the
+            ceiling the context applies
+    RegisterRepresentationRequest:
+      type: object
+      required: [representationId, personId, powerType, sourceType, sourceEvidenceId, validFrom]
+      additionalProperties: false
+      properties:
+        representationId:
+          $ref: '#/components/schemas/Identifier'
+        personId:
+          $ref: '#/components/schemas/Identifier'
+        powerType:
+          $ref: '#/components/schemas/PowerType'
+        sourceType:
+          $ref: '#/components/schemas/SourceType'
+        sourceEvidenceId:
+          type: string
+          maxLength: 256
+          pattern: '^[^\x00-\x1F\x7F-\x9F]*$'
+          description: >-
+            Opaque id of the evidence; its bytes live in the object storage,
+            apart. At most 256 characters, none of them a control character
+        scopeCurrency:
+          type: string
+          maxLength: 8
+          pattern: '^[\x20-\x7E]*$'
+          description: >-
+            With scopeMaxAmountMinor, both set or both left out. At most 8 bytes
+            of printable ASCII, the ceiling the context applies
+        scopeMaxAmountMinor:
+          type: integer
+          format: int64
+        scopeActTypes:
+          type: array
+          maxItems: 32
+          items:
+            type: string
+            maxLength: 64
+            pattern: '^[\x20-\x7E]*$'
+            description: At most 64 bytes of printable ASCII, the ceiling the context applies
+        validFrom:
+          $ref: '#/components/schemas/Instant'
+        validUntil:
+          $ref: '#/components/schemas/Instant'
+          description: Nanoseconds since the Unix epoch; absent or zero is an indefinite validity
+    ProvisionUserAccountRequest:
+      type: object
+      required: [subject]
+      additionalProperties: false
+      properties:
+        subject:
+          type: string
+          maxLength: 128
+          pattern: '^[A-Za-z0-9._:-]*$'
+          description: The sub claim of the realm, the natural identity of the account in the tenant
+        personId:
+          $ref: '#/components/schemas/Identifier'
+    SuspendUserRequest:
+      type: object
+      required: [reason]
+      additionalProperties: false
+      properties:
+        reason:
+          type: string
+          maxLength: 512
+          pattern: '^[^\x00-\x1F\x7F-\x9F]*$'
+          description: At most 512 characters, none of them a control character
+    InviteUserRequest:
+      type: object
+      required: [membershipId, inviteeEmail, role, invitationExpiresAt]
+      additionalProperties: false
+      properties:
+        membershipId:
+          $ref: '#/components/schemas/Identifier'
+        inviteeEmail:
+          type: string
+          maxLength: 254
+          pattern: '^[^\x00-\x1F\x7F-\x9F]*$'
+          description: At most 254 characters, none of them a control character
+        role:
+          $ref: '#/components/schemas/MembershipRole'
+        invitationExpiresAt:
+          $ref: '#/components/schemas/Instant'
+          description: Nanoseconds since the Unix epoch; it must come after the request
+    GrantMembershipRequest:
+      type: object
+      required: [userId]
+      additionalProperties: false
+      properties:
+        userId:
+          $ref: '#/components/schemas/Identifier'
+        personId:
+          $ref: '#/components/schemas/Identifier'
+    RevokeMembershipRequest:
+      type: object
+      required: [reason]
+      additionalProperties: false
+      properties:
+        reason:
+          type: string
+          maxLength: 512
+          pattern: '^[^\x00-\x1F\x7F-\x9F]*$'
+          description: At most 512 characters, none of them a control character
+    RequestBankAccountChangeRequest:
+      type: object
+      required: [bankAccountChangeId, destinationEvidenceId]
+      additionalProperties: false
+      properties:
+        bankAccountChangeId:
+          $ref: '#/components/schemas/Identifier'
+        destinationEvidenceId:
+          type: string
+          maxLength: 256
+          pattern: '^[^\x00-\x1F\x7F-\x9F]*$'
+          description: >-
+            Opaque id of the evidence of the destination; the bank data itself
+            never reaches this context. At most 256 characters, none of them a
+            control character
+    RegisteredOrganization:
+      type: object
+      required: [organizationId]
+      properties:
+        organizationId:
+          type: string
+    AddedEstablishment:
+      type: object
+      required: [establishmentId]
+      properties:
+        establishmentId:
+          type: string
+    RegisteredPerson:
+      type: object
+      required: [personId]
+      properties:
+        personId:
+          type: string
+    RegisteredRepresentation:
+      type: object
+      required: [representationId]
+      properties:
+        representationId:
+          type: string
+    ProvisionedUserAccount:
+      type: object
+      required: [userId]
+      properties:
+        userId:
+          type: string
+    SuspendedUser:
+      type: object
+      required: [userId]
+      properties:
+        userId:
+          type: string
+    InvitedUser:
+      type: object
+      required: [membershipId]
+      properties:
+        membershipId:
+          type: string
+    GrantedMembership:
+      type: object
+      required: [membershipId]
+      properties:
+        membershipId:
+          type: string
+    RevokedMembership:
+      type: object
+      required: [membershipId]
+      properties:
+        membershipId:
+          type: string
+    RequestedBankAccountChange:
+      type: object
+      required: [bankAccountChangeId]
+      properties:
+        bankAccountChangeId:
+          type: string
+    ApprovedBankAccountChange:
+      type: object
+      required: [bankAccountChangeId]
+      properties:
+        bankAccountChangeId:
+          type: string
+    Organization:
+      type: object
+      required:
+        - organizationId
+        - kinds
+        - jurisdiction
+        - taxIdType
+        - taxId
+        - taxIdHash
+        - taxIdHashKeyVersion
+        - taxIdMasked
+        - legalName
+        - status
+        - createdAt
+      properties:
+        organizationId:
+          type: string
+        kinds:
+          type: array
+          items:
+            $ref: '#/components/schemas/OrganizationKind'
+        jurisdiction:
+          type: string
+        taxIdType:
+          $ref: '#/components/schemas/TaxIdType'
+        taxId:
+          type: string
+        taxIdHash:
+          type: string
+        taxIdHashKeyVersion:
+          type: integer
+          format: int32
+        taxIdMasked:
+          type: string
+        legalName:
+          type: string
+        tradeName:
+          type: string
+        status:
+          $ref: '#/components/schemas/OrganizationStatus'
+        createdAt:
+          $ref: '#/components/schemas/Instant'
+    Establishment:
+      type: object
+      required:
+        - establishmentId
+        - organizationId
+        - taxIdType
+        - taxId
+        - taxIdHash
+        - taxIdHashKeyVersion
+        - taxIdMasked
+        - receiver
+        - externalReferences
+        - createdAt
+      properties:
+        establishmentId:
+          type: string
+        organizationId:
+          type: string
+        taxIdType:
+          $ref: '#/components/schemas/TaxIdType'
+        taxId:
+          type: string
+        taxIdHash:
+          type: string
+        taxIdHashKeyVersion:
+          type: integer
+          format: int32
+        taxIdMasked:
+          type: string
+        tradeName:
+          type: string
+        receiver:
+          type: boolean
+        externalReferences:
+          type: array
+          items:
+            $ref: '#/components/schemas/ExternalReferenceView'
+        createdAt:
+          $ref: '#/components/schemas/Instant'
+    Person:
+      type: object
+      required: [personId, fullName, documentHash, documentHashKeyVersion, documentMasked, createdAt]
+      description: A person is identified by the hash and the mask of the document alone
+      properties:
+        personId:
+          type: string
+        fullName:
+          type: string
+        documentHash:
+          type: string
+        documentHashKeyVersion:
+          type: integer
+          format: int32
+        documentMasked:
+          type: string
+        createdAt:
+          $ref: '#/components/schemas/Instant'
+    Representation:
+      type: object
+      required:
+        - representationId
+        - organizationId
+        - personId
+        - powerType
+        - sourceType
+        - sourceEvidenceId
+        - validFrom
+        - verificationStatus
+        - proposedByUserId
+      properties:
+        representationId:
+          type: string
+        organizationId:
+          type: string
+        personId:
+          type: string
+        powerType:
+          $ref: '#/components/schemas/PowerType'
+        sourceType:
+          $ref: '#/components/schemas/SourceType'
+        sourceEvidenceId:
+          type: string
+        scopeCurrency:
+          type: string
+        scopeMaxAmountMinor:
+          type: integer
+          format: int64
+        scopeActTypes:
+          type: array
+          items:
+            type: string
+        validFrom:
+          $ref: '#/components/schemas/Instant'
+        validUntil:
+          $ref: '#/components/schemas/Instant'
+          description: Nanoseconds since the Unix epoch; zero is an indefinite validity
+        verificationStatus:
+          $ref: '#/components/schemas/RepresentationVerificationStatus'
+        proposedByUserId:
+          type: string
+    Membership:
+      type: object
+      required:
+        - membershipId
+        - organizationId
+        - inviteeEmail
+        - role
+        - status
+        - invitedByUserId
+        - invitedAt
+        - invitationExpiresAt
+      properties:
+        membershipId:
+          type: string
+        organizationId:
+          type: string
+        inviteeEmail:
+          type: string
+        role:
+          $ref: '#/components/schemas/MembershipRole'
+        status:
+          $ref: '#/components/schemas/MembershipStatus'
+        invitedByUserId:
+          type: string
+        invitedAt:
+          $ref: '#/components/schemas/Instant'
+        invitationExpiresAt:
+          $ref: '#/components/schemas/Instant'
+        userId:
+          type: string
+          description: Empty until the grant
+        personId:
+          type: string
+        verificationLevel:
+          $ref: '#/components/schemas/VerificationLevel'
+        grantedAt:
+          $ref: '#/components/schemas/Instant'
+        revokedAt:
+          $ref: '#/components/schemas/Instant'
+        revocationReason:
+          type: string
+    EffectivePermissions:
+      type: object
+      required: [permissions]
+      properties:
+        permissions:
+          type: array
+          uniqueItems: true
+          description: >-
+            The union of the permissions of the roles of the active memberships,
+            in ascending order; empty when the account is absent or suspended
+          items:
+            type: string
+    BankAccountChange:
+      type: object
+      required:
+        - bankAccountChangeId
+        - organizationId
+        - destinationEvidenceId
+        - requestedByUserId
+        - status
+        - requestedAt
+      properties:
+        bankAccountChangeId:
+          type: string
+        organizationId:
+          type: string
+        destinationEvidenceId:
+          type: string
+        requestedByUserId:
+          type: string
+        approvedByUserId:
+          type: string
+          description: Empty until the approval
+        status:
+          $ref: '#/components/schemas/BankAccountChangeStatus'
+        requestedAt:
+          $ref: '#/components/schemas/Instant'
+        approvedAt:
+          $ref: '#/components/schemas/Instant'
+    Rejection:
+      type: object
+      required: [code, message]
+      description: >-
+        A refusal the domain or the edge declared. Domain codes take the
+        "context/aggregate/reason" form (FND-03 §5.3; ADR-053).
+      properties:
+        code:
+          type: string
+          examples:
+            - identity-organization/organization/duplicate-tax-id
+            - identity-organization/membership/role-kind-mismatch
+            - identity-organization/bank-account-change/same-actor-approval
+            - missing-idempotency-key
+            - invalid-idempotency-key
+            - reused-idempotency-key
+            - in-flight-idempotency-key
+            - already-exists
+        message:
+          type: string
+  headers:
+    IdempotentReplayed:
+      description: >-
+        Present with the value true when the answer is the stored response of
+        an earlier request with the same Idempotency-Key (IDM-08); absent on the
+        first answer.
+      schema:
+        type: string
+        enum: ['true']
+  responses:
+    BadRequest:
+      description: The request is malformed or misses Idempotency-Key, or carries it outside its format
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Rejection'
+    NotFound:
+      description: No record with this id in the tenant of the request
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Rejection'
+    VersionConflict:
+      description: >-
+        A concurrent write advanced the aggregate (replay the request), or a request with the same
+        Idempotency-Key is still in progress (in-flight-idempotency-key)
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Rejection'
+    CreateConflict:
+      description: >-
+        The aggregate already exists (already-exists), a request with the same
+        Idempotency-Key is still in progress (in-flight-idempotency-key), or a
+        concurrent creation of the same aggregate won; replay the request
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Rejection'
+    Rejected:
+      description: >-
+        The domain refused the command (a business rejection, not a failure), or
+        the Idempotency-Key was already used with another request
+        (reused-idempotency-key)
+      headers:
+        Idempotent-Replayed:
+          $ref: '#/components/headers/IdempotentReplayed'
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Rejection'
+    AdmissionRefused:
+      description: Admission control refused the request before reading the body (RES-17)
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Rejection'
+    Unavailable:
+      description: The identity context is unavailable
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Rejection'
+    Timeout:
+      description: The deadline of the request expired before the context answered (GRP-04)
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Rejection'
+    Failure:
+      description: Technical failure; the body carries no internal detail (ERR-20)
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Rejection'

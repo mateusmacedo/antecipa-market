@@ -1,0 +1,413 @@
+{
+  "format_version": "1",
+  "identity": {
+    "context": "identity",
+    "aggregate": "organization"
+  },
+  "cases": [
+    {
+      "name": "register-accepted",
+      "doc": "Ramo Accepted de Register: CNPJ alfanumérico (ADR-021); a organização nasce active com createdAt = at, e o organization-registered leva hash e máscara, nunca o identificador em claro.",
+      "state_before": {
+        "organization": "org-1",
+        "kinds": "",
+        "jurisdiction": "",
+        "tax_id_type": "",
+        "tax_id": "",
+        "tax_id_hash": "",
+        "tax_id_hash_key_version": "0",
+        "tax_id_masked": "",
+        "legal_name": "",
+        "trade_name": "",
+        "status": "new",
+        "created_at": "0"
+      },
+      "command": {
+        "upr": "register",
+        "kinds": "client",
+        "jurisdiction": "BR",
+        "tax_id_type": "cnpj",
+        "tax_id": "12ABC34501DE35",
+        "tax_id_hash": "4a455609da3a3d6d689b65257f38532e3868396abc39d3b92311b18489f169dc",
+        "tax_id_hash_key_version": "1",
+        "tax_id_already_registered": "false",
+        "legal_name": "Recebiveis Sinteticos Ltda",
+        "trade_name": "Sintetica",
+        "at": "1755432000000000000"
+      },
+      "expected": {
+        "branch": "accepted",
+        "response": {
+          "organization": "org-1"
+        },
+        "events": [
+          {
+            "name": "identity-organization.organization.registered",
+            "fields": {
+              "organization": "org-1",
+              "kinds": "client",
+              "jurisdiction": "BR",
+              "tax_id_type": "cnpj",
+              "tax_id_hash": "4a455609da3a3d6d689b65257f38532e3868396abc39d3b92311b18489f169dc",
+              "tax_id_masked": "**.***.***/**DE-35",
+              "at": "1755432000000000000"
+            }
+          }
+        ],
+        "state_after": {
+          "organization": "org-1",
+          "kinds": "client",
+          "jurisdiction": "BR",
+          "tax_id_type": "cnpj",
+          "tax_id": "12ABC34501DE35",
+          "tax_id_hash": "4a455609da3a3d6d689b65257f38532e3868396abc39d3b92311b18489f169dc",
+          "tax_id_hash_key_version": "1",
+          "tax_id_masked": "**.***.***/**DE-35",
+          "legal_name": "Recebiveis Sinteticos Ltda",
+          "trade_name": "Sintetica",
+          "status": "active",
+          "created_at": "1755432000000000000"
+        }
+      }
+    },
+    {
+      "name": "register-accepted-cpf-with-punctuation",
+      "doc": "Ramo Accepted de Register com CPF pontuado e dois papéis: a máscara sai do valor normalizado, e o estado guarda o valor como chegou.",
+      "state_before": {
+        "organization": "org-1",
+        "kinds": "",
+        "jurisdiction": "",
+        "tax_id_type": "",
+        "tax_id": "",
+        "tax_id_hash": "",
+        "tax_id_hash_key_version": "0",
+        "tax_id_masked": "",
+        "legal_name": "",
+        "trade_name": "",
+        "status": "new",
+        "created_at": "0"
+      },
+      "command": {
+        "upr": "register",
+        "kinds": "funder,partner",
+        "jurisdiction": "BR",
+        "tax_id_type": "cpf",
+        "tax_id": "123.456.789-09",
+        "tax_id_hash": "accdef5fa5a63d40218f9b3fb5abdfc9eeb4036cbdbe46cff36bff2ec9462a3d",
+        "tax_id_hash_key_version": "1",
+        "tax_id_already_registered": "false",
+        "legal_name": "Recebiveis Sinteticos Ltda",
+        "trade_name": "",
+        "at": "1755432000000000000"
+      },
+      "expected": {
+        "branch": "accepted",
+        "response": {
+          "organization": "org-1"
+        },
+        "events": [
+          {
+            "name": "identity-organization.organization.registered",
+            "fields": {
+              "organization": "org-1",
+              "kinds": "funder,partner",
+              "jurisdiction": "BR",
+              "tax_id_type": "cpf",
+              "tax_id_hash": "accdef5fa5a63d40218f9b3fb5abdfc9eeb4036cbdbe46cff36bff2ec9462a3d",
+              "tax_id_masked": "***.***.*89-09",
+              "at": "1755432000000000000"
+            }
+          }
+        ],
+        "state_after": {
+          "organization": "org-1",
+          "kinds": "funder,partner",
+          "jurisdiction": "BR",
+          "tax_id_type": "cpf",
+          "tax_id": "123.456.789-09",
+          "tax_id_hash": "accdef5fa5a63d40218f9b3fb5abdfc9eeb4036cbdbe46cff36bff2ec9462a3d",
+          "tax_id_hash_key_version": "1",
+          "tax_id_masked": "***.***.*89-09",
+          "legal_name": "Recebiveis Sinteticos Ltda",
+          "trade_name": "",
+          "status": "active",
+          "created_at": "1755432000000000000"
+        }
+      }
+    },
+    {
+      "name": "register-kinds-empty",
+      "doc": "Ramo Rejected de Register: sem papel nenhum a organização não nasce; estado inalterado.",
+      "state_before": {
+        "organization": "org-1",
+        "kinds": "",
+        "jurisdiction": "",
+        "tax_id_type": "",
+        "tax_id": "",
+        "tax_id_hash": "",
+        "tax_id_hash_key_version": "0",
+        "tax_id_masked": "",
+        "legal_name": "",
+        "trade_name": "",
+        "status": "new",
+        "created_at": "0"
+      },
+      "command": {
+        "upr": "register",
+        "kinds": "",
+        "jurisdiction": "BR",
+        "tax_id_type": "cnpj",
+        "tax_id": "12ABC34501DE35",
+        "tax_id_hash": "4a455609da3a3d6d689b65257f38532e3868396abc39d3b92311b18489f169dc",
+        "tax_id_hash_key_version": "1",
+        "tax_id_already_registered": "false",
+        "legal_name": "Recebiveis Sinteticos Ltda",
+        "trade_name": "Sintetica",
+        "at": "1755432000000000000"
+      },
+      "expected": {
+        "branch": "rejected",
+        "rejection": {
+          "code": "identity-organization/organization/kinds-empty",
+          "message": "kinds must not be empty",
+          "details": {}
+        },
+        "events": [],
+        "state_after": {
+          "organization": "org-1",
+          "kinds": "",
+          "jurisdiction": "",
+          "tax_id_type": "",
+          "tax_id": "",
+          "tax_id_hash": "",
+          "tax_id_hash_key_version": "0",
+          "tax_id_masked": "",
+          "legal_name": "",
+          "trade_name": "",
+          "status": "new",
+          "created_at": "0"
+        }
+      }
+    },
+    {
+      "name": "register-jurisdiction-invalid",
+      "doc": "Ramo Rejected de Register: jurisdição com três letras não é ISO 3166-1 alfa-2; estado inalterado.",
+      "state_before": {
+        "organization": "org-1",
+        "kinds": "",
+        "jurisdiction": "",
+        "tax_id_type": "",
+        "tax_id": "",
+        "tax_id_hash": "",
+        "tax_id_hash_key_version": "0",
+        "tax_id_masked": "",
+        "legal_name": "",
+        "trade_name": "",
+        "status": "new",
+        "created_at": "0"
+      },
+      "command": {
+        "upr": "register",
+        "kinds": "client",
+        "jurisdiction": "BRA",
+        "tax_id_type": "cnpj",
+        "tax_id": "12ABC34501DE35",
+        "tax_id_hash": "4a455609da3a3d6d689b65257f38532e3868396abc39d3b92311b18489f169dc",
+        "tax_id_hash_key_version": "1",
+        "tax_id_already_registered": "false",
+        "legal_name": "Recebiveis Sinteticos Ltda",
+        "trade_name": "Sintetica",
+        "at": "1755432000000000000"
+      },
+      "expected": {
+        "branch": "rejected",
+        "rejection": {
+          "code": "identity-organization/organization/jurisdiction-invalid",
+          "message": "jurisdiction must be an ISO 3166-1 alpha-2 code",
+          "details": {
+            "jurisdiction": "BRA"
+          }
+        },
+        "events": [],
+        "state_after": {
+          "organization": "org-1",
+          "kinds": "",
+          "jurisdiction": "",
+          "tax_id_type": "",
+          "tax_id": "",
+          "tax_id_hash": "",
+          "tax_id_hash_key_version": "0",
+          "tax_id_masked": "",
+          "legal_name": "",
+          "trade_name": "",
+          "status": "new",
+          "created_at": "0"
+        }
+      }
+    },
+    {
+      "name": "register-tax-id-empty",
+      "doc": "Ramo Rejected de Register: identificador fiscal só com pontuação normaliza para vazio; estado inalterado.",
+      "state_before": {
+        "organization": "org-1",
+        "kinds": "",
+        "jurisdiction": "",
+        "tax_id_type": "",
+        "tax_id": "",
+        "tax_id_hash": "",
+        "tax_id_hash_key_version": "0",
+        "tax_id_masked": "",
+        "legal_name": "",
+        "trade_name": "",
+        "status": "new",
+        "created_at": "0"
+      },
+      "command": {
+        "upr": "register",
+        "kinds": "client",
+        "jurisdiction": "BR",
+        "tax_id_type": "cnpj",
+        "tax_id": "../-",
+        "tax_id_hash": "4a455609da3a3d6d689b65257f38532e3868396abc39d3b92311b18489f169dc",
+        "tax_id_hash_key_version": "1",
+        "tax_id_already_registered": "false",
+        "legal_name": "Recebiveis Sinteticos Ltda",
+        "trade_name": "Sintetica",
+        "at": "1755432000000000000"
+      },
+      "expected": {
+        "branch": "rejected",
+        "rejection": {
+          "code": "identity-organization/organization/tax-id-empty",
+          "message": "tax id must not be empty",
+          "details": {}
+        },
+        "events": [],
+        "state_after": {
+          "organization": "org-1",
+          "kinds": "",
+          "jurisdiction": "",
+          "tax_id_type": "",
+          "tax_id": "",
+          "tax_id_hash": "",
+          "tax_id_hash_key_version": "0",
+          "tax_id_masked": "",
+          "legal_name": "",
+          "trade_name": "",
+          "status": "new",
+          "created_at": "0"
+        }
+      }
+    },
+    {
+      "name": "register-legal-name-empty",
+      "doc": "Ramo Rejected de Register: razão social em branco; estado inalterado.",
+      "state_before": {
+        "organization": "org-1",
+        "kinds": "",
+        "jurisdiction": "",
+        "tax_id_type": "",
+        "tax_id": "",
+        "tax_id_hash": "",
+        "tax_id_hash_key_version": "0",
+        "tax_id_masked": "",
+        "legal_name": "",
+        "trade_name": "",
+        "status": "new",
+        "created_at": "0"
+      },
+      "command": {
+        "upr": "register",
+        "kinds": "client",
+        "jurisdiction": "BR",
+        "tax_id_type": "cnpj",
+        "tax_id": "12ABC34501DE35",
+        "tax_id_hash": "4a455609da3a3d6d689b65257f38532e3868396abc39d3b92311b18489f169dc",
+        "tax_id_hash_key_version": "1",
+        "tax_id_already_registered": "false",
+        "legal_name": "   ",
+        "trade_name": "Sintetica",
+        "at": "1755432000000000000"
+      },
+      "expected": {
+        "branch": "rejected",
+        "rejection": {
+          "code": "identity-organization/organization/legal-name-empty",
+          "message": "legal name must not be empty",
+          "details": {}
+        },
+        "events": [],
+        "state_after": {
+          "organization": "org-1",
+          "kinds": "",
+          "jurisdiction": "",
+          "tax_id_type": "",
+          "tax_id": "",
+          "tax_id_hash": "",
+          "tax_id_hash_key_version": "0",
+          "tax_id_masked": "",
+          "legal_name": "",
+          "trade_name": "",
+          "status": "new",
+          "created_at": "0"
+        }
+      }
+    },
+    {
+      "name": "register-duplicate-tax-id",
+      "doc": "Ramo Rejected de Register: o caso de uso achou o mesmo hash na jurisdição do tenant; estado inalterado.",
+      "state_before": {
+        "organization": "org-1",
+        "kinds": "",
+        "jurisdiction": "",
+        "tax_id_type": "",
+        "tax_id": "",
+        "tax_id_hash": "",
+        "tax_id_hash_key_version": "0",
+        "tax_id_masked": "",
+        "legal_name": "",
+        "trade_name": "",
+        "status": "new",
+        "created_at": "0"
+      },
+      "command": {
+        "upr": "register",
+        "kinds": "client",
+        "jurisdiction": "BR",
+        "tax_id_type": "cnpj",
+        "tax_id": "12ABC34501DE35",
+        "tax_id_hash": "4a455609da3a3d6d689b65257f38532e3868396abc39d3b92311b18489f169dc",
+        "tax_id_hash_key_version": "1",
+        "tax_id_already_registered": "true",
+        "legal_name": "Recebiveis Sinteticos Ltda",
+        "trade_name": "Sintetica",
+        "at": "1755432000000000000"
+      },
+      "expected": {
+        "branch": "rejected",
+        "rejection": {
+          "code": "identity-organization/organization/duplicate-tax-id",
+          "message": "tax id already registered in the jurisdiction",
+          "details": {
+            "jurisdiction": "BR"
+          }
+        },
+        "events": [],
+        "state_after": {
+          "organization": "org-1",
+          "kinds": "",
+          "jurisdiction": "",
+          "tax_id_type": "",
+          "tax_id": "",
+          "tax_id_hash": "",
+          "tax_id_hash_key_version": "0",
+          "tax_id_masked": "",
+          "legal_name": "",
+          "trade_name": "",
+          "status": "new",
+          "created_at": "0"
+        }
+      }
+    }
+  ]
+}

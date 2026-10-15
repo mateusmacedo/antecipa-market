@@ -1,0 +1,544 @@
+syntax = "proto3";
+
+package company.identity.service.v1;
+
+// Internal synchronous surface of the identity-organization bounded context
+// (GRP-01). A domain refusal travels as `rejection` in the response; a
+// technical failure is a gRPC status.
+service IdentityService {
+  rpc RegisterOrganization(RegisterOrganizationRequest) returns (RegisterOrganizationResponse);
+  rpc FindOrganization(FindOrganizationRequest) returns (FindOrganizationResponse);
+  rpc FindOrganizationByTaxId(FindOrganizationByTaxIdRequest) returns (FindOrganizationByTaxIdResponse);
+  rpc AddEstablishment(AddEstablishmentRequest) returns (AddEstablishmentResponse);
+  rpc RegisterPerson(RegisterPersonRequest) returns (RegisterPersonResponse);
+  rpc RegisterRepresentation(RegisterRepresentationRequest) returns (RegisterRepresentationResponse);
+  rpc FindEstablishmentsByOrganization(FindEstablishmentsByOrganizationRequest) returns (FindEstablishmentsByOrganizationResponse);
+  rpc FindPerson(FindPersonRequest) returns (FindPersonResponse);
+  rpc FindRepresentation(FindRepresentationRequest) returns (FindRepresentationResponse);
+  rpc FindRepresentationsByOrganization(FindRepresentationsByOrganizationRequest) returns (FindRepresentationsByOrganizationResponse);
+  rpc ProvisionUserAccount(ProvisionUserAccountRequest) returns (ProvisionUserAccountResponse);
+  rpc SuspendUser(SuspendUserRequest) returns (SuspendUserResponse);
+  rpc InviteUser(InviteUserRequest) returns (InviteUserResponse);
+  rpc GrantMembership(GrantMembershipRequest) returns (GrantMembershipResponse);
+  rpc RevokeMembership(RevokeMembershipRequest) returns (RevokeMembershipResponse);
+  rpc FindMembershipsByUser(FindMembershipsByUserRequest) returns (FindMembershipsByUserResponse);
+  rpc FindMembershipsByOrganization(FindMembershipsByOrganizationRequest) returns (FindMembershipsByOrganizationResponse);
+  rpc FindEffectivePermissions(FindEffectivePermissionsRequest) returns (FindEffectivePermissionsResponse);
+  rpc RequestBankAccountChange(RequestBankAccountChangeRequest) returns (RequestBankAccountChangeResponse);
+  rpc ApproveBankAccountChange(ApproveBankAccountChangeRequest) returns (ApproveBankAccountChangeResponse);
+  rpc FindBankAccountChange(FindBankAccountChangeRequest) returns (FindBankAccountChangeResponse);
+  rpc FindBankAccountChangesByOrganization(FindBankAccountChangesByOrganizationRequest) returns (FindBankAccountChangesByOrganizationResponse);
+}
+
+message RegisterOrganizationRequest {
+  string organization_id = 1;
+  repeated OrganizationKind kinds = 2;
+  // ISO 3166-1 alpha-2.
+  string jurisdiction = 3;
+  TaxIdType tax_id_type = 4;
+  // In clear on this hop only: it never leaves the context in an event or a log.
+  string tax_id = 5;
+  string legal_name = 6;
+  string trade_name = 7;
+}
+
+message RegisterOrganizationResponse {
+  oneof result {
+    RegisteredOrganization registered = 1;
+    Rejection rejection = 2;
+  }
+}
+
+message RegisteredOrganization {
+  string organization_id = 1;
+}
+
+message FindOrganizationRequest {
+  string organization_id = 1;
+}
+
+message FindOrganizationResponse {
+  Organization organization = 1;
+}
+
+// The type travels with the value because the protected hash depends on it.
+message FindOrganizationByTaxIdRequest {
+  TaxIdType tax_id_type = 1;
+  string tax_id = 2;
+  string jurisdiction = 3;
+}
+
+message FindOrganizationByTaxIdResponse {
+  Organization organization = 1;
+}
+
+message Organization {
+  string organization_id = 1;
+  repeated OrganizationKind kinds = 2;
+  string jurisdiction = 3;
+  TaxIdType tax_id_type = 4;
+  string tax_id = 5;
+  string tax_id_hash = 6;
+  int32 tax_id_hash_key_version = 7;
+  string tax_id_masked = 8;
+  string legal_name = 9;
+  string trade_name = 10;
+  OrganizationStatus status = 11;
+  // Nanoseconds since the Unix epoch, the domain's instant.
+  int64 created_at = 12;
+}
+
+enum OrganizationKind {
+  ORGANIZATION_KIND_UNSPECIFIED = 0;
+  ORGANIZATION_KIND_CLIENT = 1;
+  ORGANIZATION_KIND_FUNDER = 2;
+  ORGANIZATION_KIND_PARTNER = 3;
+  ORGANIZATION_KIND_PLATFORM = 4;
+}
+
+enum TaxIdType {
+  TAX_ID_TYPE_UNSPECIFIED = 0;
+  TAX_ID_TYPE_CNPJ = 1;
+  TAX_ID_TYPE_CPF = 2;
+}
+
+enum OrganizationStatus {
+  ORGANIZATION_STATUS_UNSPECIFIED = 0;
+  ORGANIZATION_STATUS_ACTIVE = 1;
+  ORGANIZATION_STATUS_SUSPENDED = 2;
+  ORGANIZATION_STATUS_OFFBOARDED = 3;
+}
+
+message Rejection {
+  string code = 1;
+  string message = 2;
+}
+
+message AddEstablishmentRequest {
+  string establishment_id = 1;
+  string organization_id = 2;
+  TaxIdType tax_id_type = 3;
+  // In clear on this hop only: it never leaves the context in an event or a log.
+  string tax_id = 4;
+  string trade_name = 5;
+  bool receiver = 6;
+  repeated ExternalReference external_references = 7;
+}
+
+message AddEstablishmentResponse {
+  oneof result {
+    AddedEstablishment added = 1;
+    Rejection rejection = 2;
+  }
+}
+
+message AddedEstablishment {
+  string establishment_id = 1;
+}
+
+message RegisterPersonRequest {
+  string person_id = 1;
+  string full_name = 2;
+  // In clear on this hop only: it derives the hash and the mask and is never stored.
+  string document = 3;
+}
+
+message RegisterPersonResponse {
+  oneof result {
+    RegisteredPerson registered = 1;
+    Rejection rejection = 2;
+  }
+}
+
+message RegisteredPerson {
+  string person_id = 1;
+}
+
+message RegisterRepresentationRequest {
+  string representation_id = 1;
+  string organization_id = 2;
+  string person_id = 3;
+  PowerType power_type = 4;
+  SourceType source_type = 5;
+  // Opaque id of the evidence; its bytes live in the object storage, apart.
+  string source_evidence_id = 6;
+  // With scope_max_amount_minor, both set or both left empty.
+  string scope_currency = 7;
+  int64 scope_max_amount_minor = 8;
+  repeated string scope_act_types = 9;
+  // Nanoseconds since the Unix epoch, the domain's instant.
+  int64 valid_from = 10;
+  // Nanoseconds since the Unix epoch; zero is an indefinite validity.
+  int64 valid_until = 11;
+  // The subject of the authenticated user, filled by the bff from the token.
+  string proposed_by_user_id = 12;
+}
+
+message RegisterRepresentationResponse {
+  oneof result {
+    RegisteredRepresentation registered = 1;
+    Rejection rejection = 2;
+  }
+}
+
+message RegisteredRepresentation {
+  string representation_id = 1;
+}
+
+message FindEstablishmentsByOrganizationRequest {
+  string organization_id = 1;
+}
+
+message FindEstablishmentsByOrganizationResponse {
+  repeated Establishment establishments = 1;
+}
+
+message FindPersonRequest {
+  string person_id = 1;
+}
+
+message FindPersonResponse {
+  Person person = 1;
+}
+
+message FindRepresentationRequest {
+  string representation_id = 1;
+}
+
+message FindRepresentationResponse {
+  Representation representation = 1;
+}
+
+message FindRepresentationsByOrganizationRequest {
+  string organization_id = 1;
+  // Nanoseconds since the Unix epoch; zero lists every representation, in force or not.
+  int64 valid_at = 2;
+}
+
+message FindRepresentationsByOrganizationResponse {
+  repeated Representation representations = 1;
+}
+
+message Establishment {
+  string establishment_id = 1;
+  string organization_id = 2;
+  TaxIdType tax_id_type = 3;
+  string tax_id = 4;
+  string tax_id_hash = 5;
+  int32 tax_id_hash_key_version = 6;
+  string tax_id_masked = 7;
+  string trade_name = 8;
+  bool receiver = 9;
+  repeated ExternalReference external_references = 10;
+  // Nanoseconds since the Unix epoch, the domain's instant.
+  int64 created_at = 11;
+}
+
+// The identity of an object in a partner system (doc 90, section 2.1).
+message ExternalReference {
+  string provider_id = 1;
+  ExternalSystem system = 2;
+  ExternalReferenceType reference_type = 3;
+  // The partner's value exactly, never normalized.
+  string reference = 4;
+  // Nanoseconds since the Unix epoch, when the reference was obtained.
+  int64 as_of = 5;
+  string observed_version = 6;
+}
+
+enum ExternalSystem {
+  EXTERNAL_SYSTEM_UNSPECIFIED = 0;
+  EXTERNAL_SYSTEM_REGISTRY = 1;
+  EXTERNAL_SYSTEM_BOOKKEEPER = 2;
+  EXTERNAL_SYSTEM_ACQUIRER = 3;
+  EXTERNAL_SYSTEM_FUNDER = 4;
+  EXTERNAL_SYSTEM_DEPOSITORY = 5;
+}
+
+enum ExternalReferenceType {
+  EXTERNAL_REFERENCE_TYPE_UNSPECIFIED = 0;
+  EXTERNAL_REFERENCE_TYPE_ASSET = 1;
+  EXTERNAL_REFERENCE_TYPE_EFFECT = 2;
+  EXTERNAL_REFERENCE_TYPE_AUTHORIZATION = 3;
+  EXTERNAL_REFERENCE_TYPE_COMMAND = 4;
+  EXTERNAL_REFERENCE_TYPE_SETTLEMENT = 5;
+}
+
+// A person is identified by the hash and the mask of the document alone.
+message Person {
+  string person_id = 1;
+  string full_name = 2;
+  string document_hash = 3;
+  int32 document_hash_key_version = 4;
+  string document_masked = 5;
+  // Nanoseconds since the Unix epoch, the domain's instant.
+  int64 created_at = 6;
+}
+
+message Representation {
+  string representation_id = 1;
+  string organization_id = 2;
+  string person_id = 3;
+  PowerType power_type = 4;
+  SourceType source_type = 5;
+  string source_evidence_id = 6;
+  string scope_currency = 7;
+  int64 scope_max_amount_minor = 8;
+  repeated string scope_act_types = 9;
+  // Nanoseconds since the Unix epoch, the domain's instant.
+  int64 valid_from = 10;
+  // Nanoseconds since the Unix epoch; zero is an indefinite validity.
+  int64 valid_until = 11;
+  RepresentationVerificationStatus verification_status = 12;
+  string proposed_by_user_id = 13;
+}
+
+enum PowerType {
+  POWER_TYPE_UNSPECIFIED = 0;
+  POWER_TYPE_LEGAL_REPRESENTATIVE = 1;
+  POWER_TYPE_ATTORNEY_IN_FACT = 2;
+  POWER_TYPE_OPERATOR = 3;
+}
+
+enum SourceType {
+  SOURCE_TYPE_UNSPECIFIED = 0;
+  SOURCE_TYPE_ARTICLES_OF_ASSOCIATION = 1;
+  SOURCE_TYPE_POWER_OF_ATTORNEY = 2;
+  SOURCE_TYPE_BOARD_RESOLUTION = 3;
+  SOURCE_TYPE_INTERNAL_DELEGATION = 4;
+}
+
+enum RepresentationVerificationStatus {
+  REPRESENTATION_VERIFICATION_STATUS_UNSPECIFIED = 0;
+  REPRESENTATION_VERIFICATION_STATUS_DECLARED = 1;
+}
+
+message ProvisionUserAccountRequest {
+  // The sub claim of the realm, the natural identity of the account in the tenant.
+  string subject = 1;
+  string person_id = 2;
+}
+
+message ProvisionUserAccountResponse {
+  oneof result {
+    ProvisionedUserAccount provisioned = 1;
+    Rejection rejection = 2;
+  }
+}
+
+message ProvisionedUserAccount {
+  string user_id = 1;
+}
+
+message SuspendUserRequest {
+  string user_id = 1;
+  string reason = 2;
+}
+
+message SuspendUserResponse {
+  oneof result {
+    SuspendedUser suspended = 1;
+    Rejection rejection = 2;
+  }
+}
+
+message SuspendedUser {
+  string user_id = 1;
+}
+
+message InviteUserRequest {
+  string membership_id = 1;
+  string organization_id = 2;
+  string invitee_email = 3;
+  MembershipRole role = 4;
+  // The subject of the authenticated user, filled by the bff from the token.
+  string invited_by_user_id = 5;
+  // Nanoseconds since the Unix epoch; it must come after the request.
+  int64 invitation_expires_at = 6;
+}
+
+message InviteUserResponse {
+  oneof result {
+    InvitedUser invited = 1;
+    Rejection rejection = 2;
+  }
+}
+
+message InvitedUser {
+  string membership_id = 1;
+}
+
+message GrantMembershipRequest {
+  string membership_id = 1;
+  string user_id = 2;
+  string person_id = 3;
+  // Confirmed by the edge, which conducts the verification of the channel.
+  bool channel_confirmed = 4;
+  VerificationLevel verification_level = 5;
+}
+
+message GrantMembershipResponse {
+  oneof result {
+    GrantedMembership granted = 1;
+    Rejection rejection = 2;
+  }
+}
+
+message GrantedMembership {
+  string membership_id = 1;
+}
+
+message RevokeMembershipRequest {
+  string membership_id = 1;
+  string reason = 2;
+}
+
+message RevokeMembershipResponse {
+  oneof result {
+    RevokedMembership revoked = 1;
+    Rejection rejection = 2;
+  }
+}
+
+message RevokedMembership {
+  string membership_id = 1;
+}
+
+message FindMembershipsByUserRequest {
+  string user_id = 1;
+}
+
+message FindMembershipsByUserResponse {
+  repeated Membership memberships = 1;
+}
+
+message FindMembershipsByOrganizationRequest {
+  string organization_id = 1;
+}
+
+message FindMembershipsByOrganizationResponse {
+  repeated Membership memberships = 1;
+}
+
+// Called by the bff on every request, with no cache in any hop (CTX-16).
+message FindEffectivePermissionsRequest {
+  string user_id = 1;
+}
+
+message FindEffectivePermissionsResponse {
+  // The union of the permissions of the roles of the active memberships, without
+  // repetition and in ascending order; empty when the account is absent or suspended.
+  repeated string permissions = 1;
+}
+
+message Membership {
+  string membership_id = 1;
+  string organization_id = 2;
+  string invitee_email = 3;
+  MembershipRole role = 4;
+  MembershipStatus status = 5;
+  string invited_by_user_id = 6;
+  // Nanoseconds since the Unix epoch, the domain's instant.
+  int64 invited_at = 7;
+  int64 invitation_expires_at = 8;
+  // Empty until the grant.
+  string user_id = 9;
+  string person_id = 10;
+  VerificationLevel verification_level = 11;
+  int64 granted_at = 12;
+  int64 revoked_at = 13;
+  string revocation_reason = 14;
+}
+
+enum MembershipRole {
+  MEMBERSHIP_ROLE_UNSPECIFIED = 0;
+  MEMBERSHIP_ROLE_OPERATOR = 1;
+  MEMBERSHIP_ROLE_AUDITOR = 2;
+}
+
+enum VerificationLevel {
+  VERIFICATION_LEVEL_UNSPECIFIED = 0;
+  VERIFICATION_LEVEL_CHANNEL_OWNERSHIP = 1;
+  VERIFICATION_LEVEL_PERSONAL_DATA_CHECKED = 2;
+}
+
+enum MembershipStatus {
+  MEMBERSHIP_STATUS_UNSPECIFIED = 0;
+  MEMBERSHIP_STATUS_INVITED = 1;
+  MEMBERSHIP_STATUS_ACTIVE = 2;
+  MEMBERSHIP_STATUS_REVOKED = 3;
+}
+
+message RequestBankAccountChangeRequest {
+  string bank_account_change_id = 1;
+  string organization_id = 2;
+  // Opaque id of the evidence of the destination; the bank data itself never
+  // reaches this context.
+  string destination_evidence_id = 3;
+  // The subject of the authenticated user, filled by the bff from the token.
+  string requested_by_user_id = 4;
+}
+
+message RequestBankAccountChangeResponse {
+  oneof result {
+    RequestedBankAccountChange requested = 1;
+    Rejection rejection = 2;
+  }
+}
+
+message RequestedBankAccountChange {
+  string bank_account_change_id = 1;
+}
+
+message ApproveBankAccountChangeRequest {
+  string bank_account_change_id = 1;
+  // The subject of the authenticated user, filled by the bff from the token; it
+  // must differ from the requester.
+  string approved_by_user_id = 2;
+}
+
+message ApproveBankAccountChangeResponse {
+  oneof result {
+    ApprovedBankAccountChange approved = 1;
+    Rejection rejection = 2;
+  }
+}
+
+message ApprovedBankAccountChange {
+  string bank_account_change_id = 1;
+}
+
+message FindBankAccountChangeRequest {
+  string bank_account_change_id = 1;
+}
+
+message FindBankAccountChangeResponse {
+  BankAccountChange bank_account_change = 1;
+}
+
+message FindBankAccountChangesByOrganizationRequest {
+  string organization_id = 1;
+}
+
+message FindBankAccountChangesByOrganizationResponse {
+  repeated BankAccountChange bank_account_changes = 1;
+}
+
+message BankAccountChange {
+  string bank_account_change_id = 1;
+  string organization_id = 2;
+  string destination_evidence_id = 3;
+  string requested_by_user_id = 4;
+  // Empty until the approval.
+  string approved_by_user_id = 5;
+  BankAccountChangeStatus status = 6;
+  // Nanoseconds since the Unix epoch, the domain's instant.
+  int64 requested_at = 7;
+  int64 approved_at = 8;
+}
+
+enum BankAccountChangeStatus {
+  BANK_ACCOUNT_CHANGE_STATUS_UNSPECIFIED = 0;
+  BANK_ACCOUNT_CHANGE_STATUS_REQUESTED = 1;
+  BANK_ACCOUNT_CHANGE_STATUS_APPROVED = 2;
+}

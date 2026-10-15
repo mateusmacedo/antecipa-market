@@ -1,0 +1,18 @@
+syntax = "proto3";
+
+package company.identity.event.v1;
+
+import "company/identity/event/v1/types.proto";
+import "google/protobuf/timestamp.proto";
+
+// A user was granted a membership of an organization in the
+// identity-organization bounded context.
+message MembershipGranted {
+  string membership_id = 1;
+  string organization_id = 2;
+  // The subject of the user, the natural identity of the account in the tenant.
+  string user_id = 3;
+  MembershipRole role = 4;
+  VerificationLevel verification_level = 5;
+  google.protobuf.Timestamp granted_at = 6;
+}

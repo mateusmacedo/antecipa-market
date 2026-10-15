@@ -1,0 +1,159 @@
+{
+  "format_version": "1",
+  "identity": {
+    "context": "identity",
+    "aggregate": "person"
+  },
+  "cases": [
+    {
+      "name": "register-accepted",
+      "doc": "Ramo Accepted de Register: a pessoa guarda hash, versão da chave e máscara do documento, nunca o valor (nota ‡‡), e nenhum evento é emitido.",
+      "state_before": {
+        "person": "per-1",
+        "full_name": "",
+        "document_hash": "",
+        "document_hash_key_version": "0",
+        "document_masked": "",
+        "created_at": "0"
+      },
+      "command": {
+        "upr": "register",
+        "full_name": "Ana Sintetica",
+        "document": "123.456.789-09",
+        "document_hash": "5b2d0f0e4c8f1a9e7d36c2b4a1f0e9d8c7b6a5f4e3d2c1b0a9f8e7d6c5b4a392",
+        "document_hash_key_version": "1",
+        "document_already_registered": "false",
+        "at": "1755432000000000000"
+      },
+      "expected": {
+        "branch": "accepted",
+        "response": {
+          "person": "per-1"
+        },
+        "events": [],
+        "state_after": {
+          "person": "per-1",
+          "full_name": "Ana Sintetica",
+          "document_hash": "5b2d0f0e4c8f1a9e7d36c2b4a1f0e9d8c7b6a5f4e3d2c1b0a9f8e7d6c5b4a392",
+          "document_hash_key_version": "1",
+          "document_masked": "***.***.*89-09",
+          "created_at": "1755432000000000000"
+        }
+      }
+    },
+    {
+      "name": "register-full-name-empty",
+      "doc": "Ramo Rejected de Register: nome só de espaços.",
+      "state_before": {
+        "person": "per-1",
+        "full_name": "",
+        "document_hash": "",
+        "document_hash_key_version": "0",
+        "document_masked": "",
+        "created_at": "0"
+      },
+      "command": {
+        "upr": "register",
+        "full_name": "  ",
+        "document": "123.456.789-09",
+        "document_hash": "5b2d0f0e4c8f1a9e7d36c2b4a1f0e9d8c7b6a5f4e3d2c1b0a9f8e7d6c5b4a392",
+        "document_hash_key_version": "1",
+        "document_already_registered": "false",
+        "at": "1755432000000000000"
+      },
+      "expected": {
+        "branch": "rejected",
+        "rejection": {
+          "code": "identity-organization/person/full-name-empty",
+          "message": "full name must not be empty",
+          "details": {}
+        },
+        "events": [],
+        "state_after": {
+          "person": "per-1",
+          "full_name": "",
+          "document_hash": "",
+          "document_hash_key_version": "0",
+          "document_masked": "",
+          "created_at": "0"
+        }
+      }
+    },
+    {
+      "name": "register-document-empty",
+      "doc": "Ramo Rejected de Register: documento só de pontuação normaliza para vazio.",
+      "state_before": {
+        "person": "per-1",
+        "full_name": "",
+        "document_hash": "",
+        "document_hash_key_version": "0",
+        "document_masked": "",
+        "created_at": "0"
+      },
+      "command": {
+        "upr": "register",
+        "full_name": "Ana Sintetica",
+        "document": "..-",
+        "document_hash": "",
+        "document_hash_key_version": "1",
+        "document_already_registered": "false",
+        "at": "1755432000000000000"
+      },
+      "expected": {
+        "branch": "rejected",
+        "rejection": {
+          "code": "identity-organization/person/document-empty",
+          "message": "document must not be empty",
+          "details": {}
+        },
+        "events": [],
+        "state_after": {
+          "person": "per-1",
+          "full_name": "",
+          "document_hash": "",
+          "document_hash_key_version": "0",
+          "document_masked": "",
+          "created_at": "0"
+        }
+      }
+    },
+    {
+      "name": "register-duplicate-document",
+      "doc": "Ramo Rejected de Register: o hash do documento já está registrado no tenant (nota ††).",
+      "state_before": {
+        "person": "per-1",
+        "full_name": "",
+        "document_hash": "",
+        "document_hash_key_version": "0",
+        "document_masked": "",
+        "created_at": "0"
+      },
+      "command": {
+        "upr": "register",
+        "full_name": "Ana Sintetica",
+        "document": "123.456.789-09",
+        "document_hash": "5b2d0f0e4c8f1a9e7d36c2b4a1f0e9d8c7b6a5f4e3d2c1b0a9f8e7d6c5b4a392",
+        "document_hash_key_version": "1",
+        "document_already_registered": "true",
+        "at": "1755432000000000000"
+      },
+      "expected": {
+        "branch": "rejected",
+        "rejection": {
+          "code": "identity-organization/person/duplicate-document",
+          "message": "document already registered",
+          "details": {}
+        },
+        "events": [],
+        "state_after": {
+          "person": "per-1",
+          "full_name": "",
+          "document_hash": "",
+          "document_hash_key_version": "0",
+          "document_masked": "",
+          "created_at": "0"
+        }
+      }
+    }
+  ]
+}
