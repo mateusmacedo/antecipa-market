@@ -113,4 +113,4 @@ ADR-001.
 | ADR-019 | Construir em Go sobre o kernel DMPF, com AWS como nuvem-alvo e floci como emulador | Ratifica Go e o deploy por app do kernel e fixa AWS e floci; front-end e produção ficam pendentes. |
 | ADR-020 | Reter o inbox pelo menos pela janela de redelivery declarada por canal | `retenção_inbox ≥ janela_redelivery` (INB-14) com fórmula por canal (TRP-23/24/24b), zonas de replay e purga com evidência. |
 | ADR-021 | Testar com dados sintéticos e simulador de parceiro, sem dado real fora de produção | Fases 0 e 1 com sintéticos, property-based, simulador e goldens, regras R1 a R7; homologação sintética; fase 2 pendente. |
-| ADR-022 | Fazer as normas do kernel DMPF prevalecerem sobre os documentos de design | Regra de precedência e tabela das 13 divergências entre `docs/design/` e o kernel, com o ADR ou a spec que trata cada uma. |
+| ADR-022 | Fazer as normas do kernel DMPF prevalecerem sobre os documentos de design | Regra de precedência e tabela das 15 divergências entre `docs/design/` e o kernel, com o ADR ou a spec que trata cada uma. |

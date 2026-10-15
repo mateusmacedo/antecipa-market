@@ -4,6 +4,9 @@
 
 Aceito — 2026-10-12. Implementa SPEC-GXGASP24 (DEVS-76).
 
+> **Addendum (2026-10-12)** — linhas 14 e 15 da tabela, achadas pela
+> SPEC-7KW0HHF6 (DEVS-77).
+
 ## Contexto
 
 Os documentos de `docs/design/` foram escritos antes de o workspace adotar o
@@ -44,10 +47,13 @@ rastreabilidade das lacunas.
 | 11 | Comando externo de saída | 00 §7.2 e §7.3: `UNKNOWN_OUTCOME`, consulta de estado, chave idempotente de saída | ADR-056 cobre só entrada; RES-25 a RES-28 | Extensão do kernel para o ciclo de saída | SPEC-5AQHHMJ0 (DEVS-96); SPEC-N1X148AW, SPEC-ZFDEPFWC, SPEC-CWYGNY82 |
 | 12 | Evidência bruta em object storage | 00 §5.2 | Sem porta nem provider de object storage (a capability `io.storage` existe, ADR-015 do kernel) | Porta de object storage com provider S3 | [ADR-018](./018-imutabilidade-do-ledger.md); SPEC-CWBA4BPV (DEVS-95) |
 | 13 | Dados de homologação | 00 §11: anonimizados | Sem norma; o kernel cobre só a infra de teste (ADR-054 §7) | Dados sintéticos | [ADR-021](./021-dados-de-teste-sinteticos.md) |
+| 14 | Cifra de campo pessoal (addendum 2026-10-12) | 90 §1.4: envelope adicional para `PII`; envelope com chave segregada para `PII_SENSITIVE` | Sem porta de cifra de campo: SPEC-MSA607GT exclui a cifra por KMS e SPEC-CWBA4BPV cifra só objeto em repouso | Porta de cifra em envelope com chave mestra no KMS. Até a implementação, `PII_SENSITIVE` guardado só como hash e máscara, e `PII` sem envelope | SPEC-CC5SHV1K (DEVS-102); SPEC-7KW0HHF6 |
+| 15 | Unicidade de negócio (addendum 2026-10-12) | 90 §3.1: índice único `(taxIdHash, jurisdiction)` sem tenant, para o requisito 1 do PRD 01 | ADR-051: `tenant_id` à frente de toda chave; violação de índice único fora da PK volta como erro técnico, não como rejeição | Unicidade por tenant traduzida em rejeição de domínio. Até a implementação, pré-checagem por leitura com o índice como salvaguarda. Unicidade entre tenants pendente de registro na plataforma | SPEC-7SRQ3RPK (DEVS-103); SPEC-QVDGV6J0 (DEVS-100); SPEC-7KW0HHF6 |
 
 As specs SPEC-QPRR24C4, SPEC-CWBA4BPV, SPEC-MSA607GT, SPEC-QVDGV6J0,
-SPEC-5AQHHMJ0, SPEC-SBW7HT6Y, SPEC-STEJG347 e SPEC-SWN93XHJ vivem no
-repositório do kernel (`docs/specs/`), no projeto DMPF do Linear.
+SPEC-5AQHHMJ0, SPEC-SBW7HT6Y, SPEC-STEJG347, SPEC-SWN93XHJ, SPEC-CC5SHV1K e
+SPEC-7SRQ3RPK vivem no repositório do kernel (`docs/specs/`), no projeto DMPF
+do Linear.
 
 ## Alternativas descartadas
 
@@ -73,6 +79,7 @@ repositório do kernel (`docs/specs/`), no projeto DMPF do Linear.
 ## Referências
 
 - SPEC-GXGASP24 — `docs/specs/SPEC-GXGASP24-fundacao-arquitetural-adrs.md`
+- SPEC-7KW0HHF6 — `docs/specs/SPEC-7KW0HHF6-identity-organization.md` (addendum 2026-10-12)
 - [ADR-011](./011-template-consome-dmpf-por-versao.md)
 - Kernel DMPF, no `workflowRef` do rc.4 (`487e9de`), base
   `https://github.com/mateusmacedo/dmpf/blob/487e9de17099c0eb8d44e3e9c2dfbd58b577b958/`:
