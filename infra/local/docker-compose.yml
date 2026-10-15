@@ -6,9 +6,10 @@
 # git; ver .env.example); os defaults servem apenas ao desenvolvimento local. O
 # generator bounded-context inclui aqui o compose de cada app.
 
-name: nx-base-template-local
+name: antecipa-market-local
 
 include:
+  - ../../apps/backend/identity/deploy/compose.yml
   - compose/postgres.yml
   - compose/redis.yml
   - compose/redpanda.yml

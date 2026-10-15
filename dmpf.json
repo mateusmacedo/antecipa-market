@@ -1,14 +1,14 @@
 {
   "schema": "dmpf/workspace@1",
-  "modulePrefix": "example.com/change-me",
+  "modulePrefix": "github.com/mateusmacedo/antecipa-market",
   "npmScope": "@mateusmacedo",
   "appsDir": "apps/backend",
   "edge": "",
   "spiffeTrustDomain": "dmpf",
   "composeProfile": "dmpf",
-  "composeProject": "nx-base-template",
-  "imageRegistry": "registry.example.com/change-me",
-  "bufModule": "buf.build/change-me",
+  "composeProject": "antecipa-market",
+  "imageRegistry": "ghcr.io/mateusmacedo",
+  "bufModule": "buf.build/mateusmacedo",
   "tooling": {
     "mode": "version"
   }

@@ -34,6 +34,7 @@ services:
             -keyout "$$1-client.key" -out "/tmp/$$1-client.csr"
           sign "$$1-client"
         }
+        server dmpf-identity-api
         chmod 0644 ./*.key ./*.crt
     volumes:
       - pki:/pki
