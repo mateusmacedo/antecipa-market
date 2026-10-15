@@ -1,0 +1,73 @@
+{
+  "schema": "dmpf/units@1",
+  "units": [
+    {
+      "id": "identity-organization/domain",
+      "block": "domain",
+      "bounded_context": "identity-organization",
+      "public_integration_surface": false,
+      "include": ["github.com/mateusmacedo/antecipa-market/apps/backend/identity/domain"]
+    },
+    {
+      "id": "identity-organization/ports",
+      "block": "port",
+      "bounded_context": "identity-organization",
+      "public_integration_surface": false,
+      "include": ["github.com/mateusmacedo/antecipa-market/apps/backend/identity/ports"]
+    },
+    {
+      "id": "identity-organization/application",
+      "block": "application",
+      "bounded_context": "identity-organization",
+      "public_integration_surface": false,
+      "include": ["github.com/mateusmacedo/antecipa-market/apps/backend/identity/application"]
+    },
+    {
+      "id": "identity-organization/provider-postgres",
+      "block": "provider",
+      "bounded_context": "identity-organization",
+      "public_integration_surface": false,
+      "include": ["github.com/mateusmacedo/antecipa-market/apps/backend/identity/provider"]
+    },
+    {
+      "id": "identity-organization/app",
+      "block": "app",
+      "bounded_context": "identity-organization",
+      "public_integration_surface": false,
+      "include": [
+        "github.com/mateusmacedo/antecipa-market/apps/backend/identity/app",
+        "github.com/mateusmacedo/antecipa-market/apps/backend/identity/app/rpc",
+        "github.com/mateusmacedo/antecipa-market/apps/backend/identity/cmd"
+      ]
+    },
+    {
+      "id": "identity-organization/appkit",
+      "block": "app",
+      "bounded_context": "identity-organization",
+      "public_integration_surface": false,
+      "include": ["github.com/mateusmacedo/antecipa-market/apps/backend/identity/appkit"]
+    },
+    {
+      "id": "identity-organization/distkit",
+      "block": "app",
+      "bounded_context": "identity-organization",
+      "public_integration_surface": false,
+      "include": ["github.com/mateusmacedo/antecipa-market/apps/backend/identity/distkit"]
+    }
+  ],
+  "external": [
+    {
+      "package": "github.com/jackc/pgx/v5",
+      "versions": ">=5.10 <6",
+      "entrypoints": [".", "github.com/jackc/pgx/v5/pgxpool", "github.com/jackc/pgx/v5/pgconn"],
+      "capability": "io.storage"
+    },
+    {
+      "package": "google.golang.org/protobuf",
+      "versions": ">=1.36.12 <2",
+      "entrypoints": ["google.golang.org/protobuf/proto"],
+      "capability": "wire.codec"
+    }
+  ],
+  "exceptions": []
+}

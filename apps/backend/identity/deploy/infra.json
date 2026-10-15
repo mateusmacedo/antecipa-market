@@ -1,0 +1,37 @@
+{
+  "schema": "dmpf/infra@1",
+  "app": "identity",
+  "image": {
+    "env": "IDENTITY_IMAGE",
+    "local": "identity:local"
+  },
+  "database": {
+    "passwordEnv": "IDENTITY_PG_PASSWORD",
+    "local": "identity-local",
+    "dev": "identity-dev"
+  },
+  "kafka": {
+    "passwordEnv": "KAFKA_IDENTITY_PASSWORD",
+    "local": "identity-local",
+    "topics": [
+      {
+        "name": "identity.events",
+        "env": "KAFKA_IDENTITY_TOPIC"
+      },
+      {
+        "name": "identity.events.dlq",
+        "env": "KAFKA_IDENTITY_DLQ"
+      }
+    ],
+    "acls": [
+      {
+        "operations": ["write", "describe"],
+        "topics": ["identity.events", "identity.events.dlq"]
+      }
+    ]
+  },
+  "grpc": {
+    "server": "dmpf-identity-api"
+  },
+  "openapi": true
+}
