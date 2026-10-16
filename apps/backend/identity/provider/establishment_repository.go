@@ -11,8 +11,8 @@ import (
 )
 
 // establishmentState is the snapshot column, under JSON names fixed here like
-// organizationState. The tax id stays in clear until envelope encryption
-// (spec note ‡‡).
+// organizationState. The tax id stays in clear until the kernel provides
+// envelope encryption for personal data.
 type establishmentState struct {
 	TaxIDType           string                   `json:"taxIdType"`
 	TaxID               string                   `json:"taxId"`

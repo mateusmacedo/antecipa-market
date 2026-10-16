@@ -92,8 +92,9 @@ func TestNoTwoOperationsShareAPermission(t *testing.T) {
 	}
 }
 
-// The bff gates each route by the permission of the frozen table (spec, Role e
-// Permission): one that drifts from it here closes the route to every operator.
+// The backend-for-frontend gates each route by the permission of the frozen
+// table (spec, Role e Permission): one that drifts from it here closes the
+// route to every operator.
 func TestThePermissionsOfTheBankAccountChangeAreThoseOfTheFrozenTable(t *testing.T) {
 	granted := map[port.Permission]bool{}
 	for _, p := range domain.RoleOperator.Permissions() {

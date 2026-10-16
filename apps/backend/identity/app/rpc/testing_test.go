@@ -219,7 +219,9 @@ func (h *harness) invoke(ctx context.Context, method string, req, resp proto.Mes
 
 var keys atomic.Int64
 
-// Mirrors the bff call: a GRP-04 deadline, the IDN-15 tenant and an IDM-01 key.
+// Mirrors the backend-for-frontend call: the mandatory outgoing deadline, the
+// resolved tenant without which the operation is denied, and the idempotency
+// key every command requires.
 func withTenant(t *testing.T) context.Context {
 	t.Helper()
 	return withKey(t, fmt.Sprintf("k-%d", keys.Add(1)))

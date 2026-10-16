@@ -11,9 +11,10 @@ import (
 	"github.com/mateusmacedo/antecipa-market/apps/backend/identity/ports"
 )
 
-// organizationStatus is the read of spec note †, inside the unit of work but
-// outside the optimistic lock. An organization not found, or held by another
-// tenant, is OrganizationNew, which the UPR refuses as not active.
+// organizationStatus is the precondition read of another aggregate, inside the
+// unit of work but outside the optimistic lock. An organization not found, or
+// held by another tenant, is OrganizationNew, which the domain decision refuses
+// as not active.
 func organizationStatus(ctx context.Context, organizations ports.OrganizationRepository, id domain.OrganizationID) (domain.OrganizationStatus, error) {
 	snapshot, err := organizationOf(ctx, organizations, id)
 	return snapshot.Status, err
@@ -31,7 +32,7 @@ func personFound(ctx context.Context, persons ports.PersonRepository, id domain.
 }
 
 // The kernel Relation filters by one column, so the organization half of the
-// key is refined in memory (spec note ††).
+// key is refined in memory over the rows of the filtered column.
 func (s Service) establishmentTaxIDRegistered(ctx context.Context, taxIDHash string, organizationID domain.OrganizationID) (bool, error) {
 	found, err := s.EstablishmentTaxIDReader.LoadByTaxIDHash(ctx, taxIDHash)
 	if absent(err) {
@@ -62,9 +63,10 @@ func absent(err error) bool {
 	return errors.As(err, &access)
 }
 
-// organizationOf is the read of spec note † when the command needs more than
-// the status: an organization not found, or held by another tenant, is the
-// zero snapshot, whose OrganizationNew status the UPR refuses as not active.
+// organizationOf is the precondition read of another aggregate when the command
+// needs more than the status: an organization not found, or held by another
+// tenant, is the zero snapshot, whose OrganizationNew status the domain decision
+// refuses as not active.
 func organizationOf(ctx context.Context, organizations ports.OrganizationRepository, id domain.OrganizationID) (domain.OrganizationSnapshot, error) {
 	snapshot, _, err := organizations.Load(ctx, id)
 	switch {

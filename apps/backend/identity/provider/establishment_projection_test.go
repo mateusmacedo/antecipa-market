@@ -66,7 +66,8 @@ func statusFrom(name string) domain.OrganizationStatus {
 }
 
 // referencesFrom reads the list as provider|system|type|reference|as_of|version
-// entries joined by ';', because a fixture holds only string scalars (FIX-09).
+// entries joined by ';', because the golden fixture format holds only string
+// scalars.
 func referencesFrom(t *testing.T, listed string) []domain.ExternalReference {
 	t.Helper()
 	if listed == "" {

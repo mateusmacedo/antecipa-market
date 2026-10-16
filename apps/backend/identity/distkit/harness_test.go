@@ -39,7 +39,8 @@ func TestTwoDrainsPublishEveryRecordExactlyOnce(t *testing.T) {
 	tb.Require(t, dist.RelayVector(t, h, records))
 }
 
-// The message context is required: the OBX-08 claim drains only records whose
+// The message context is required: the outbox claim, identified by the run that
+// made it, drains only records whose
 // metadata names correlation, causation and traceparent.
 func enqueue(t *testing.T, pool *pgxpool.Pool, n int) {
 	t.Helper()

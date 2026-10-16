@@ -304,7 +304,7 @@ func TestMapperMapsUserSuspendedWithTheReason(t *testing.T) {
 	}
 }
 
-// The invitee email is PII of the membership (spec note ‡‡): no event of the
+// The invitee email is personal data of the membership: no event of the
 // membership may declare it, or the mapper could start publishing it.
 func TestNoMembershipEventContractCarriesTheInviteeEmail(t *testing.T) {
 	t.Parallel()
@@ -379,7 +379,7 @@ func TestMapperMapsBankAccountChangeApprovedWithTheApprover(t *testing.T) {
 	}
 }
 
-// The bank data is PII_SENSITIVE and never lives in this context (spec,
+// The bank data is sensitive personal data and never lives in this context (spec,
 // BankAccountChange): the events declare exactly the fields of the spec.
 func TestTheBankAccountChangeContractsDeclareOnlyTheFieldsOfTheSpec(t *testing.T) {
 	t.Parallel()

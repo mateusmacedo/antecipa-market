@@ -2,7 +2,8 @@ package domain
 
 import "slices"
 
-// Checked by the bff on each route (spec section "Role e Permission").
+// Checked by the backend-for-frontend on each route (spec section "Role e
+// Permission").
 type Permission string
 
 var rolePermissions = map[Role][]Permission{

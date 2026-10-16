@@ -9,8 +9,9 @@ import (
 )
 
 // findRelated is the query of a relation, fixed once for every collection of
-// this context: a CrossTenantAccess answers the empty collection nobody holds
-// (IDN-13) and still reaches the instrumentation, which records it (IDN-12).
+// this context: a CrossTenantAccess answers the empty collection nobody holds,
+// so the response never reveals the data exists, and still reaches the
+// instrumentation, which records it as a cross-tenant security event.
 func findRelated[S any](ctx context.Context, s Service, operation string, input Operation, what string, load func(context.Context) ([]S, error)) ([]S, error) {
 	ctx, end := s.instrumentation().BeginOperation(ctx, operation)
 

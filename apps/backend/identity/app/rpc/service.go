@@ -58,8 +58,8 @@ func controlled(texts ...string) bool {
 
 func Methods() []string { return kernelgrpc.MethodNames(descriptor) }
 
-// Commands lists the methods that require an idempotency key (IDM-01); the
-// queries neither require nor read one.
+// Commands lists the methods that require an idempotency key, since every
+// command must carry one; the queries neither require nor read one.
 func Commands() []string {
 	return []string{
 		"RegisterOrganization", "AddEstablishment", "RegisterPerson", "RegisterRepresentation",
@@ -97,7 +97,8 @@ type IdentityServer interface {
 }
 
 // ServiceDesc binds IdentityService in the app block: protoc-gen-go-grpc would
-// put io.network into the contract block, which admits only wire.codec (ADR-015).
+// put network access into the contract block, whose declared external
+// capabilities admit only the wire codec.
 var ServiceDesc = grpc.ServiceDesc{
 	ServiceName: ServiceName,
 	HandlerType: (*IdentityServer)(nil),
@@ -779,7 +780,8 @@ func bankAccountChangeID(raw string) (domain.BankAccountChangeID, error) {
 
 // actor refuses a blank subject before the domain: an empty requester makes
 // every approver distinct from it, so the segregation of duties would pass
-// vacuously (spec note §).
+// vacuously (the spec states that actor fields carry the authenticated user's
+// subject, taken from the verified token and never from the request body).
 func actor(field, raw string) (string, error) {
 	switch {
 	case strings.TrimSpace(raw) == "":

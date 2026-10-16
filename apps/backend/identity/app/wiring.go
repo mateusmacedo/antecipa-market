@@ -44,8 +44,9 @@ func RunWith(ctx context.Context, cfg Config, rt *otelboot.Runtime) error {
 	}
 }
 
-// runAPI serves the reads from a pool of their own: a command of spec note ††
-// reads while it holds its transaction, and admission bounds each (method,
+// runAPI serves the reads from a pool of their own: a command that pre-checks
+// per-tenant uniqueness reads while it holds its transaction, and admission
+// bounds each (method,
 // tenant), so no size of a shared pool keeps a connection free for the read.
 func runAPI(ctx context.Context, cfg Config, rt *otelboot.Runtime) error {
 	if rt == nil {

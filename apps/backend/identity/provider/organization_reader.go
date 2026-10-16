@@ -9,7 +9,8 @@ import (
 	"github.com/mateusmacedo/antecipa-market/apps/backend/identity/ports"
 )
 
-// NewOrganizationReader serves the read side without the write side (UOW-11):
+// NewOrganizationReader serves the read side without the write side, because a
+// query neither opens a write unit of work nor writes to the outbox:
 // it takes the pool because a query must not open a transaction.
 func NewOrganizationReader(pool postgres.ReadPool) ports.OrganizationReader {
 	return organizationTable.Reader(pool)

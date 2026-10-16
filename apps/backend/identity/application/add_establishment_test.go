@@ -199,8 +199,9 @@ func TestAddEstablishmentRejectsEachPreconditionWithoutWriting(t *testing.T) {
 	}
 }
 
-// The organization of another tenant is the organization nobody holds here
-// (IDN-13): the precondition of spec note † refuses it as not active.
+// The organization of another tenant is the organization nobody holds here,
+// so the caller cannot tell it from a missing one: the precondition on the
+// other aggregate, loaded before the decision, refuses it as not active.
 func TestAddEstablishmentToTheOrganizationOfAnotherTenantIsNotActive(t *testing.T) {
 	h := newHarness(t)
 	h.seedOrganization(t, withTenant(t, context.Background(), "globex"), registeredSnapshot(testOrganizationID, "globex", testJurisdiction))

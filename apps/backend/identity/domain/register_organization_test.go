@@ -95,8 +95,8 @@ func TestRegisterAcceptsATradeNameLeftEmpty(t *testing.T) {
 }
 
 // The event leaves the context, so the tax id may cross it only as hash and
-// mask (spec, PII policy): neither the value as received nor its normalized
-// form may appear anywhere in it.
+// mask (spec, personal data policy): neither the value as received nor its
+// normalized form may appear anywhere in it.
 func TestRegisterKeepsTheTaxIDOutOfTheEvent(t *testing.T) {
 	for _, raw := range []string{alphanumericCNPJ, "12.ABC.345/01DE-35", numericCNPJ} {
 		cmd := registerCommand()

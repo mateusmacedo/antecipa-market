@@ -167,7 +167,7 @@ func TestRegisterAcceptsTheSameTaxIDInAnotherJurisdiction(t *testing.T) {
 }
 
 // A CrossTenantAccess on the uniqueness read means another tenant holds the
-// hash; uniqueness is per tenant, so it counts as absent (spec note ††).
+// hash; uniqueness is per tenant, so it counts as absent.
 func TestRegisterCountsACrossTenantAccessAsAbsent(t *testing.T) {
 	h := newHarness(t)
 	h.taxIDs.err = port.CrossTenantAccess{Object: "organizations?tax_id_hash=h", ContextTenant: testTenant, DataTenant: "globex"}

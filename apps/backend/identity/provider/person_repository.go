@@ -10,8 +10,8 @@ import (
 	"github.com/mateusmacedo/antecipa-market/apps/backend/identity/ports"
 )
 
-// personState holds no document field on purpose: the document is
-// PII_SENSITIVE and is not stored in this version (spec note ‡‡).
+// personState holds no document field on purpose: the document is sensitive
+// personal data and is not stored in this version.
 type personState struct {
 	FullName               string `json:"fullName"`
 	DocumentHashKeyVersion int    `json:"documentHashKeyVersion"`

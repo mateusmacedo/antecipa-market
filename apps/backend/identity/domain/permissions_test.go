@@ -44,8 +44,9 @@ var auditorPermissions = []domain.Permission{
 	"portfolio:list-assets-by-snapshot",
 }
 
-// The catalogue is what the bff checks on every route: a permission renamed or
-// dropped here reaches the wire, so the frozen table of the spec is pinned.
+// The catalogue is what the backend-for-frontend checks on every route: a
+// permission renamed or dropped here reaches the wire, so the frozen table of
+// the spec is pinned.
 func TestTheRolesKeepTheFrozenPermissionsOfTheSpec(t *testing.T) {
 	for _, tc := range []struct {
 		role  domain.Role

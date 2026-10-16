@@ -10,7 +10,7 @@ const (
 const maskVisibleTail = 4
 
 // NormalizeTaxID keeps the ASCII letters and digits of a CNPJ, upper-cased,
-// because the CNPJ has been alphanumeric since July 2026 (ADR-021), and only the
+// because the CNPJ has been alphanumeric since July 2026, and only the
 // digits of a CPF. Stored hashes depend on this form: changing it orphans them.
 func NormalizeTaxID(kind TaxIDType, value string) string {
 	out := make([]byte, 0, len(value))

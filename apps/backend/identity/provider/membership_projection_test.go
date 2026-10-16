@@ -26,7 +26,7 @@ func TestMembershipsMatchTheProjectionFixture(t *testing.T) {
 	tb.RunProjection(t, f, runMembership)
 }
 
-// The invitee email is PII (spec note ‡‡): it lives in the state, never in an
+// The invitee email is personal data: it lives in the state, never in an
 // event of the membership.
 func TestNoProjectedMembershipEventHoldsTheInviteeEmail(t *testing.T) {
 	for _, c := range projectionFixture(t, "membership.golden").Cases {

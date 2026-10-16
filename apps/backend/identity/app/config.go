@@ -23,8 +23,8 @@ import (
 	"github.com/mateusmacedo/antecipa-market/apps/backend/identity/provider"
 )
 
-// Role selects which process the binary becomes (BLK-02: the relay never
-// shares a process with the request path).
+// Role selects which process the binary becomes: one role per process, so the
+// outbox relay never shares a process with the request path.
 type Role string
 
 const (
@@ -73,8 +73,9 @@ type Config struct {
 	Brokers       []string
 	KafkaInsecure bool
 
-	// KafkaAuth is the principal this process presents to the
-	// broker, required whenever TLS is on (IDN-04).
+	// KafkaAuth is the principal this process presents to the broker, required
+	// whenever TLS is on: a consumed message counts as authenticated only when
+	// the transport that delivered it authenticated the producer.
 	KafkaAuth kafka.ClientAuth
 	Group     string
 

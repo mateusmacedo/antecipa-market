@@ -32,8 +32,9 @@ func (s Service) FindOrganizationByTaxID(ctx context.Context, q FindOrganization
 	var access port.CrossTenantAccess
 	switch {
 	case errors.As(err, &access):
-		// IDN-13: the caller gets the answer of a tax id nobody holds; the
-		// instrumentation still gets the access, which IDN-12 records.
+		// The caller gets the answer of a tax id nobody holds, so the response
+		// never reveals it exists; the instrumentation still gets the access and
+		// records it as a cross-tenant security event.
 		end(port.Result{Outcome: port.OutcomeFailed, Err: access})
 		return domain.OrganizationSnapshot{}, fmt.Errorf("application: find organization by tax id: %w", port.ErrNotFound)
 	case err != nil:

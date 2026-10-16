@@ -28,7 +28,7 @@ var (
 )
 
 // IdentifierProtector realizes ports.IdentifierProtector by HMAC-SHA256 under
-// the secret key of the identity configuration (spec note ‡). The key cannot
+// the secret key of the identity configuration. The key cannot
 // rotate: without the identifier in clear, stored hashes cannot be recomputed.
 type IdentifierProtector struct {
 	key        []byte

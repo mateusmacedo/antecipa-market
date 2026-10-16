@@ -52,7 +52,8 @@ var _ kernel.DomainEvent = OrganizationRegistered{}
 type EstablishmentID string
 
 // AddEstablishment carries the state of the organization the use case loaded
-// as a value (spec note †): OrganizationNew stands for an organization that
+// as a value, as a precondition on another aggregate: OrganizationNew stands
+// for an organization that
 // was not found, so it refuses like any status other than active.
 type AddEstablishment struct {
 	OrganizationID         OrganizationID
@@ -90,7 +91,8 @@ var _ kernel.DomainEvent = EstablishmentAdded{}
 type PersonID string
 
 // RegisterPerson carries the document only to be checked and masked: the
-// person keeps its hash and mask, never the value (spec note ‡‡).
+// person keeps its hash and mask, never the value, because sensitive personal
+// data is not stored in this version.
 type RegisterPerson struct {
 	FullName                  string
 	Document                  string
@@ -131,7 +133,7 @@ const (
 )
 
 // RegisterRepresentation carries the organization status and the existence of
-// the person the use case loaded (spec note †). A zero ValidUntil is an
+// the person the use case loaded as preconditions. A zero ValidUntil is an
 // indefinite validity, and a zero amount with no currency is no monetary scope.
 type RegisterRepresentation struct {
 	OrganizationID      OrganizationID
@@ -153,7 +155,7 @@ type RegisterRepresentationResponse struct {
 	RepresentationID RepresentationID
 }
 
-// UserID is the subject claim of the realm (ADR-016), the natural identity of a
+// UserID is the subject claim of the Keycloak realm, the natural identity of a
 // user account; the kernel scopes it by tenant, so one subject has an account
 // in each tenant it acts in.
 type UserID string
@@ -208,7 +210,7 @@ const (
 )
 
 // InviteUser carries the status and the kinds of the organization the use case
-// loaded (spec note †): OrganizationNew stands for one that was not found.
+// loaded as a precondition: OrganizationNew stands for one that was not found.
 type InviteUser struct {
 	OrganizationID      OrganizationID
 	OrganizationStatus  OrganizationStatus
@@ -225,7 +227,7 @@ type InviteUserResponse struct {
 }
 
 // GrantMembership carries the status of the user account the use case loaded
-// (spec note †): UserAccountNew stands for one that was not found.
+// as a precondition: UserAccountNew stands for one that was not found.
 type GrantMembership struct {
 	UserID            UserID
 	UserStatus        UserAccountStatus
@@ -289,8 +291,8 @@ const (
 )
 
 // RequestBankAccountChange carries the status of the organization the use case
-// loaded (spec note †): OrganizationNew stands for one that was not found. The
-// bank data itself never reaches this context, only the id of its evidence.
+// loaded as a precondition: OrganizationNew stands for one that was not found.
+// The bank data itself never reaches this context, only the id of its evidence.
 type RequestBankAccountChange struct {
 	OrganizationID        OrganizationID
 	OrganizationStatus    OrganizationStatus

@@ -12,7 +12,8 @@ import (
 
 // organizationState is the snapshot column: the fields no query filters by,
 // under JSON names fixed here so a rename in the domain does not rewrite stored
-// rows. The PII fields stay in clear until envelope encryption (spec note ‡‡).
+// rows. The personal data fields stay in clear until the kernel provides
+// envelope encryption.
 type organizationState struct {
 	Kinds               []string `json:"kinds"`
 	TaxIDType           string   `json:"taxIdType"`
@@ -26,7 +27,8 @@ type organizationState struct {
 }
 
 // Only the columns are declared here: the statements, and with them the tenant
-// predicate, are the kernel's (IDN-14).
+// predicate, are the kernel's, so tenant isolation never depends on each author
+// remembering the condition.
 var organizationTable = postgres.Table[domain.OrganizationID, domain.OrganizationSnapshot]{
 	Name:     "organizations",
 	IDColumn: "organization_id",

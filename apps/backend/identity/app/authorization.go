@@ -8,14 +8,17 @@ import (
 )
 
 // Authorization is step 1 of this context. Over gRPC the interceptor mounts no
-// subject, so Permitted admits by the tenant alone: the bff checks the
-// permission against FindEffectivePermissions before the hop (CTX-12, IDN-10).
+// subject, so Permitted admits by the tenant alone: the backend-for-frontend
+// checks the permission against FindEffectivePermissions before the hop, since
+// the user's identity never crosses to a downstream service as authorization
+// input and the permissions arrive here already resolved.
 func Authorization() usecase.Authorize[application.Operation] {
 	return usecase.Permitted(permissionOf)
 }
 
 // An operation absent from the switch declares none, which Permitted denies
-// (IDN-17): adding an operation without a line here closes it, never opens it.
+// because an undeclared operation requires subject and tenant by default:
+// adding an operation without a line here closes it, never opens it.
 func permissionOf(op application.Operation) port.Permission {
 	switch op.(type) {
 	case application.RegisterOrganization:

@@ -48,8 +48,9 @@ func (s Service) FindEffectivePermissions(ctx context.Context, user domain.UserI
 	return domain.EffectivePermissions(roles...), nil
 }
 
-// readResult hands a CrossTenantAccess of either read to the security record
-// (IDN-12), while the caller gets the answer of a user nobody holds (IDN-13).
+// readResult hands a CrossTenantAccess of either read to the security record,
+// which logs every cross-tenant attempt, while the caller gets the answer of a
+// user nobody holds, so the response never reveals the record exists.
 func readResult(errs ...error) port.Result {
 	for _, err := range errs {
 		var access port.CrossTenantAccess

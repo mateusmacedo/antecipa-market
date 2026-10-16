@@ -129,7 +129,7 @@ func TestEstablishmentRoundTripsTheWholeState(t *testing.T) {
 }
 
 // The unique constraint is the authority the pre-check of the use case only
-// anticipates (spec note ††): it fails as a technical error, never a conflict.
+// anticipates: it fails as a technical error, never a conflict.
 func TestTheSameTaxIDHashInTheOrganizationIsRefusedInTheTenant(t *testing.T) {
 	pool := appkit.OpenPool(t)
 	ctx := withExecution(t, context.Background())

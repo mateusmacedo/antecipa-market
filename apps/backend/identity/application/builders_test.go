@@ -1,7 +1,8 @@
 package application_test
 
 // A copy of the domain_test builder, since test files cannot be imported; the
-// domain tests pin the Serpro algorithm (ADR-021).
+// domain tests pin the Serpro check-digit algorithm, which the synthetic test
+// documents must follow.
 func cnpj(base string) string {
 	weights := []int{6, 5, 4, 3, 2, 9, 8, 7, 6, 5, 4, 3, 2}
 	digits := base

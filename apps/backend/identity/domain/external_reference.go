@@ -23,7 +23,7 @@ const (
 )
 
 // ExternalReference is the identity of an object in a partner system, as the
-// data model declares it (doc 90 §2.1): Reference is the partner's value
+// data model document of the design declares it: Reference is the partner's value
 // exactly, never normalized.
 type ExternalReference struct {
 	ProviderID      string

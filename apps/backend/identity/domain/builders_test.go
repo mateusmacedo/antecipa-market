@@ -2,8 +2,8 @@ package domain_test
 
 import "testing"
 
-// Check digits by the Serpro method, which covers the alphanumeric CNPJ
-// (ADR-021).
+// Check digits by the Serpro method, which covers the alphanumeric CNPJ the
+// synthetic test documents must include.
 func cnpj(base string) string {
 	weights := []int{6, 5, 4, 3, 2, 9, 8, 7, 6, 5, 4, 3, 2}
 	digits := base

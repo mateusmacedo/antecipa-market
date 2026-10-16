@@ -61,8 +61,8 @@ func TestRegisterPersonEmitsNoEvent(t *testing.T) {
 	}
 }
 
-// The document is PII_SENSITIVE and is not stored in this version (spec note
-// ‡‡): neither the value as received nor its digits may reach the state.
+// The document is sensitive personal data and is not stored in this version:
+// neither the value as received nor its digits may reach the state.
 func TestRegisterPersonKeepsTheDocumentOutOfTheState(t *testing.T) {
 	for _, raw := range []string{"123.456.789-09", syntheticCPF} {
 		cmd := registerPersonCommand()
