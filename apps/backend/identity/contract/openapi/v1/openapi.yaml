@@ -5,10 +5,11 @@ info:
   description: >-
     Public REST edge of the identity-organization context, served by
     apps/backend/bff, which calls company.identity.service.v1.IdentityService
-    over gRPC, one operation per RPC (RST-04). Writes are idempotent by
-    Idempotency-Key (RST-02); reads run outside any transaction (UOW-11). The
-    bff fills every *ByUserId field from the verified token (CTX-06), so no
-    request body carries one. Schemas bound the form only, and no value they
+    over gRPC, one operation per RPC, and exposes no route this published
+    contract does not declare. Writes are idempotent by Idempotency-Key; reads
+    run outside any transaction and never write to the outbox. The
+    backend-for-frontend fills every *ByUserId field from the verified token,
+    never from the request input, so no request body carries one. Schemas bound the form only, and no value they
     admit exceeds a byte ceiling of the context: codes and tax ids are
     printable ASCII, where characters and bytes coincide. Within those bounds,
     the emptiness and format refusals the spec declares come back from the
@@ -17,7 +18,7 @@ info:
     covered by the Buf gates.
 servers:
   - url: http://localhost:8080
-    description: local bff
+    description: local backend-for-frontend
 security:
   - bearerAuth: []
 paths:
@@ -67,7 +68,7 @@ paths:
       description: >-
         A read sent as POST so the clear tax id travels in the body, never in a
         URL. The edge demands an Idempotency-Key on every POST and refuses its
-        absence with 400 (RST-02); the read runs outside any transaction, so the
+        absence with 400; the read runs outside any transaction, so the
         context neither stores nor replays its answer.
       parameters:
         - $ref: '#/components/parameters/LookupIdempotencyKey'
@@ -589,8 +590,9 @@ paths:
       operationId: findEffectivePermissions
       summary: Resolve the effective permissions of a user
       description: >-
-        The bff resolves them on every request, with no cache in any hop
-        (CTX-16); an absent or suspended account answers an empty list.
+        The backend-for-frontend resolves them on every request, with no cache
+        in any hop, so a revoked membership or suspended account takes effect on
+        the next request; an absent or suspended account answers an empty list.
       parameters:
         - $ref: '#/components/parameters/UserID'
         - $ref: '#/components/parameters/CorrelationID'
@@ -616,7 +618,7 @@ paths:
       operationId: grantMembership
       summary: Grant an invited membership
       description: >-
-        The bff conducts the verification of the channel and of the personal
+        The backend-for-frontend conducts the verification of the channel and of the personal
         data, and sets channel_confirmed and verification_level on the gRPC
         call from what it verified; this body carries neither, so the caller
         never declares its own verification level.
@@ -727,7 +729,7 @@ paths:
       operationId: approveBankAccountChange
       summary: Approve a requested bank account change
       description: >-
-        The approver is the authenticated user, set by the bff from the token;
+        The approver is the authenticated user, set by the backend-for-frontend from the token;
         it must differ from the requester.
       parameters:
         - $ref: '#/components/parameters/BankAccountChangeID'
@@ -765,11 +767,15 @@ components:
       type: http
       scheme: bearer
       description: >-
-        Access token of the authorization server the bff verifies (OIDC). The
-        tenant comes only from the verified token (IDN-01, CTX-06). Each route
+        Access token of the authorization server the backend-for-frontend
+        verifies (OIDC). A request is authenticated only when the token is
+        presented, verified and resolves a subject, and the tenant comes only
+        from that verified token, never from the request input. Each route
         requires the permission identity:<operation in kebab-case>, for example
         identity:request-bank-account-change, checked against the effective
-        permissions the bff resolves on every request (ADR-016).
+        permissions the backend-for-frontend resolves on every request from the
+        memberships of the user, since the Keycloak token carries the tenant but
+        not the permissions.
   parameters:
     OrganizationID:
       name: organizationId
@@ -829,7 +835,7 @@ components:
       in: header
       required: true
       description: >-
-        Client-chosen key that makes a command POST idempotent (RST-02, FND-04 §7.6).
+        Client-chosen key that makes a command POST idempotent.
         A POST without it, or with a key outside this format, is refused with
         400 before any call to the context. The edge scopes the key to the
         authenticated subject. Within 24h, the same key with the same request
@@ -848,7 +854,7 @@ components:
       required: true
       description: >-
         The edge demands the key on every POST and refuses its absence, or a
-        key outside this format, with 400 (RST-02). On this read the key makes
+        key outside this format, with 400. On this read the key makes
         nothing idempotent: no answer is stored nor replayed.
       schema:
         type: string
@@ -860,7 +866,8 @@ components:
       in: header
       required: false
       description: >-
-        Correlation of the whole chain the request starts (ENV-08). When
+        Correlation of the whole chain the request starts, carried unchanged
+        through every hop and message it produces. When
         absent or outside this shape the edge mints one.
       schema:
         type: string
@@ -1463,7 +1470,7 @@ components:
       required: [code, message]
       description: >-
         A refusal the domain or the edge declared. Domain codes take the
-        "context/aggregate/reason" form (FND-03 §5.3; ADR-053).
+        stable "context/aggregate/reason" form, the same in every context.
       properties:
         code:
           type: string
@@ -1482,7 +1489,8 @@ components:
     IdempotentReplayed:
       description: >-
         Present with the value true when the answer is the stored response of
-        an earlier request with the same Idempotency-Key (IDM-08); absent on the
+        an earlier request with the same Idempotency-Key, so the effect did not
+        happen again; absent on the
         first answer.
       schema:
         type: string
@@ -1530,7 +1538,9 @@ components:
           schema:
             $ref: '#/components/schemas/Rejection'
     AdmissionRefused:
-      description: Admission control refused the request before reading the body (RES-17)
+      description: >-
+        Admission control refused the request before reading the body, cheaply
+        and with a category of its own, so an overload never costs a decode
       content:
         application/json:
           schema:
@@ -1542,13 +1552,17 @@ components:
           schema:
             $ref: '#/components/schemas/Rejection'
     Timeout:
-      description: The deadline of the request expired before the context answered (GRP-04)
+      description: >-
+        The deadline every call to the context carries expired before the
+        context answered
       content:
         application/json:
           schema:
             $ref: '#/components/schemas/Rejection'
     Failure:
-      description: Technical failure; the body carries no internal detail (ERR-20)
+      description: >-
+        Technical failure; the body carries only the code and a safe message,
+        never the technical cause, business data or secrets
       content:
         application/json:
           schema:

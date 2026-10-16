@@ -75,7 +75,8 @@ func organizationRegistered(fields map[string]string) (*eventv1.OrganizationRegi
 	}, nil
 }
 
-// A fixture payload holds only string scalars (FIX-09).
+// A fixture payload holds only string scalars, as the golden fixture format
+// requires.
 func organizationKinds(listed string) ([]eventv1.OrganizationKind, error) {
 	if listed == "" {
 		return nil, nil

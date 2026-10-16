@@ -2,8 +2,9 @@ syntax = "proto3";
 
 package company.identity.service.v1;
 
-// Internal synchronous surface of the identity-organization bounded context
-// (GRP-01). A domain refusal travels as `rejection` in the response; a
+// Internal synchronous surface of the identity-organization bounded context,
+// over gRPC because both ends are ours. A domain refusal travels as `rejection`
+// in the response; a
 // technical failure is a gRPC status.
 service IdentityService {
   rpc RegisterOrganization(RegisterOrganizationRequest) returns (RegisterOrganizationResponse);
@@ -170,7 +171,7 @@ message RegisterRepresentationRequest {
   int64 valid_from = 10;
   // Nanoseconds since the Unix epoch; zero is an indefinite validity.
   int64 valid_until = 11;
-  // The subject of the authenticated user, filled by the bff from the token.
+  // The subject of the authenticated user, filled by the backend-for-frontend from the token.
   string proposed_by_user_id = 12;
 }
 
@@ -351,7 +352,7 @@ message InviteUserRequest {
   string organization_id = 2;
   string invitee_email = 3;
   MembershipRole role = 4;
-  // The subject of the authenticated user, filled by the bff from the token.
+  // The subject of the authenticated user, filled by the backend-for-frontend from the token.
   string invited_by_user_id = 5;
   // Nanoseconds since the Unix epoch; it must come after the request.
   int64 invitation_expires_at = 6;
@@ -420,7 +421,8 @@ message FindMembershipsByOrganizationResponse {
   repeated Membership memberships = 1;
 }
 
-// Called by the bff on every request, with no cache in any hop (CTX-16).
+// Called by the backend-for-frontend on every request, with no cache in any
+// hop, so a revoked membership takes effect on the next request.
 message FindEffectivePermissionsRequest {
   string user_id = 1;
 }
@@ -475,7 +477,7 @@ message RequestBankAccountChangeRequest {
   // Opaque id of the evidence of the destination; the bank data itself never
   // reaches this context.
   string destination_evidence_id = 3;
-  // The subject of the authenticated user, filled by the bff from the token.
+  // The subject of the authenticated user, filled by the backend-for-frontend from the token.
   string requested_by_user_id = 4;
 }
 
@@ -492,7 +494,7 @@ message RequestedBankAccountChange {
 
 message ApproveBankAccountChangeRequest {
   string bank_account_change_id = 1;
-  // The subject of the authenticated user, filled by the bff from the token; it
+  // The subject of the authenticated user, filled by the backend-for-frontend from the token; it
   // must differ from the requester.
   string approved_by_user_id = 2;
 }

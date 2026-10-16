@@ -1666,7 +1666,7 @@ type RegisterRepresentationRequest struct {
 	ValidFrom int64 `protobuf:"varint,10,opt,name=valid_from,json=validFrom,proto3" json:"valid_from,omitempty"`
 	// Nanoseconds since the Unix epoch; zero is an indefinite validity.
 	ValidUntil int64 `protobuf:"varint,11,opt,name=valid_until,json=validUntil,proto3" json:"valid_until,omitempty"`
-	// The subject of the authenticated user, filled by the bff from the token.
+	// The subject of the authenticated user, filled by the backend-for-frontend from the token.
 	ProposedByUserId string `protobuf:"bytes,12,opt,name=proposed_by_user_id,json=proposedByUserId,proto3" json:"proposed_by_user_id,omitempty"`
 	unknownFields    protoimpl.UnknownFields
 	sizeCache        protoimpl.SizeCache
@@ -3076,7 +3076,7 @@ type InviteUserRequest struct {
 	OrganizationId string                 `protobuf:"bytes,2,opt,name=organization_id,json=organizationId,proto3" json:"organization_id,omitempty"`
 	InviteeEmail   string                 `protobuf:"bytes,3,opt,name=invitee_email,json=inviteeEmail,proto3" json:"invitee_email,omitempty"`
 	Role           MembershipRole         `protobuf:"varint,4,opt,name=role,proto3,enum=company.identity.service.v1.MembershipRole" json:"role,omitempty"`
-	// The subject of the authenticated user, filled by the bff from the token.
+	// The subject of the authenticated user, filled by the backend-for-frontend from the token.
 	InvitedByUserId string `protobuf:"bytes,5,opt,name=invited_by_user_id,json=invitedByUserId,proto3" json:"invited_by_user_id,omitempty"`
 	// Nanoseconds since the Unix epoch; it must come after the request.
 	InvitationExpiresAt int64 `protobuf:"varint,6,opt,name=invitation_expires_at,json=invitationExpiresAt,proto3" json:"invitation_expires_at,omitempty"`
@@ -3839,7 +3839,8 @@ func (x *FindMembershipsByOrganizationResponse) GetMemberships() []*Membership {
 	return nil
 }
 
-// Called by the bff on every request, with no cache in any hop (CTX-16).
+// Called by the backend-for-frontend on every request, with no cache in any
+// hop, so a revoked membership takes effect on the next request.
 type FindEffectivePermissionsRequest struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	UserId        string                 `protobuf:"bytes,1,opt,name=user_id,json=userId,proto3" json:"user_id,omitempty"`
@@ -4087,7 +4088,7 @@ type RequestBankAccountChangeRequest struct {
 	// Opaque id of the evidence of the destination; the bank data itself never
 	// reaches this context.
 	DestinationEvidenceId string `protobuf:"bytes,3,opt,name=destination_evidence_id,json=destinationEvidenceId,proto3" json:"destination_evidence_id,omitempty"`
-	// The subject of the authenticated user, filled by the bff from the token.
+	// The subject of the authenticated user, filled by the backend-for-frontend from the token.
 	RequestedByUserId string `protobuf:"bytes,4,opt,name=requested_by_user_id,json=requestedByUserId,proto3" json:"requested_by_user_id,omitempty"`
 	unknownFields     protoimpl.UnknownFields
 	sizeCache         protoimpl.SizeCache
@@ -4280,7 +4281,7 @@ func (x *RequestedBankAccountChange) GetBankAccountChangeId() string {
 type ApproveBankAccountChangeRequest struct {
 	state               protoimpl.MessageState `protogen:"open.v1"`
 	BankAccountChangeId string                 `protobuf:"bytes,1,opt,name=bank_account_change_id,json=bankAccountChangeId,proto3" json:"bank_account_change_id,omitempty"`
-	// The subject of the authenticated user, filled by the bff from the token; it
+	// The subject of the authenticated user, filled by the backend-for-frontend from the token; it
 	// must differ from the requester.
 	ApprovedByUserId string `protobuf:"bytes,2,opt,name=approved_by_user_id,json=approvedByUserId,proto3" json:"approved_by_user_id,omitempty"`
 	unknownFields    protoimpl.UnknownFields
