@@ -462,6 +462,7 @@ anti-drift) e o [`docs/onboarding.md`](../../../docs/onboarding.md).
 
 ## Documentação relacionada
 
+- Mapa diagramático completo do contexto: [arquitetura, jornadas, estados e sequências](docs/architecture/README.md).
 - Spec do contexto:
   [`docs/specs/SPEC-7KW0HHF6-identity-organization.md`](../../../docs/specs/SPEC-7KW0HHF6-identity-organization.md).
 - Decisões arquiteturais: [`docs/adr/`](../../../docs/adr/), em especial o
