@@ -148,7 +148,7 @@ func NewIdentityService(transactions, reads *pgxpool.Pool, rt *otelboot.Runtime,
 
 func api(cfg Config, rt *otelboot.Runtime, reads *pgxpool.Pool) serve.API {
 	return serve.API{
-		Desc: &rpc.ServiceDesc, Commands: rpc.Commands(), Schema: provider.Schema, CommandConsumer: application.CommandConsumer,
+		Desc: &rpc.ServiceDesc, Commands: rpc.Commands(), Schema: provider.Schema, Grants: provider.Grants, CommandConsumer: application.CommandConsumer,
 		Register: func(server *grpc.Server, pool *pgxpool.Pool) error {
 			service, err := NewIdentityService(pool, reads, rt, cfg)
 			if err != nil {
