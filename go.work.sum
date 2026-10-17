@@ -49,6 +49,7 @@ github.com/kr/pretty v0.3.0/go.mod h1:640gp4NfQd8pI5XOwp5fnNeVWj67G7CFk/SaSQn7NB
 github.com/kr/pretty v0.3.1/go.mod h1:hoEshYVHaxMs3cyo3Yncou5ZscifuDolrwPKZanG3xk=
 github.com/mateusmacedo/dmpf/tools/dmpf-conformance v1.0.0-rc.4 h1:cyOrxmk1sD9Q/5Hm2BsH5ZbxGM4ARDyyjpChg302ioY=
 github.com/mateusmacedo/dmpf/tools/dmpf-conformance v1.0.0-rc.4/go.mod h1:j9HKd9BLwreFsatjS7GBhtiJKdb6r2r/K6750TJxE6g=
+github.com/mateusmacedo/dmpf/tools/dmpf-conformance v1.0.0-rc.5/go.mod h1:j9HKd9BLwreFsatjS7GBhtiJKdb6r2r/K6750TJxE6g=
 github.com/modern-go/concurrent v0.0.0-20180306012644-bacd9c7ef1dd/go.mod h1:6dJC0mAP4ikYIbvyc7fijjWJddQyLn8Ig3JB5CqoB9Q=
 github.com/modern-go/reflect2 v1.0.2/go.mod h1:yWuevngMOJpCy52FWWMvUC8ws7m/LJsjYzDa0/r8luk=
 github.com/mwitkow/go-conntrack v0.0.0-20190716064945-2f068394615f/go.mod h1:qRWi+5nqEBWmkhHvq77mSJWrCKwh8bxhgT7d/eI7P4U=

@@ -10,7 +10,7 @@ Crie um bounded context a partir da spec em `$ARGUMENTS`. Siga os passos na
 ordem; cada um tem uma recusa explícita. Nada é escrito antes do passo 4.
 
 `$ARGUMENTS` traz o id da spec (`SPEC-<id>`) e, opcionalmente, `--regen`. O
-`--regen` é o modo da prova de regeneração (`https://github.com/mateusmacedo/dmpf/blob/487e9de17099c0eb8d44e3e9c2dfbd58b577b958/tools/dmpf-harness-check.sh
+`--regen` é o modo da prova de regeneração (`https://github.com/mateusmacedo/dmpf/blob/b5131eea0ce4c593e11e39f339ea9daea1f53ce4/tools/dmpf-harness-check.sh
 --phase regen`): aceita spec em `stage: done`, roda sem perguntas e não edita
 outra app. Abaixo, `<id>` é o id e `<regen>` diz se a flag veio.
 
@@ -79,7 +79,7 @@ dmpf-context-author`, em foreground) com este prompt, substituindo o caminho:
 > `.claude/rules/dmpf-bounded-context.md` e a skill
 > `.agents/skills/dmpf-bounded-context/` (os doze passos de
 > `references/golden-path.md`; as armadilhas de `references/armadilhas.md`).
-> A forma canônica é a de `https://github.com/mateusmacedo/dmpf/blob/487e9de17099c0eb8d44e3e9c2dfbd58b577b958/apps/backend/bookings` (ADR-053): borda só gRPC em
+> A forma canônica é a de `https://github.com/mateusmacedo/dmpf/blob/b5131eea0ce4c593e11e39f339ea9daea1f53ce4/apps/backend/bookings` (ADR-053): borda só gRPC em
 > `app/rpc`, com o serviço em `apps/backend/<name>/contract/proto/company/<name>/service/v1/`;
 > config sem prefixo `DMPF_`; schema em `provider/schema.sql`; persistência
 > híbrida; instante em nanossegundos. Os handlers de `app/rpc` devolvem o erro
@@ -109,18 +109,18 @@ Rito restante (passos humanos):
      pnpm nx run <name>-contract:buf-pins
      pnpm nx run <name>-contract:buf-generate-check
      NX_BASE=origin/develop pnpm nx run <name>-contract:buf-breaking
-  2. go run github.com/mateusmacedo/dmpf/tools/dmpf-conformance/cmd/conformance@v1.0.0-rc.4 --root . --write-baseline
-  3. go run github.com/mateusmacedo/dmpf/tools/dmpf-conformance/cmd/conformance@v1.0.0-rc.4 --root .
+  2. go run github.com/mateusmacedo/dmpf/tools/dmpf-conformance/cmd/conformance@v1.0.0-rc.5 --root . --write-baseline
+  3. go run github.com/mateusmacedo/dmpf/tools/dmpf-conformance/cmd/conformance@v1.0.0-rc.5 --root .
      DMPF_APPS_DIR=apps/backend bash node_modules/@mateusmacedo/dmpf-plugin/scripts/dmpf-context-check.sh
   4. Banco, role, tópicos, ACLs e certificado vêm do deploy/infra.json do app:
      ajuste-o ao que o contexto publica e consome e rode
-     go run github.com/mateusmacedo/dmpf/tools/dmpf-conformance/cmd/infrasync@v1.0.0-rc.4 --root . --write
+     go run github.com/mateusmacedo/dmpf/tools/dmpf-conformance/cmd/infrasync@v1.0.0-rc.5 --root . --write
      As rotas REST no bff ficam para uma tarefa própria.
   5. Um commit por projeto Nx (AGENTS.md §Convenções obrigatórias); PR para develop.
 ```
 
 Com `<regen>`, imprima no lugar do rito: "o rito é executado pelo
-`https://github.com/mateusmacedo/dmpf/blob/487e9de17099c0eb8d44e3e9c2dfbd58b577b958/tools/dmpf-harness-check.sh --phase regen`".
+`https://github.com/mateusmacedo/dmpf/blob/b5131eea0ce4c593e11e39f339ea9daea1f53ce4/tools/dmpf-harness-check.sh --phase regen`".
 
 Se o agente parou num gate normativo, imprima o gate em vez do rito e não
 sugira contorno.

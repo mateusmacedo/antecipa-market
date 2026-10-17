@@ -17,15 +17,15 @@ efeito observável e o diagnóstico normativo, não apenas exercitar um helper.
 
 O código no disco é a autoridade. Antes de escrever ou revisar um teste:
 
-1. Leia `https://github.com/mateusmacedo/dmpf/blob/487e9de17099c0eb8d44e3e9c2dfbd58b577b958/libs/backend/go/testkit/README.md` e o `doc.go` do package escolhido.
+1. Leia `https://github.com/mateusmacedo/dmpf/blob/b5131eea0ce4c593e11e39f339ea9daea1f53ce4/libs/backend/go/testkit/README.md` e o `doc.go` do package escolhido.
 2. Inspecione as declarações exportadas e pelo menos um uso real em `*_test.go`.
 3. Procure consumidores fora do módulo para entender a adaptação do candidato.
 
 Use buscas focadas, por exemplo:
 
 ```bash
-rg -n '^(type|func|const|var) [A-Z]' https://github.com/mateusmacedo/dmpf/blob/487e9de17099c0eb8d44e3e9c2dfbd58b577b958/libs/backend/go/testkit/<package> --glob '*.go' --glob '!**/*_test.go'
-rg -n 'testkit/<package>' https://github.com/mateusmacedo/dmpf/blob/487e9de17099c0eb8d44e3e9c2dfbd58b577b958/libs/backend/go --glob '*_test.go'
+rg -n '^(type|func|const|var) [A-Z]' https://github.com/mateusmacedo/dmpf/blob/b5131eea0ce4c593e11e39f339ea9daea1f53ce4/libs/backend/go/testkit/<package> --glob '*.go' --glob '!**/*_test.go'
+rg -n 'testkit/<package>' https://github.com/mateusmacedo/dmpf/blob/b5131eea0ce4c593e11e39f339ea9daea1f53ce4/libs/backend/go --glob '*_test.go'
 ```
 
 Consulte [references/package-routing.md](references/package-routing.md) para
@@ -58,11 +58,11 @@ escolher o package e localizar os exemplos canônicos.
   forem parte do comportamento. Duas goroutines não substituem os processos OS
   do vetor distribuído, e o controle ingênuo deve reprovar com `DMPF-R004`.
 - `appkit` e `distkit` não são packages do `testkit`: são harnesses de cada
-  contexto, como `https://github.com/mateusmacedo/dmpf/blob/487e9de17099c0eb8d44e3e9c2dfbd58b577b958/apps/backend/reservations/{appkit,distkit}` (ADR-046). O que
+  contexto, como `https://github.com/mateusmacedo/dmpf/blob/b5131eea0ce4c593e11e39f339ea9daea1f53ce4/apps/backend/reservations/{appkit,distkit}` (ADR-046). O que
   os `distkit` têm em comum — supervisão de processos, harness por papel e
   vetor do relay (`DMPF-P001` a `DMPF-P003`) — vive em `tb/dist`, e o `distkit`
   do contexto fica só com o `Spec`, os papéis e o veredito próprio (ADR-062).
-  O kit em `https://github.com/mateusmacedo/dmpf/blob/487e9de17099c0eb8d44e3e9c2dfbd58b577b958/libs/backend/go/testkit` guarda só o que qualquer contexto importa —
+  O kit em `https://github.com/mateusmacedo/dmpf/blob/b5131eea0ce4c593e11e39f339ea9daea1f53ce4/libs/backend/go/testkit` guarda só o que qualquer contexto importa —
   uma suíte do kit nunca depende de um contexto de `apps/backend`.
 - Monte o `ExecutionContext` de teste por `tb/execctx`, e a telemetria de teste
   (coletor OTLP, manifesto por papel, coletores de falha e leitores) por

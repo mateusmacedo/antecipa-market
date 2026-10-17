@@ -38,6 +38,12 @@ services:
     depends_on:
       redpanda:
         condition: service_healthy
+    environment:
+      RPK_USER: console
+      RPK_PASS: ${KAFKA_CONSOLE_PASSWORD:-console-local}
+      RPK_SASL_MECHANISM: SCRAM-SHA-256
+      KAFKA_IDENTITY_PASSWORD: ${KAFKA_IDENTITY_PASSWORD:-identity-local}
+      KAFKA_CONSOLE_PASSWORD: ${KAFKA_CONSOLE_PASSWORD:-console-local}
     entrypoint: ['/bin/sh', '-c']
     # A ligação entre principal e source que o consumer admite é a ACL (ADR-052):
     # cada processo só escreve no próprio tópico e na DLQ que alimenta, e só quem
@@ -49,19 +55,37 @@ services:
       - |
         set -eu
         admin="-X admin.hosts=redpanda:9644"
-        su="-X brokers=redpanda:29092 -X user=console -X pass=${KAFKA_CONSOLE_PASSWORD:-console-local} -X sasl.mechanism=SCRAM-SHA-256"
-        for user in identity:${KAFKA_IDENTITY_PASSWORD:-identity-local} console:${KAFKA_CONSOLE_PASSWORD:-console-local}; do
-          rpk security user create "$${user%%:*}" -p "$${user#*:}" --mechanism SCRAM-SHA-256 $$admin || true
-        done
+        broker="-X brokers=redpanda:29092"
+        users=http://redpanda:9644/v1/security/users
+        scram() {
+          printf '{"username":"%s","password":"%s","algorithm":"SCRAM-SHA-256"}' "$$2" "$$3" |
+            curl -sS -o /dev/null -w '%{http_code}' -X "$$1" -H 'Content-Type: application/json' --data-binary @- "$$4"
+        }
+        create_user() {
+          case $$2 in
+            *[[:cntrl:]]*) echo "redpanda-init: a senha do usuário $$1 tem caractere de controle" >&2; exit 1 ;;
+          esac
+          pass=$$(printf '%s' "$$2" | sed 's/["\\]/\\&/g')
+          status=$$(scram POST "$$1" "$$pass" "$$users") || status=000
+          if [ "$$status" = 500 ] && rpk security user list $$admin | grep -qx "$$1"; then
+            status=$$(scram PUT "$$1" "$$pass" "$$users/$$1") || status=000
+          fi
+          case $$status in
+            2??) ;;
+            *) echo "redpanda-init: a Admin API recusou o usuário $$1 com status $$status" >&2; exit 1 ;;
+          esac
+        }
+        create_user identity "$$KAFKA_IDENTITY_PASSWORD"
+        create_user console "$$KAFKA_CONSOLE_PASSWORD"
         for user in identity console; do
           rpk security user list $$admin | grep -qw "$$user"
         done
         rpk cluster config set superusers '["console",""]' $$admin
-        rpk topic create ${KAFKA_IDENTITY_TOPIC:-identity.events} ${KAFKA_IDENTITY_DLQ:-identity.events.dlq} $$su -p 1 -r 1 || true
+        rpk topic create ${KAFKA_IDENTITY_TOPIC:-identity.events} ${KAFKA_IDENTITY_DLQ:-identity.events.dlq} $$broker -p 1 -r 1 || true
         for topic in ${KAFKA_IDENTITY_TOPIC:-identity.events} ${KAFKA_IDENTITY_DLQ:-identity.events.dlq}; do
-          rpk topic describe "$$topic" $$su >/dev/null
+          rpk topic describe "$$topic" $$broker >/dev/null
         done
-        rpk security acl create --allow-principal User:identity --operation write,describe --topic ${KAFKA_IDENTITY_TOPIC:-identity.events} --topic ${KAFKA_IDENTITY_DLQ:-identity.events.dlq} $$su
+        rpk security acl create --allow-principal User:identity --operation write,describe --topic ${KAFKA_IDENTITY_TOPIC:-identity.events} --topic ${KAFKA_IDENTITY_DLQ:-identity.events.dlq} $$broker
         rpk cluster config set kafka_enable_authorization true $$admin
     deploy:
       resources:

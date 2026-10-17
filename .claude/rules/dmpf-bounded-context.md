@@ -6,7 +6,7 @@ paths:
 # Bounded context sobre o kernel DMPF
 
 Normas que quem escreve um bounded context — pessoa ou agente — obedece. Cada
-regra é curta e aponta a fonte; a norma mora em `https://github.com/mateusmacedo/dmpf/blob/487e9de17099c0eb8d44e3e9c2dfbd58b577b958/docs/dmpf/` e nos ADRs, e
+regra é curta e aponta a fonte; a norma mora em `https://github.com/mateusmacedo/dmpf/blob/b5131eea0ce4c593e11e39f339ea9daea1f53ce4/docs/dmpf/` e nos ADRs, e
 quando este texto divergir dela, a fonte vence. Complementa as demais rules de
 `.claude/rules/`, não as repete. O passo a passo com os arquivos-molde está na
 skill `.agents/skills/dmpf-bounded-context/`.
@@ -35,7 +35,7 @@ skill `.agents/skills/dmpf-bounded-context/`.
   do generator `bounded-context`; à mão só o `include` de packages novos, por
   merge, com `exceptions` e `public_integration_surface` preservados.
 - Regravar o baseline (`--write-baseline`) é passo executado por pessoa
-  (`DMPF-T001`; `https://github.com/mateusmacedo/dmpf/blob/487e9de17099c0eb8d44e3e9c2dfbd58b577b958/docs/guides/dmpf-manifesto.md`).
+  (`DMPF-T001`; `https://github.com/mateusmacedo/dmpf/blob/b5131eea0ce4c593e11e39f339ea9daea1f53ce4/docs/guides/dmpf-manifesto.md`).
 
 ## Domínio (ADR-032; FND-04)
 
@@ -100,7 +100,7 @@ skill `.agents/skills/dmpf-bounded-context/`.
   nunca à mão.
 - Contrato publicado é imutável: `.proto` existente não é regravado; evolução
   é rito próprio. Cada contexto tem o seu `contract/buf.yaml`, e o kernel tem
-  o dele em `https://github.com/mateusmacedo/dmpf/blob/487e9de17099c0eb8d44e3e9c2dfbd58b577b958/libs/backend/go/contracts`.
+  o dele em `https://github.com/mateusmacedo/dmpf/blob/b5131eea0ce4c593e11e39f339ea9daea1f53ce4/libs/backend/go/contracts`.
 - A unidade `<ctx>/contract` fica no `dmpf-units.json` do módulo `contract/`
   e entra **antes** do `generate`; sem ela o gerado cai em `DMPF-U001`. O
   generator já a declara.
@@ -123,7 +123,17 @@ skill `.agents/skills/dmpf-bounded-context/`.
 
 ## Banco e persistência (ADR-053)
 
-- Banco próprio por app: database e role com o nome da app, schema `public`.
+- Banco próprio por app, com o nome da app e schema `public`, e duas roles
+  (ADR-063): `<app>_migrator`, dona do banco, aplica o schema e os grants; a
+  de runtime, `<app>`, não possui nada e só tem os grants por tabela do
+  kernel e os que o contexto declara em `provider.Grants` (`postgres.Mutable`
+  para o agregado). Tabela sem grant declarado recusa a partida e reprova
+  no gate. `PG_MIGRATE_DSN` vai só ao `api`: no Compose, no serviço
+  `<app>-api`, fora de âncora e de `extends` que `relay` e `consumer`
+  herdam; no Kubernetes, no Secret `<app>-migrator`, que só o Deployment
+  `<app>-api` referencia. `relay` e `consumer` têm só o `PG_DSN`, e a role
+  `<app>_migrator` fora desse lugar, em DSN URL ou chave/valor ou em
+  `PGUSER`, reprova no gate.
   Tabela do kernel é substantivo sem prefixo (`outbox`, `inbox`,
   `quarantine`); tabela de agregado é o agregado no plural, sem prefixo;
   coluna de id `<agregado>_id`; índice `<tabela>_<colunas>_idx`; constraint

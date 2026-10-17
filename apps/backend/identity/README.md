@@ -8,7 +8,7 @@ de conta bancária sob dupla aprovação.
 
 É o bounded context `identity-organization`, especificado em
 [`SPEC-7KW0HHF6`](../../../docs/specs/SPEC-7KW0HHF6-identity-organization.md) e
-construído sobre o kernel DMPF `v1.0.0-rc.4`.
+construído sobre o kernel DMPF `v1.0.0-rc.5`.
 
 ## Sumário
 
@@ -76,7 +76,7 @@ O mesmo binário roda em dois papéis, escolhidos por `--role`:
 ## Stack
 
 - **Go** `1.26.9`, a diretiva do `go.work`, que o CI usa.
-- **Kernel DMPF** `v1.0.0-rc.4`, com UoW, outbox, inbox, gRPC e observabilidade.
+- **Kernel DMPF** `v1.0.0-rc.5`, com UoW, outbox, inbox, gRPC e observabilidade.
 - **gRPC e Protobuf**, com contrato gerado pelo Buf (`buf` `v1.72.0` e
   `protoc-gen-go` `v1.36.12`).
 - **PostgreSQL**, por `pgx` v5, com persistência híbrida de colunas tipadas e
@@ -352,13 +352,13 @@ de pessoa, só dígitos.
 
 ### Dependências
 
-O `go.mod` declara o kernel por versão (`v1.0.0-rc.4`) e o módulo de contrato
+O `go.mod` declara o kernel por versão (`v1.0.0-rc.5`) e o módulo de contrato
 irmão em `v0.1.0`. Dentro do workspace, quem resolve é o `go.work` da raiz,
 com o `replace` do contrato. O `require` do irmão é gravado pelo `modsync`, que
 deve rodar de novo a cada import novo de módulo do workspace:
 
 ```bash
-go run github.com/mateusmacedo/dmpf/tools/dmpf-conformance/cmd/modsync@v1.0.0-rc.4 --root . --write
+go run github.com/mateusmacedo/dmpf/tools/dmpf-conformance/cmd/modsync@v1.0.0-rc.5 --root . --write
 ```
 
 O target `tidy` mantém o `go.sum`, aplicando os `replace` do `go.work` só
@@ -396,7 +396,7 @@ Gates completos do contexto, os mesmos de qualquer módulo:
 ```bash
 pnpm nx run-many -t fmt-check,vet,build,lint,test-race,test-distributed,govulncheck -p identity,identity-contract
 DMPF_APPS_DIR=apps/backend bash node_modules/@mateusmacedo/dmpf-plugin/scripts/dmpf-context-check.sh --context apps/backend/identity
-go run github.com/mateusmacedo/dmpf/tools/dmpf-conformance/cmd/conformance@v1.0.0-rc.4 --root .
+go run github.com/mateusmacedo/dmpf/tools/dmpf-conformance/cmd/conformance@v1.0.0-rc.5 --root .
 ```
 
 ## Contrato
@@ -441,7 +441,7 @@ NX_BASE=origin/master pnpm nx run identity-contract:buf-breaking
   [`deploy/infra.json`](deploy/infra.json). Mudou o `infra.json`? Regrave:
 
   ```bash
-  go run github.com/mateusmacedo/dmpf/tools/dmpf-conformance/cmd/infrasync@v1.0.0-rc.4 --root . --write
+  go run github.com/mateusmacedo/dmpf/tools/dmpf-conformance/cmd/infrasync@v1.0.0-rc.5 --root . --write
   ```
 
 ## Contribuição

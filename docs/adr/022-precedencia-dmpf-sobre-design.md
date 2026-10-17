@@ -6,6 +6,12 @@ Aceito — 2026-10-12. Implementa SPEC-GXGASP24 (DEVS-76).
 
 > **Addendum (2026-10-12)** — linhas 14 e 15 da tabela, achadas pela
 > SPEC-7KW0HHF6 (DEVS-77).
+>
+> **Addendum (2026-10-17)** — reconferência do bump para o `1.0.0-rc.5`
+> (`workflowRef` `b5131ee`), pelo item 4. Mudam as linhas 5 e 8: o kernel
+> entregou a SPEC-QPRR24C4 (ADR-063), a SPEC-SBW7HT6Y (ADR-064) e a
+> SPEC-STEJG347 (ADR-065). As demais linhas seguem como estavam, porque as
+> specs que as tratam continuam em `backlog` no kernel.
 
 ## Contexto
 
@@ -22,7 +28,7 @@ rastreabilidade das lacunas.
 ## Decisão
 
 1. Onde `docs/design/` contradiz uma norma do kernel DMPF na versão consumida
-   (hoje o `1.0.0-rc.4`, `workflowRef` `487e9de`), **prevalece o kernel**. O
+   (hoje o `1.0.0-rc.5`, `workflowRef` `b5131ee`), **prevalece o kernel**. O
    documento de design continua valendo como requisito de produto e como
    raciocínio de origem.
 2. `docs/prd/`, `docs/design/` e `docs/reference/` não são editados para
@@ -38,10 +44,10 @@ rastreabilidade das lacunas.
 | 2 | Multi-tenancy | 00 §4.1: RLS com `SET LOCAL` como mecanismo primário | ADR-051, IDN-14 | Choke point no `postgres.Table`; RLS só como segunda camada | [ADR-013](./013-multi-tenancy-por-execution-context.md); SPEC-QVDGV6J0 (DEVS-100) |
 | 3 | Broker | 00 §6.3: fila gerenciada FIFO | TRP-37 a TRP-41, ADR-025 | Kafka como alvo, com critério por canal; SNS/SQS nos casos de TRP-40 | [ADR-015](./015-kafka-como-broker.md); SPEC-SWN93XHJ (DEVS-98) |
 | 4 | Modelo físico de dados | 90: tabelas largas; 00 §5.3 e 93 RNF-V4: partição mensal | ADR-051, ADR-053 §4 | Persistência híbrida; o doc 90 vale como modelo lógico | [ADR-014](./014-postgresql-persistencia-hibrida.md) |
-| 5 | Imutabilidade por permissão de banco | 00 §5.2: sem `UPDATE`/`DELETE` por permissão | ADR-053 §1 (role dona do banco), ADR-051 | Role de runtime separada da dona, mais trigger | [ADR-018](./018-imutabilidade-do-ledger.md); SPEC-QPRR24C4 (DEVS-94) |
+| 5 | Imutabilidade por permissão de banco | 00 §5.2: sem `UPDATE`/`DELETE` por permissão | ADR-063 (addendum 2026-10-17): role migradora `<app>_migrator` dona do banco e role de runtime `<app>` só com o privilégio declarado por tabela, por opt-in no bloco `database.migrator`; ADR-051 | Role de runtime separada da dona, mais trigger. Os grants por tabela já valem para todo contexto; a role migradora separada ainda não foi adotada por nenhum contexto deste workspace | [ADR-018](./018-imutabilidade-do-ledger.md); SPEC-QPRR24C4 (DEVS-94), entregue no `1.0.0-rc.5` |
 | 6 | Envelope de eventos | 92: JSON com `schemaUri`, sem chave de partição | ADR-022 e ADR-023 do kernel; `partitionkey` obrigatório | CloudEvents Protobuf com Buf; `partitionkey` igual ao id do agregado. A validação contra registry na publicação (00 §3.2) não tem equivalente em runtime: o Buf valida em CI, e o registry em runtime é pendência do kernel (ADR-023) | Este ADR; [ADR-015](./015-kafka-como-broker.md); specs de contexto |
 | 7 | Borda | 91: Client API, Partner API e webhooks REST por contexto | ADR-024, ADR-044, ADR-053 §6 | REST externo e recepção de webhook só no `bff`; contextos em gRPC | [ADR-012](./012-um-app-por-bounded-context.md); SPEC-N1X148AW |
-| 8 | Autenticação | 01: federação por organização e revogação em 60 s | `authn` com issuer único e claim de tenant string; IDN-01 | Keycloak com realm único, mapper de tenant e deny-list de sessão consultada em toda requisição, que supera a lista com cache de 30 s do doc 01 §2.2 | [ADR-016](./016-provedor-de-identidade-oidc.md); SPEC-SBW7HT6Y (DEVS-97), SPEC-STEJG347 (DEVS-101) |
+| 8 | Autenticação | 01: federação por organização e revogação em 60 s | Addendum 2026-10-17: `authn` com issuer único e tenant pelo caminho `organization.*.tenant_id`, que casa exatamente uma organização (ADR-064, IDN-20); deny-list por `sub` e `sid` no Redis, alimentada pelo papel `session-events` do `bff` (ADR-065); IDN-01 | Keycloak de referência do kernel, com o mapper nativo de organização e sem mapper próprio, e deny-list de sessão consultada em toda requisição, que supera a lista com cache de 30 s do doc 01 §2.2 | [ADR-016](./016-provedor-de-identidade-oidc.md) (addendum 2026-10-17); SPEC-SBW7HT6Y (DEVS-97) e SPEC-STEJG347 (DEVS-101), entregues no `1.0.0-rc.5` |
 | 9 | Tempo | 00 §8: UTC com milissegundo | ADR-034, ADR-035, ADR-053 §8 | Instante de domínio em `int64` de nanossegundos; data de negócio segue data pura com calendário | Este ADR; specs de contexto |
 | 10 | Ambientes | 00 §11: desenvolvimento, integração, homologação e produção | ADR-054 §4 e §7 (overlays dev e hmg, infra de testes) | Dev e hmg pelo baseline; integração coberta por hmg e pela infra de testes; produção pendente | [ADR-019](./019-go-sobre-o-kernel-dmpf.md) |
 | 11 | Comando externo de saída | 00 §7.2 e §7.3: `UNKNOWN_OUTCOME`, consulta de estado, chave idempotente de saída | ADR-056 cobre só entrada; RES-25 a RES-28 | Extensão do kernel para o ciclo de saída | SPEC-5AQHHMJ0 (DEVS-96); SPEC-N1X148AW, SPEC-ZFDEPFWC, SPEC-CWYGNY82 |
@@ -88,3 +94,7 @@ do Linear.
   - `docs/adr/053-nomenclatura-e-isolamento-de-banco-e-padronizacao-de-contextos.md`, `docs/adr/054-apps-autocontidos-e-infras-separadas.md`, `docs/adr/056-idempotencia-de-comando-pela-inbox.md`
   - `docs/dmpf/cloudevents-protobuf-buf.md` (`partitionkey`), `docs/dmpf/politicas-transporte.md` (TRP), `docs/dmpf/contexto-erros-seguranca.md` (IDN), `docs/dmpf/resiliencia-observabilidade.md` (RES)
   - `libs/backend/go/authn/README.md`
+- Kernel DMPF, no `workflowRef` do rc.5 (`b5131ee`), base
+  `https://github.com/mateusmacedo/dmpf/blob/b5131eea0ce4c593e11e39f339ea9daea1f53ce4/`
+  (addendum 2026-10-17):
+  - `docs/adr/063-duas-roles-de-banco-por-app.md`, `docs/adr/064-keycloak-de-referencia-sem-extensao.md`, `docs/adr/065-revogacao-de-sessao-no-authn.md`
