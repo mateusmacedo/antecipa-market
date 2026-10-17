@@ -5,6 +5,17 @@
 Aceito — 2026-10-12, com as condições da Decisão.
 Implementa SPEC-GXGASP24 (DEVS-76).
 
+> **Addendum (2026-10-17)** — o kernel `1.0.0-rc.5` entregou a SPEC-SBW7HT6Y
+> (ADR-064 do kernel) e a SPEC-STEJG347 (ADR-065 do kernel), e a condição 1
+> mudou de forma. Não há mapper que achate a organização em `tenant_id`: o
+> realm usa o mapper nativo de organização, e o `authn` lê o tenant por
+> `OIDC_TENANT_CLAIM=organization.*.tenant_id`, com o client `dmpf-bff` como
+> audiência. O curinga casa exatamente uma organização; com nenhuma ou com mais
+> de uma, o caminho fica ausente (IDN-20). Por isso, o usuário vinculado a
+> várias organizações escolhe a ativa no pedido do token, pelo scope de
+> organização, e não por um mapper. A condição 2 vale como está, com a
+> deny-list no Redis alimentada pelo papel `session-events` do `bff`.
+
 ## Contexto
 
 A decisão D5 vem de `docs/design/00-arquitetura-tecnica.md` §9, que deixa em
