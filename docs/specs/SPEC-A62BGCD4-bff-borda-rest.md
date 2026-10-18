@@ -2,7 +2,7 @@
 id: SPEC-A62BGCD4
 slug: bff-borda-rest
 title: bff - borda REST pública sobre os contextos gRPC (fundação e identity)
-stage: planning
+stage: building
 priority: P0
 depends_on: [SPEC-GXGASP24, SPEC-7KW0HHF6, SPEC-SBW7HT6Y, SPEC-STEJG347]
 ticket_url: https://linear.app/mmda/issue/DEVS-110
@@ -28,6 +28,21 @@ created: 2026-10-15
 > `session-events`, os manifestos dele e o back-channel do realm, na DEVS-114.
 > A recusa em até 60 s contra o Keycloak é garantida pelo kernel, e o workspace
 > prova a fiação. O texto original foi preservado onde não conflita com o rc.5.
+
+> **Addendum (2026-10-17, fronteira da DEVS-111)** — o gate estrutural do DMPF
+> trata o `bff` como borda e exige `app/rpc` e `deploy/infra.json` desde o
+> primeiro commit. Para que a DEVS-111 saia com o CI verde, ela antecipa o
+> mínimo real: `app/rpc/tls.go` (o `ClientTLS`, carregado na partida quando
+> `GRPC_CA_FILE` está definido, recusando material ilegível), o
+> `deploy/infra.json` com `grpc.client: bff` e o `infrasync --write`, que emite
+> o cliente `bff` em `infra/local/compose/pki.yml` e atualiza
+> `infra/local/.env.example`, o Alloy e os agregados
+> `infra/k8s/overlays/{dev,hmg}/apps`. O dial gRPC e o `ClientOptions`, que
+> reutiliza `rpc.ClientTLS`, ficam na DEVS-112, com a dependência do `/readyz`
+> no `identity`. O `edge: bff` no `dmpf.json`, o `init` e a regeneração do
+> `identity` ficam na DEVS-114, que também cria o `deploy/k8s` do `bff`. Até lá,
+> os agregados `infra/k8s/overlays/{dev,hmg}/apps` referenciam overlays do
+> `bff` que ainda não existem; nenhum gate renderiza kustomize.
 
 ## Resumo
 
@@ -102,9 +117,10 @@ vínculos e dados bancários sem acesso direto ao gRPC interno.
   `contract` dos contextos e bibliotecas do kernel (ADR-012; ADR-044 do kernel;
   regra `DMPF-D002`).
 - [P0] Uma rota encaminha para exatamente uma chamada gRPC. Sem orquestração,
-  sem saga, sem banco. O Redis da deny-list não é banco do `bff`: é o
-  armazenamento do provider `libs/backend/go/redis`, que a API só consulta e o
-  papel `session-events` só alimenta (ADR-065 do kernel, itens 1 e 6).
+  sem saga, sem banco. O Redis não é banco do `bff`: é um recurso compartilhado
+  da infraestrutura, no qual o provider `libs/backend/go/redis` guarda a
+  deny-list que a API só consulta e o papel `session-events` só alimenta
+  (ADR-065 do kernel, itens 1 e 6).
 - [P0] Toda rota declara `Permission` e `ContractRef`; `ValidateEdge` recusa na
   partida rota sem permissão ou `POST` sem exigência de `Idempotency-Key`
   (IDN-16, IDN-17, RST-04).
@@ -231,6 +247,10 @@ vínculos e dados bancários sem acesso direto ao gRPC interno.
 - [ ] **[P0] mTLS de cliente**: `GRPC_CA_FILE`, `GRPC_CLIENT_CERT_FILE`,
   `GRPC_CLIENT_KEY_FILE` e `GRPC_SERVER_NAME`, com identidade
   `spiffe://dmpf/bff` (ADR-052 do kernel). `GRPC_INSECURE` só no host local.
+  - DEVS-111: `app/rpc/tls.go` com `ClientTLS`, carregado na partida quando
+    `GRPC_CA_FILE` está definido; material ilegível impede a partida.
+  - DEVS-112: dial gRPC e `ClientOptions`, que reutiliza `rpc.ClientTLS` e
+    substitui a carga da partida.
 - [ ] **[P0] Borda declarada**: `dmpf.json` com `"edge": "bff"`; regenerar os
   arquivos do `identity` que dependem de `edgeApp` (NetworkPolicy,
   `GRPC_TRUSTED_CLIENTS` do overlay hmg, `project.json`, `README.md`) pelo
@@ -240,6 +260,10 @@ vínculos e dados bancários sem acesso direto ao gRPC interno.
   Com `edge: bff`, a regeneração do `init` liga o back-channel do realm ao papel
   `session-events` e sobe o Redis local também nos profiles `dmpf` e `keycloak`
   (ver Arquivos a modificar).
+  - DEVS-111: `deploy/infra.json` do `bff` e `infrasync --write` (cliente `bff`
+    no `pki.yml`), o que satisfaz a pré-condição do `init`.
+  - DEVS-114: `"edge": "bff"` no `dmpf.json`, `init --edge=bff` e regeneração
+    dos arquivos do `identity` que dependem de `edgeApp`.
 - [ ] **[P0] OpenAPI servido**: servir `/openapi/identity/v1/openapi.yaml` a
   partir de `OPENAPI_IDENTITY_PATH`. Teste estrutural garante que cada rota
   registrada existe no contrato com o método e o caminho declarados.
@@ -253,6 +277,8 @@ vínculos e dados bancários sem acesso direto ao gRPC interno.
 - [ ] **[P1] Saúde**: `/livez` e `/readyz` em `ADMIN_ADDR` (`:8090`), fora do
   contrato e sem autenticação; `/readyz` falha enquanto a conexão gRPC com o
   `identity` não estiver pronta.
+  - DEVS-111: `/readyz` trivial, que só cai para 503 na drenagem.
+  - DEVS-112: `/readyz` passa a depender da conexão gRPC com o `identity`.
   O papel `session-events` serve `/livez` e `/readyz` em `ADMIN_ADDR` (`:8092`):
   o `/readyz` dele só cai para 503 no desligamento (draining) e não depende do
   Redis nem do Keycloak, e a porta do receptor não serve saúde (404).
@@ -275,11 +301,15 @@ vínculos e dados bancários sem acesso direto ao gRPC interno.
   `docker:run`, `deploy-env`, `k8s-render`).
   - DEVS-111: o `deploy/.env.example` traz
     `REDIS_URL=redis://revocation:dmpf-local-revocation@localhost:6379/0`
-    (usuário ACL `revocation` de `infra/local/compose/redis.yml`). O `serve`
+    (único usuário ACL que `infra/local/compose/redis.yml`, saída do
+    dmpf-plugin, libera no Redis local). O `serve`
     depende de um target do workspace que sobe o profile `redis` do compose
     local, porque o `infra-session` e o `infra-up` da referência chamam
     `tools/infra-session.sh`, que não existe aqui. O `test-race` depende de um
     `test-infra-up` disponível no workspace (Redis de testes em 16379).
+    Também entram o `deploy/infra.json` e as saídas do `infrasync` (ver Borda
+    declarada) e os targets `redis-up`, `test-infra-up` e `test-infra-down`
+    (ver Pontos a verificar, Targets de Redis).
   - DEVS-114: entram `deploy/.env.session-events.example` (portas
     `127.0.0.1:8091` e `127.0.0.1:8092`, issuer e client secret locais) e, no
     `.env.example`, as variáveis `OIDC_REVOCATION_TTL_SECONDS`,
@@ -347,7 +377,7 @@ papéis seguinte. É o comportamento esperado (fail-closed), não um defeito.
   declarada; nenhuma permissão é lida de claim; o acesso a id de outro tenant
   volta como 404 (ADR-051 do kernel).
 - [ ] Segurança: sessão revogada é recusada em até 60 s (ADR-016). Com o
-  verificador OIDC e o Redis da deny-list fora ou lento além de
+  verificador OIDC e o Redis de `REDIS_URL` fora ou lento além de
   `OIDC_REVOCATION_TIMEOUT_MS`, a borda recusa todo token verificado com 401
   (falha fechada, ADR-065 do kernel, itens 3 e 4), sem cache de "não
   revogado". O comportamento é garantido pelo `authn` do kernel.
@@ -368,6 +398,11 @@ papéis seguinte. É o comportamento esperado (fail-closed), não um defeito.
 - O teste estrutural da referência (`app/api/openapi_test.go:77`) exige os
   status 400/404/409/422/429/503/504/default; as consultas do `identity` não
   declaram 409/422. Ajustar o teste ao tipo da rota sem relaxar o contrato.
+  Resolvido em 2026-10-17: o teste compara os status por tipo de rota (comando,
+  consulta por id, consulta por `POST` e listagem, esta sem 404), com
+  `Idempotent-Replayed` só em comando. Na DEVS-111, sem rota registrada, ele exige inventário vazio e
+  exercita os tipos com rotas sintéticas; o inventário das 21 rotas (método,
+  caminho e `operationId`) entra com as rotas, na DEVS-112 e na DEVS-113.
 - Resolvido em 2026-10-17: `1.0.0-rc.5` (`workflowRef` `b5131ee`), com o bump
   feito no PR #4 (ADR-011). O `go.mod` do `bff` fixa as bibliotecas do kernel em
   `v1.0.0-rc.5`, inclusive `libs/backend/go/redis`.
@@ -418,6 +453,25 @@ papéis seguinte. É o comportamento esperado (fail-closed), não um defeito.
   `@mateusmacedo/dmpf-plugin:test-env` e um `test-infra-up` próprio
   (`@mateusmacedo/dmpf-plugin:test-infra`), e `infra/test/compose.yml` já tem
   o Redis em 16379.
+  Resolvido em 2026-10-17: o projeto `bff` tem o target `redis-up`
+  (`docker compose -f infra/local/docker-compose.yml --profile redis up -d
+  --wait redis`), do qual o `serve` depende, e segue o padrão do `identity` no
+  `test-race`, com `test-infra-up` e `test-infra-down` próprios.
+- Riscos residuais do checklist de qualidade da DEVS-111. Resolvido em
+  2026-10-18:
+  - `DRAIN_DELAY` acima de 10 s recusa a partida, porque o
+    `terminationGracePeriodSeconds` de 30 s precisa cobrir a drenagem e as
+    duas janelas de `ShutdownGrace` (10 s) do kernel, a do `Shutdown` HTTP e a
+    do flush da telemetria. Um segundo `SIGTERM` ou `SIGINT` encerra o
+    processo na hora, sem o desligamento gracioso.
+  - `HTTP_ADDR` ou `ADMIN_ADDR` fora de `host:porta`, ou os dois na mesma
+    porta com host igual ou curinga, recusam a partida com exit 2.
+  - Contrato OpenAPI vazio recusa a partida. O contrato sai com `ETag`, `304`
+    a `If-None-Match` e gzip quando o cliente o aceita.
+  - `SIGTERM` durante a descoberta OIDC encerra a partida sem erro.
+  - A amostragem forçada pelo `traceparent` de um cliente anônimo fica com a
+    SPEC-Z2HM6NAP do kernel (DEVS-58): tratá-la no `bff` contrariaria a
+    decisão de continuar o trace do cliente.
 
 ## Camadas afetadas
 
@@ -430,7 +484,7 @@ papéis seguinte. É o comportamento esperado (fail-closed), não um defeito.
 | Contexto `identity` | [x] | Só arquivos gerados que dependem de `edgeApp` (regeneração) |
 | Infra local e k8s | [x] | `dmpf.json`, `go.work`, `pki.yml` (infrasync), arquivos do `init` que dependem do `edge`, compose e overlays do `bff`, referências (`secretKeyRef`) aos Secrets `redis` e `keycloak-session-events`, fornecidos fora do `bff` (ver Pontos a verificar) |
 | Domínio e aplicação | [ ] | Nenhuma mudança; o `bff` não tem domínio |
-| Banco | [ ] | O `bff` não declara banco; usa o Redis da deny-list (`REDIS_URL`), sem schema próprio |
+| Banco | [ ] | O `bff` não declara banco; usa o Redis compartilhado indicado por `REDIS_URL`, sem schema próprio |
 
 ## Localização de código
 
@@ -446,7 +500,7 @@ apps/backend/bff/
   app/api/routes.go          — bindings das 21 rotas do identity
   app/api/handlers_identity.go — tradução JSON <-> mensagens do IdentityService
   app/api/middleware.go, handlers.go, health.go, traceparent.go — porte da referência
-  app/rpc/clients.go, errors.go, metadata.go, replay.go, ready.go, tls.go — porte da referência
+  app/rpc/clients.go, errors.go, metadata.go, replay.go, ready.go, tls.go — porte da referência (tls.go na DEVS-111; os demais na DEVS-112)
   deploy/                    — compose.yml, .env.example, .env.session-events.example (DEVS-114), infra.json, k8s/base (com `*-session-events.yaml`), overlays dev e hmg (com `deployment-session-events-patch.yaml`)
   dmpf-units.json, project.json, go.mod (com `libs/backend/go/redis v1.0.0-rc.5`), Dockerfile, README.md
 ```
@@ -468,7 +522,8 @@ apps/backend/bff/
   `apps/backend/identity/project.json`, `apps/backend/identity/README.md`: só
   por regeneração.
 - `infra/local/compose/pki.yml`, `infra/local/.env.example` e demais arquivos
-  do `infrasync`: só por `infrasync --write`.
+  do `infrasync`: só por `infrasync --write`, rodado na DEVS-111 assim que o
+  `deploy/infra.json` do `bff` existe.
 - `infra/local/docker-compose.yml`: incluir
   `../../apps/backend/bff/deploy/compose.yml` à mão (o `init` só cria o arquivo).
 
@@ -648,8 +703,8 @@ Authenticate(ctx, credential):
 5. **Identity indisponível**: DADO o servidor gRPC fora QUANDO chega qualquer
    rota autenticada ENTÃO a resposta é 503 `unavailable` e nenhuma permissão de
    claim é usada.
-6. **e2e real**: DADO `bff` e `identity` em container com mTLS, e o Redis da
-   deny-list fornecido ao `bff` por `REDIS_URL`, QUANDO um usuário sem vínculo
+6. **e2e real**: DADO `bff` e `identity` em container com mTLS, e um Redis
+   fornecido ao `bff` por `REDIS_URL`, QUANDO um usuário sem vínculo
    chama as 21 rotas ENTÃO todas respondem 403, e
    `GET /openapi/identity/v1/openapi.yaml` responde 200.
 7. **Revogação na API (DEVS-112)**: DADO um issuer OIDC falso com JWKS,
@@ -684,9 +739,10 @@ Authenticate(ctx, credential):
   `contract` dos contextos e bibliotecas do kernel (ADR-012; ADR-044 do kernel;
   regra `DMPF-D002`).
 - [P0] Uma rota encaminha para exatamente uma chamada gRPC. Sem orquestração,
-  sem saga, sem banco. O Redis da deny-list não é banco do `bff`: é o
-  armazenamento do provider `libs/backend/go/redis`, que a API só consulta e o
-  papel `session-events` só alimenta (ADR-065 do kernel, itens 1 e 6).
+  sem saga, sem banco. O Redis não é banco do `bff`: é um recurso compartilhado
+  da infraestrutura, no qual o provider `libs/backend/go/redis` guarda a
+  deny-list que a API só consulta e o papel `session-events` só alimenta
+  (ADR-065 do kernel, itens 1 e 6).
 - [P0] Toda rota declara `Permission` e `ContractRef`; `ValidateEdge` recusa na
   partida rota sem permissão ou `POST` sem exigência de `Idempotency-Key`
   (IDN-16, IDN-17, RST-04).
