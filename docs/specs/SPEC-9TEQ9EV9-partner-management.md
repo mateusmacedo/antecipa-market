@@ -63,7 +63,7 @@ created: 2026-10-12
   9. *H17 declarativo*: H17 é declaração do operador em `satisfiedCriteria`; a verificação contra a regra comercial depende do #7 e está no Escopo fora.
   10. *`requiredCheckIds` no produto*: a lista fica no `FinancialProduct`, que pertence a parceiro e acordo e cumpre o "por produto e parceiro" de `docs/design/02` §4; o KYB a lê pela consulta de produto.
   11. *Sem fan-out*: `ChangePartnerStage` muda só o `Partner`; suspender o parceiro ou iniciar o offboarding não altera as capacidades, e a capacidade efetiva nega com `Partner.status ≠ active`.
-  12. *Sem papel de job*: `RaiseCertificateExpiryAlert` e `RetireProduct(expired)` são comandos RPC idempotentes com chaves determinísticas `cert-alert.<profileId>.<thresholdDays>` e `product-expired.<productId>`; o disparo agendado está no Escopo fora.
+  12. *Sem papel de job*: `RaiseCertificateExpiryAlert` e `RetireProduct(expired)` são comandos RPC idempotentes com chaves determinísticas `cert-alert.<profileId>.<thresholdDays>.<yyyymmdd>` e `product-expired.<productId>.<yyyymmdd>`, com o dia UTC da avaliação, para que a repetição no dia seguinte decida de novo sobre o estado; ids de perfil e de produto seguem `^[A-Za-z0-9._-]{1,100}$`, para que a chave caiba no formato da chave de idempotência; o disparo agendado está no Escopo fora.
   13. *Diretório de organizações fail-closed*: a porta `OrganizationDirectory` tem, em produção, provider que falha fechado; o fake vale só em testes (Nota (‡)).
   14. *Role migradora*: o banco do contexto pertence à role migradora `partner_migrator`, e a role de runtime `partner` tem só os privilégios declarados por tabela (ADR-063 do DMPF; ADR-022, linha 5).
   15. *Versão vigente*: no `PartnerAgreement`, é a de maior `version` em `active` com `validFrom` até o instante avaliado; na `Capability`, a de maior `version` entre `enabled` e `suspended`, e a capacidade efetiva nega quando ela está `suspended`; nos demais agregados versionados, a de maior `version` com `validFrom` ou `effectiveFrom` até o instante avaliado.
@@ -75,7 +75,7 @@ created: 2026-10-12
 
 ## Agregados
 
-Nota (†): pré-condição sobre outro agregado é lida no `Run` do caso de uso por `Load` de outro repositório da mesma UoW, antes de `usecase.Decide`; `ErrNotFound` vira a rejeição declarada.
+Nota (†): pré-condição sobre outro agregado é lida no `Run` do caso de uso por `Load` de outro repositório da mesma UoW, antes de `usecase.Decide`; `ErrNotFound` vira a rejeição declarada. Nesta versão, a pré-condição relacional sem id (acordo ativo e vigente, perfil vigente para o ambiente, capacidade habilitada) é lida pela `Relation` do kernel, que no rc.5 só opera sobre o pool de leitura, fora da UoW; a corrida com um comando concorrente sobre o outro agregado é aceita até o kernel oferecer leitura relacional na transação (DEVS-132).
 
 Nota (††): unicidade e série de versões são verificadas por pré-leitura em autocommit, separada da UoW do comando, com índice único de salvaguarda e `tenant_id` à frente (ADR-013). Numa corrida, o índice decide: exatamente uma requisição grava, e a perdedora sai como erro técnico, sem linha nem evento (ADR-022, linha 15, até a SPEC-7SRQ3RPK).
 
@@ -320,7 +320,7 @@ Suspender ou iniciar o offboarding do parceiro não altera as capacidades; a cap
 - **Eventos emitidos**: `PartnerProductExpired` (com `reason = expired`) ou `PartnerProductRetired` (com `reason = withdrawn`)
 - **Resposta**: `productId: id`
 
-O disparo de `RetireProduct(expired)` vem de chamador externo, com chave `product-expired.<productId>`; o agendamento está no Escopo fora.
+O disparo de `RetireProduct(expired)` vem de chamador externo, com chave `product-expired.<productId>.<yyyymmdd>`; o agendamento está no Escopo fora.
 
 ### RegisterIntegrationProfile
 
@@ -348,7 +348,7 @@ O disparo de `RetireProduct(expired)` vem de chamador externo, com chave `produc
 - **Eventos emitidos**: `PartnerCertificateExpiring`
 - **Resposta**: `profileId: id`
 
-A chave de idempotência é determinística, `cert-alert.<profileId>.<thresholdDays>`; o disparo vem de chamador externo.
+A chave de idempotência é determinística, `cert-alert.<profileId>.<thresholdDays>.<yyyymmdd>`; o disparo vem de chamador externo.
 
 ### DefineOperationalPolicy
 
@@ -423,7 +423,7 @@ As consultas leem o tenant do portador; nesta versão, a configuração vive num
 - `FindAgreementsByPartner` — filtros: `partnerId`; cardinalidade: `many`
 - `FindIntegrationProfile` — filtros: `partnerId`, `environment`, `asOf`; cardinalidade: `one` — versão vigente, pela regra de Agregados
 - `FindOperationalPolicy` — filtros: `partnerId`, `asOf`; cardinalidade: `one`
-- `FindCertificatesExpiring` — filtros: `environment`, `expiresBefore`; cardinalidade: `many` — igualdade por `environment` e refino em memória por `certificateExpiresAt` anterior a `expiresBefore`; o custo linear é aceito em tenant único
+- `FindCertificatesExpiring` — filtros: `environment`, `expiresBefore`; cardinalidade: `many` — igualdade por `environment`, só a versão vigente de cada série `partnerId+environment`, e refino em memória por `certificateExpiresAt` anterior a `expiresBefore`; o custo linear é aceito em tenant único
 
 A capacidade efetiva é: parceiro `active` E contrato vigente no instante E versão vigente da capacidade em `enabled` E produto vigente (com `productId`) E tenant incluído no rollout E parâmetros compatíveis. A avaliação segue a ordem do enum `failedCondition`. Se a consulta não puder confirmar, o consumidor nega (`docs/design/13` §4).
 
@@ -479,7 +479,7 @@ As relações são só por identidade. A verificação (†) de existência e vi
 ## Políticas transversais
 
 - **Tenant**: tenant único da plataforma nesta versão; vem do token verificado.
-- **Idempotência**: todo comando exige chave de idempotência na metadata gRPC (FND-04; ADR-056). Os comandos de criação entram pelo `bff` por `POST` com a chave declarada (RST-02). O replay com a mesma chave devolve a resposta registrada; a repetição com chave nova decide de novo sobre o estado atual. `RaiseCertificateExpiryAlert` e `RetireProduct(expired)` usam chave determinística: `cert-alert.<profileId>.<thresholdDays>` e `product-expired.<productId>`. O contexto não consome evento nesta versão.
+- **Idempotência**: todo comando exige chave de idempotência na metadata gRPC (FND-04; ADR-056). Os comandos de criação entram pelo `bff` por `POST` com a chave declarada (RST-02). O replay com a mesma chave devolve a resposta registrada; a repetição com chave nova decide de novo sobre o estado atual. `RaiseCertificateExpiryAlert` e `RetireProduct(expired)` usam chave determinística com o dia UTC da avaliação: `cert-alert.<profileId>.<thresholdDays>.<yyyymmdd>` e `product-expired.<productId>.<yyyymmdd>`; a recusa por prazo ainda não alcançado fica registrada só naquele dia, e o domínio impede segundo alerta pelo mesmo limiar e segunda expiração. O contexto não consome evento nesta versão.
 - **Autorização**: a permissão `partner:<operação-kebab>` é conferida no `bff`; no contexto, `usecase.Permitted` exige só o tenant. As permissões `partner:*` e a matriz de papéis (`docs/design/95-personas-jornadas.md`) estão no Escopo fora.
 - **Auditoria**: pela trilha de auditoria do kernel (FND-08; `observability/audit`); os eventos publicados vão ao Ledger, e toda mudança fica reproduzível pelas versões.
 - **Dados**: `supportContact` e `incidentContact` são PII, fora de log e de evento; segredos só por referência.
@@ -572,7 +572,7 @@ DADO um produto active
 QUANDO RetireProduct chega com reason withdrawn
 ENTÃO o produto vai a retired e PartnerProductRetired é emitido
 
-DADO um produto já retirado por RetireProduct com reason expired e a chave product-expired.<productId>
+DADO um produto já retirado por RetireProduct com reason expired e a chave product-expired.<productId>.<yyyymmdd>
 QUANDO a mesma chamada chega de novo com a mesma chave
 ENTÃO devolve a resposta registrada e nenhum PartnerProductExpired novo é emitido
 
@@ -584,7 +584,7 @@ DADO um perfil cujo certificado vence em 25 dias
 QUANDO RaiseCertificateExpiryAlert chega com thresholdDays 30
 ENTÃO lastAlertedThresholdDays vira 30 e PartnerCertificateExpiring é emitido
 
-DADO um alerta de 30 dias já emitido com a chave cert-alert.<profileId>.30
+DADO um alerta de 30 dias já emitido com a chave cert-alert.<profileId>.30.<yyyymmdd>
 QUANDO RaiseCertificateExpiryAlert chega de novo com a mesma chave
 ENTÃO devolve a resposta registrada e nenhum PartnerCertificateExpiring novo é emitido
 
