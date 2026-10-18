@@ -1,0 +1,93 @@
+{
+  "name": "bff",
+  "$schema": "../../../node_modules/nx/schemas/project-schema.json",
+  "projectType": "application",
+  "sourceRoot": "apps/backend/bff",
+  "tags": ["type:app", "scope:backend", "stack:go", "layer:apps"],
+  "implicitDependencies": ["identity-contract"],
+  "targets": {
+    "nx-release-publish": {
+      "executor": "nx:noop"
+    },
+    "tidy": {
+      "executor": "@mateusmacedo/dmpf-plugin:go-tidy",
+      "cache": false
+    },
+    "fmt-check": {
+      "executor": "nx:run-commands",
+      "cache": true,
+      "inputs": ["go", "^go"],
+      "options": {
+        "command": "saida=\"$(gofmt -l . 2>&1)\"; status=$?; [ $status -eq 0 ] || { printf '%s\\n' \"$saida\" >&2; exit $status; }; [ -z \"$saida\" ] || { printf '%s\\n' \"$saida\" >&2; exit 1; }",
+        "cwd": "{projectRoot}"
+      }
+    },
+    "vet": {
+      "executor": "nx:run-commands",
+      "cache": true,
+      "inputs": ["go", "^go"],
+      "options": {
+        "command": "go vet ./...",
+        "cwd": "{projectRoot}"
+      }
+    },
+    "build": {
+      "executor": "nx:run-commands",
+      "inputs": ["go", "^go"],
+      "options": {
+        "command": "go build ./...",
+        "cwd": "{projectRoot}"
+      }
+    },
+    "test-race": {
+      "executor": "@mateusmacedo/dmpf-plugin:test-env",
+      "cache": false,
+      "inputs": ["go", "^go"],
+      "options": {
+        "command": "go test -race -count=1 -p 1 -tags=integration ./..."
+      },
+      "dependsOn": ["test-infra-up"]
+    },
+    "govulncheck": {
+      "executor": "nx:run-commands",
+      "cache": false,
+      "options": {
+        "command": "go run golang.org/x/vuln/cmd/govulncheck@v1.7.0 ./...",
+        "cwd": "{projectRoot}"
+      }
+    },
+    "test-infra-up": {
+      "executor": "@mateusmacedo/dmpf-plugin:test-infra",
+      "cache": false,
+      "options": {
+        "action": "up"
+      }
+    },
+    "test-infra-down": {
+      "executor": "@mateusmacedo/dmpf-plugin:test-infra",
+      "cache": false,
+      "options": {
+        "action": "down"
+      }
+    },
+    "redis-up": {
+      "executor": "nx:run-commands",
+      "cache": false,
+      "options": {
+        "command": "docker compose -f infra/local/docker-compose.yml --profile redis up -d --wait redis",
+        "cwd": "{workspaceRoot}"
+      }
+    },
+    "serve": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "set -a; [ ! -f deploy/.env ] || . deploy/.env; set +a; exec go run ./cmd",
+        "cwd": "{projectRoot}",
+        "envFile": "{projectRoot}/deploy/.env.example"
+      },
+      "continuous": true,
+      "dependsOn": ["redis-up"]
+    },
+    "deploy-env": {}
+  }
+}

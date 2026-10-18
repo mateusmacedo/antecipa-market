@@ -1,7 +1,19 @@
 {
   "schema": "dmpf/units-baseline@1",
-  "digest": "sha256:90fe0a093f759e7ed07f29efa08986fcb71e5603ec4a62c7e04e55109adb98b3",
+  "digest": "sha256:d1f93af19f3b0e02b152fb41b2163fab0c5d228ac00c8e62b172533d34bf0876",
   "entries": [
+    {
+      "unit": "bff/app",
+      "module": "github.com/mateusmacedo/antecipa-market/apps/backend/bff",
+      "block": "app",
+      "bounded_context": "bff",
+      "membership": [
+        "github.com/mateusmacedo/antecipa-market/apps/backend/bff/app",
+        "github.com/mateusmacedo/antecipa-market/apps/backend/bff/app/api",
+        "github.com/mateusmacedo/antecipa-market/apps/backend/bff/app/rpc",
+        "github.com/mateusmacedo/antecipa-market/apps/backend/bff/cmd"
+      ]
+    },
     {
       "unit": "identity-organization/app",
       "module": "github.com/mateusmacedo/antecipa-market/apps/backend/identity",
