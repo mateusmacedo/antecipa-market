@@ -1,6 +1,7 @@
 go 1.26.9
 
 use (
+	./apps/backend/bff
 	./apps/backend/identity
 	./apps/backend/identity/contract
 )
