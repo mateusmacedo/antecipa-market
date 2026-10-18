@@ -2,7 +2,7 @@
 id: SPEC-9TEQ9EV9
 slug: partner-management
 title: Bounded context — partner-management
-stage: planning
+stage: done
 priority: P0
 depends_on: [SPEC-GXGASP24, SPEC-7KW0HHF6]
 ticket_url: https://linear.app/mmda/issue/DEVS-78/spec-9teq9ev9-bounded-context-partner-management
