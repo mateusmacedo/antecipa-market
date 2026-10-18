@@ -1,0 +1,1372 @@
+{
+  "format_version": "1",
+  "identity": {
+    "context": "partner",
+    "aggregate": "capability"
+  },
+  "cases": [
+    {
+      "name": "declare-first-version",
+      "doc": "Ramo Accepted de Declare: escrita sem consulta de estado com restrictionNote e callback aplicável nasce declared, version 1, com rollout disabled e sem evento.",
+      "state_before": {
+        "capability": "cap-1",
+        "partner": "",
+        "operation": "",
+        "asset_type": "",
+        "environment": "",
+        "version": "0",
+        "supersedes": "",
+        "is_write": "false",
+        "state_query_supported": "false",
+        "restriction_note": "",
+        "callback_applicable": "false",
+        "status": "",
+        "homologation": "",
+        "rollout_mode": "",
+        "rollout_allowlist": "",
+        "rollout_percentage": "0",
+        "rollout_excluded": "",
+        "suspension_reason": "",
+        "suspension_trigger": "",
+        "suspended_at": "0",
+        "enabled_at": "0"
+      },
+      "command": {
+        "upr": "declare",
+        "partner": "prt-1",
+        "operation": "register-receivable",
+        "asset_type": "duplicata",
+        "environment": "production",
+        "is_write": "true",
+        "state_query_supported": "false",
+        "restriction_note": "reconciled by the daily file",
+        "callback_applicable": "true",
+        "supersedes": "",
+        "head": "",
+        "head_version": "0",
+        "at": "1755432000000000000"
+      },
+      "expected": {
+        "branch": "accepted",
+        "response": {
+          "capability": "cap-1"
+        },
+        "events": [],
+        "state_after": {
+          "capability": "cap-1",
+          "partner": "prt-1",
+          "operation": "register-receivable",
+          "asset_type": "duplicata",
+          "environment": "production",
+          "version": "1",
+          "supersedes": "",
+          "is_write": "true",
+          "state_query_supported": "false",
+          "restriction_note": "reconciled by the daily file",
+          "callback_applicable": "true",
+          "status": "declared",
+          "homologation": "",
+          "rollout_mode": "disabled",
+          "rollout_allowlist": "",
+          "rollout_percentage": "0",
+          "rollout_excluded": "",
+          "suspension_reason": "",
+          "suspension_trigger": "",
+          "suspended_at": "0",
+          "enabled_at": "0"
+        }
+      }
+    },
+    {
+      "name": "declare-successor",
+      "doc": "Ramo Accepted de Declare: supersedes aponta a última versão da série e a capacidade nasce na version seguinte.",
+      "state_before": {
+        "capability": "cap-2",
+        "partner": "",
+        "operation": "",
+        "asset_type": "",
+        "environment": "",
+        "version": "0",
+        "supersedes": "",
+        "is_write": "false",
+        "state_query_supported": "false",
+        "restriction_note": "",
+        "callback_applicable": "false",
+        "status": "",
+        "homologation": "",
+        "rollout_mode": "",
+        "rollout_allowlist": "",
+        "rollout_percentage": "0",
+        "rollout_excluded": "",
+        "suspension_reason": "",
+        "suspension_trigger": "",
+        "suspended_at": "0",
+        "enabled_at": "0"
+      },
+      "command": {
+        "upr": "declare",
+        "partner": "prt-1",
+        "operation": "register-receivable",
+        "asset_type": "duplicata",
+        "environment": "production",
+        "is_write": "true",
+        "state_query_supported": "true",
+        "restriction_note": "",
+        "callback_applicable": "false",
+        "supersedes": "cap-1",
+        "head": "cap-1",
+        "head_version": "1",
+        "at": "1755432000000000000"
+      },
+      "expected": {
+        "branch": "accepted",
+        "response": {
+          "capability": "cap-2"
+        },
+        "events": [],
+        "state_after": {
+          "capability": "cap-2",
+          "partner": "prt-1",
+          "operation": "register-receivable",
+          "asset_type": "duplicata",
+          "environment": "production",
+          "version": "2",
+          "supersedes": "cap-1",
+          "is_write": "true",
+          "state_query_supported": "true",
+          "restriction_note": "",
+          "callback_applicable": "false",
+          "status": "declared",
+          "homologation": "",
+          "rollout_mode": "disabled",
+          "rollout_allowlist": "",
+          "rollout_percentage": "0",
+          "rollout_excluded": "",
+          "suspension_reason": "",
+          "suspension_trigger": "",
+          "suspended_at": "0",
+          "enabled_at": "0"
+        }
+      }
+    },
+    {
+      "name": "declare-operation-empty",
+      "doc": "Ramo Rejected de Declare: operation só de espaços.",
+      "state_before": {
+        "capability": "cap-1",
+        "partner": "",
+        "operation": "",
+        "asset_type": "",
+        "environment": "",
+        "version": "0",
+        "supersedes": "",
+        "is_write": "false",
+        "state_query_supported": "false",
+        "restriction_note": "",
+        "callback_applicable": "false",
+        "status": "",
+        "homologation": "",
+        "rollout_mode": "",
+        "rollout_allowlist": "",
+        "rollout_percentage": "0",
+        "rollout_excluded": "",
+        "suspension_reason": "",
+        "suspension_trigger": "",
+        "suspended_at": "0",
+        "enabled_at": "0"
+      },
+      "command": {
+        "upr": "declare",
+        "partner": "prt-1",
+        "operation": "  ",
+        "asset_type": "duplicata",
+        "environment": "production",
+        "is_write": "true",
+        "state_query_supported": "true",
+        "restriction_note": "",
+        "callback_applicable": "false",
+        "supersedes": "",
+        "head": "",
+        "head_version": "0",
+        "at": "1755432000000000000"
+      },
+      "expected": {
+        "branch": "rejected",
+        "rejection": {
+          "code": "partner-management/capability/operation-empty",
+          "message": "the operation is required",
+          "details": {}
+        },
+        "events": []
+      }
+    },
+    {
+      "name": "declare-asset-type-empty",
+      "doc": "Ramo Rejected de Declare: assetType vazio.",
+      "state_before": {
+        "capability": "cap-1",
+        "partner": "",
+        "operation": "",
+        "asset_type": "",
+        "environment": "",
+        "version": "0",
+        "supersedes": "",
+        "is_write": "false",
+        "state_query_supported": "false",
+        "restriction_note": "",
+        "callback_applicable": "false",
+        "status": "",
+        "homologation": "",
+        "rollout_mode": "",
+        "rollout_allowlist": "",
+        "rollout_percentage": "0",
+        "rollout_excluded": "",
+        "suspension_reason": "",
+        "suspension_trigger": "",
+        "suspended_at": "0",
+        "enabled_at": "0"
+      },
+      "command": {
+        "upr": "declare",
+        "partner": "prt-1",
+        "operation": "register-receivable",
+        "asset_type": "",
+        "environment": "production",
+        "is_write": "true",
+        "state_query_supported": "true",
+        "restriction_note": "",
+        "callback_applicable": "false",
+        "supersedes": "",
+        "head": "",
+        "head_version": "0",
+        "at": "1755432000000000000"
+      },
+      "expected": {
+        "branch": "rejected",
+        "rejection": {
+          "code": "partner-management/capability/asset-type-empty",
+          "message": "the asset type is required",
+          "details": {}
+        },
+        "events": []
+      }
+    },
+    {
+      "name": "declare-state-query-restriction-undeclared",
+      "doc": "Ramo Rejected de Declare: escrita sem consulta de estado e sem restrictionNote.",
+      "state_before": {
+        "capability": "cap-1",
+        "partner": "",
+        "operation": "",
+        "asset_type": "",
+        "environment": "",
+        "version": "0",
+        "supersedes": "",
+        "is_write": "false",
+        "state_query_supported": "false",
+        "restriction_note": "",
+        "callback_applicable": "false",
+        "status": "",
+        "homologation": "",
+        "rollout_mode": "",
+        "rollout_allowlist": "",
+        "rollout_percentage": "0",
+        "rollout_excluded": "",
+        "suspension_reason": "",
+        "suspension_trigger": "",
+        "suspended_at": "0",
+        "enabled_at": "0"
+      },
+      "command": {
+        "upr": "declare",
+        "partner": "prt-1",
+        "operation": "register-receivable",
+        "asset_type": "duplicata",
+        "environment": "production",
+        "is_write": "true",
+        "state_query_supported": "false",
+        "restriction_note": "",
+        "callback_applicable": "false",
+        "supersedes": "",
+        "head": "",
+        "head_version": "0",
+        "at": "1755432000000000000"
+      },
+      "expected": {
+        "branch": "rejected",
+        "rejection": {
+          "code": "partner-management/capability/state-query-restriction-undeclared",
+          "message": "a write operation without a state query must declare its restriction",
+          "details": {}
+        },
+        "events": []
+      }
+    },
+    {
+      "name": "declare-supersedes-invalid",
+      "doc": "Ramo Rejected de Declare: a série já tem v1 e o comando chega sem supersedesId.",
+      "state_before": {
+        "capability": "cap-2",
+        "partner": "",
+        "operation": "",
+        "asset_type": "",
+        "environment": "",
+        "version": "0",
+        "supersedes": "",
+        "is_write": "false",
+        "state_query_supported": "false",
+        "restriction_note": "",
+        "callback_applicable": "false",
+        "status": "",
+        "homologation": "",
+        "rollout_mode": "",
+        "rollout_allowlist": "",
+        "rollout_percentage": "0",
+        "rollout_excluded": "",
+        "suspension_reason": "",
+        "suspension_trigger": "",
+        "suspended_at": "0",
+        "enabled_at": "0"
+      },
+      "command": {
+        "upr": "declare",
+        "partner": "prt-1",
+        "operation": "register-receivable",
+        "asset_type": "duplicata",
+        "environment": "production",
+        "is_write": "true",
+        "state_query_supported": "true",
+        "restriction_note": "",
+        "callback_applicable": "false",
+        "supersedes": "",
+        "head": "cap-1",
+        "head_version": "1",
+        "at": "1755432000000000000"
+      },
+      "expected": {
+        "branch": "rejected",
+        "rejection": {
+          "code": "partner-management/capability/supersedes-invalid",
+          "message": "supersedes must name the last version of the series of the partner, operation, asset type and environment, and a series holds one first version",
+          "details": {
+            "supersedes": ""
+          }
+        },
+        "events": []
+      }
+    },
+    {
+      "name": "record-homologation-homologated",
+      "doc": "Ramo Accepted de RecordHomologation: escrita com consulta de estado e sem callback passa em H1 a H8 e H10 a H12 e vai a homologated, sem evento.",
+      "state_before": {
+        "capability": "cap-1",
+        "partner": "prt-1",
+        "operation": "register-receivable",
+        "asset_type": "duplicata",
+        "environment": "production",
+        "version": "1",
+        "supersedes": "",
+        "is_write": "true",
+        "state_query_supported": "true",
+        "restriction_note": "",
+        "callback_applicable": "false",
+        "status": "declared",
+        "homologation": "",
+        "rollout_mode": "disabled",
+        "rollout_allowlist": "",
+        "rollout_percentage": "0",
+        "rollout_excluded": "",
+        "suspension_reason": "",
+        "suspension_trigger": "",
+        "suspended_at": "0",
+        "enabled_at": "0"
+      },
+      "command": {
+        "upr": "record-homologation",
+        "results": "H1:true:evd-H1,H2:true:evd-H2,H4:true:evd-H4,H5:true:evd-H5,H6:true:evd-H6,H7:true:evd-H7,H8:true:evd-H8,H10:true:evd-H10,H11:true:evd-H11,H12:true:evd-H12,H3:true:evd-H3",
+        "at": "1755604800000000000"
+      },
+      "expected": {
+        "branch": "accepted",
+        "response": {
+          "capability": "cap-1",
+          "status": "homologated"
+        },
+        "events": [],
+        "state_after": {
+          "capability": "cap-1",
+          "partner": "prt-1",
+          "operation": "register-receivable",
+          "asset_type": "duplicata",
+          "environment": "production",
+          "version": "1",
+          "supersedes": "",
+          "is_write": "true",
+          "state_query_supported": "true",
+          "restriction_note": "",
+          "callback_applicable": "false",
+          "status": "homologated",
+          "homologation": "H1:true:evd-H1:1755604800000000000,H2:true:evd-H2:1755604800000000000,H4:true:evd-H4:1755604800000000000,H5:true:evd-H5:1755604800000000000,H6:true:evd-H6:1755604800000000000,H7:true:evd-H7:1755604800000000000,H8:true:evd-H8:1755604800000000000,H10:true:evd-H10:1755604800000000000,H11:true:evd-H11:1755604800000000000,H12:true:evd-H12:1755604800000000000,H3:true:evd-H3:1755604800000000000",
+          "rollout_mode": "disabled",
+          "rollout_allowlist": "",
+          "rollout_percentage": "0",
+          "rollout_excluded": "",
+          "suspension_reason": "",
+          "suspension_trigger": "",
+          "suspended_at": "0",
+          "enabled_at": "0"
+        }
+      }
+    },
+    {
+      "name": "record-homologation-partial",
+      "doc": "Ramo Accepted de RecordHomologation: sem H3 a capacidade de escrita com consulta de estado permanece declared.",
+      "state_before": {
+        "capability": "cap-1",
+        "partner": "prt-1",
+        "operation": "register-receivable",
+        "asset_type": "duplicata",
+        "environment": "production",
+        "version": "1",
+        "supersedes": "",
+        "is_write": "true",
+        "state_query_supported": "true",
+        "restriction_note": "",
+        "callback_applicable": "false",
+        "status": "declared",
+        "homologation": "",
+        "rollout_mode": "disabled",
+        "rollout_allowlist": "",
+        "rollout_percentage": "0",
+        "rollout_excluded": "",
+        "suspension_reason": "",
+        "suspension_trigger": "",
+        "suspended_at": "0",
+        "enabled_at": "0"
+      },
+      "command": {
+        "upr": "record-homologation",
+        "results": "H1:true:evd-H1,H2:true:evd-H2,H4:true:evd-H4,H5:true:evd-H5,H6:true:evd-H6,H7:true:evd-H7,H8:true:evd-H8,H10:true:evd-H10,H11:true:evd-H11,H12:true:evd-H12",
+        "at": "1755604800000000000"
+      },
+      "expected": {
+        "branch": "accepted",
+        "response": {
+          "capability": "cap-1",
+          "status": "declared"
+        },
+        "events": [],
+        "state_after": {
+          "capability": "cap-1",
+          "partner": "prt-1",
+          "operation": "register-receivable",
+          "asset_type": "duplicata",
+          "environment": "production",
+          "version": "1",
+          "supersedes": "",
+          "is_write": "true",
+          "state_query_supported": "true",
+          "restriction_note": "",
+          "callback_applicable": "false",
+          "status": "declared",
+          "homologation": "H1:true:evd-H1:1755604800000000000,H2:true:evd-H2:1755604800000000000,H4:true:evd-H4:1755604800000000000,H5:true:evd-H5:1755604800000000000,H6:true:evd-H6:1755604800000000000,H7:true:evd-H7:1755604800000000000,H8:true:evd-H8:1755604800000000000,H10:true:evd-H10:1755604800000000000,H11:true:evd-H11:1755604800000000000,H12:true:evd-H12:1755604800000000000",
+          "rollout_mode": "disabled",
+          "rollout_allowlist": "",
+          "rollout_percentage": "0",
+          "rollout_excluded": "",
+          "suspension_reason": "",
+          "suspension_trigger": "",
+          "suspended_at": "0",
+          "enabled_at": "0"
+        }
+      }
+    },
+    {
+      "name": "record-homologation-rehomologated",
+      "doc": "Ramo Accepted de RecordHomologation: suspensa por schema_mismatch, conta só os resultados posteriores a suspendedAt e volta a homologated.",
+      "state_before": {
+        "capability": "cap-1",
+        "partner": "prt-1",
+        "operation": "register-receivable",
+        "asset_type": "duplicata",
+        "environment": "production",
+        "version": "1",
+        "supersedes": "",
+        "is_write": "true",
+        "state_query_supported": "true",
+        "restriction_note": "",
+        "callback_applicable": "false",
+        "status": "suspended",
+        "homologation": "H1:true:evd-H1:1755432000000000000,H2:true:evd-H2:1755432000000000000,H4:true:evd-H4:1755432000000000000,H5:true:evd-H5:1755432000000000000,H6:true:evd-H6:1755432000000000000,H7:true:evd-H7:1755432000000000000,H8:true:evd-H8:1755432000000000000,H10:true:evd-H10:1755432000000000000,H11:true:evd-H11:1755432000000000000,H12:true:evd-H12:1755432000000000000,H3:true:evd-H3:1755432000000000000",
+        "rollout_mode": "disabled",
+        "rollout_allowlist": "",
+        "rollout_percentage": "0",
+        "rollout_excluded": "",
+        "suspension_reason": "schema v4 rejected",
+        "suspension_trigger": "schema_mismatch",
+        "suspended_at": "1755518400000000000",
+        "enabled_at": "1755432000000000000"
+      },
+      "command": {
+        "upr": "record-homologation",
+        "results": "H1:true:evd-H1,H2:true:evd-H2,H4:true:evd-H4,H5:true:evd-H5,H6:true:evd-H6,H7:true:evd-H7,H8:true:evd-H8,H10:true:evd-H10,H11:true:evd-H11,H12:true:evd-H12,H3:true:evd-H3",
+        "at": "1755604800000000000"
+      },
+      "expected": {
+        "branch": "accepted",
+        "response": {
+          "capability": "cap-1",
+          "status": "homologated"
+        },
+        "events": [],
+        "state_after": {
+          "capability": "cap-1",
+          "partner": "prt-1",
+          "operation": "register-receivable",
+          "asset_type": "duplicata",
+          "environment": "production",
+          "version": "1",
+          "supersedes": "",
+          "is_write": "true",
+          "state_query_supported": "true",
+          "restriction_note": "",
+          "callback_applicable": "false",
+          "status": "homologated",
+          "homologation": "H1:true:evd-H1:1755604800000000000,H2:true:evd-H2:1755604800000000000,H4:true:evd-H4:1755604800000000000,H5:true:evd-H5:1755604800000000000,H6:true:evd-H6:1755604800000000000,H7:true:evd-H7:1755604800000000000,H8:true:evd-H8:1755604800000000000,H10:true:evd-H10:1755604800000000000,H11:true:evd-H11:1755604800000000000,H12:true:evd-H12:1755604800000000000,H3:true:evd-H3:1755604800000000000",
+          "rollout_mode": "disabled",
+          "rollout_allowlist": "",
+          "rollout_percentage": "0",
+          "rollout_excluded": "",
+          "suspension_reason": "schema v4 rejected",
+          "suspension_trigger": "schema_mismatch",
+          "suspended_at": "1755518400000000000",
+          "enabled_at": "1755432000000000000"
+        }
+      }
+    },
+    {
+      "name": "record-homologation-criteria-empty",
+      "doc": "Ramo Rejected de RecordHomologation: results vazio.",
+      "state_before": {
+        "capability": "cap-1",
+        "partner": "prt-1",
+        "operation": "register-receivable",
+        "asset_type": "duplicata",
+        "environment": "production",
+        "version": "1",
+        "supersedes": "",
+        "is_write": "true",
+        "state_query_supported": "true",
+        "restriction_note": "",
+        "callback_applicable": "false",
+        "status": "declared",
+        "homologation": "",
+        "rollout_mode": "disabled",
+        "rollout_allowlist": "",
+        "rollout_percentage": "0",
+        "rollout_excluded": "",
+        "suspension_reason": "",
+        "suspension_trigger": "",
+        "suspended_at": "0",
+        "enabled_at": "0"
+      },
+      "command": {
+        "upr": "record-homologation",
+        "results": "",
+        "at": "1755604800000000000"
+      },
+      "expected": {
+        "branch": "rejected",
+        "rejection": {
+          "code": "partner-management/capability/criteria-empty",
+          "message": "at least one criterion result is required",
+          "details": {}
+        },
+        "events": []
+      }
+    },
+    {
+      "name": "record-homologation-unknown-criterion",
+      "doc": "Ramo Rejected de RecordHomologation: H13 não é critério técnico.",
+      "state_before": {
+        "capability": "cap-1",
+        "partner": "prt-1",
+        "operation": "register-receivable",
+        "asset_type": "duplicata",
+        "environment": "production",
+        "version": "1",
+        "supersedes": "",
+        "is_write": "true",
+        "state_query_supported": "true",
+        "restriction_note": "",
+        "callback_applicable": "false",
+        "status": "declared",
+        "homologation": "",
+        "rollout_mode": "disabled",
+        "rollout_allowlist": "",
+        "rollout_percentage": "0",
+        "rollout_excluded": "",
+        "suspension_reason": "",
+        "suspension_trigger": "",
+        "suspended_at": "0",
+        "enabled_at": "0"
+      },
+      "command": {
+        "upr": "record-homologation",
+        "results": "H1:true:evd-H1,H13:true:evd-H13",
+        "at": "1755604800000000000"
+      },
+      "expected": {
+        "branch": "rejected",
+        "rejection": {
+          "code": "partner-management/capability/unknown-criterion",
+          "message": "the technical criteria are H1 to H12",
+          "details": {
+            "criterion": "H13"
+          }
+        },
+        "events": []
+      }
+    },
+    {
+      "name": "record-homologation-closed",
+      "doc": "Ramo Rejected de RecordHomologation: a capacidade já está homologated.",
+      "state_before": {
+        "capability": "cap-1",
+        "partner": "prt-1",
+        "operation": "register-receivable",
+        "asset_type": "duplicata",
+        "environment": "production",
+        "version": "1",
+        "supersedes": "",
+        "is_write": "true",
+        "state_query_supported": "true",
+        "restriction_note": "",
+        "callback_applicable": "false",
+        "status": "homologated",
+        "homologation": "H1:true:evd-H1:1755432000000000000,H2:true:evd-H2:1755432000000000000,H4:true:evd-H4:1755432000000000000,H5:true:evd-H5:1755432000000000000,H6:true:evd-H6:1755432000000000000,H7:true:evd-H7:1755432000000000000,H8:true:evd-H8:1755432000000000000,H10:true:evd-H10:1755432000000000000,H11:true:evd-H11:1755432000000000000,H12:true:evd-H12:1755432000000000000,H3:true:evd-H3:1755432000000000000",
+        "rollout_mode": "disabled",
+        "rollout_allowlist": "",
+        "rollout_percentage": "0",
+        "rollout_excluded": "",
+        "suspension_reason": "",
+        "suspension_trigger": "",
+        "suspended_at": "0",
+        "enabled_at": "0"
+      },
+      "command": {
+        "upr": "record-homologation",
+        "results": "H1:true:evd-H1",
+        "at": "1755604800000000000"
+      },
+      "expected": {
+        "branch": "rejected",
+        "rejection": {
+          "code": "partner-management/capability/homologation-closed",
+          "message": "only a declared capability, or one suspended by a schema mismatch, records homologation",
+          "details": {}
+        },
+        "events": []
+      }
+    },
+    {
+      "name": "record-homologation-closed-suspended-manual",
+      "doc": "Ramo Rejected de RecordHomologation: suspensa com trigger manual não reabre a homologação.",
+      "state_before": {
+        "capability": "cap-1",
+        "partner": "prt-1",
+        "operation": "register-receivable",
+        "asset_type": "duplicata",
+        "environment": "production",
+        "version": "1",
+        "supersedes": "",
+        "is_write": "true",
+        "state_query_supported": "true",
+        "restriction_note": "",
+        "callback_applicable": "false",
+        "status": "suspended",
+        "homologation": "H1:true:evd-H1:1755432000000000000,H2:true:evd-H2:1755432000000000000,H4:true:evd-H4:1755432000000000000,H5:true:evd-H5:1755432000000000000,H6:true:evd-H6:1755432000000000000,H7:true:evd-H7:1755432000000000000,H8:true:evd-H8:1755432000000000000,H10:true:evd-H10:1755432000000000000,H11:true:evd-H11:1755432000000000000,H12:true:evd-H12:1755432000000000000,H3:true:evd-H3:1755432000000000000",
+        "rollout_mode": "disabled",
+        "rollout_allowlist": "",
+        "rollout_percentage": "0",
+        "rollout_excluded": "",
+        "suspension_reason": "partner incident",
+        "suspension_trigger": "manual",
+        "suspended_at": "1755518400000000000",
+        "enabled_at": "1755432000000000000"
+      },
+      "command": {
+        "upr": "record-homologation",
+        "results": "H1:true:evd-H1",
+        "at": "1755604800000000000"
+      },
+      "expected": {
+        "branch": "rejected",
+        "rejection": {
+          "code": "partner-management/capability/homologation-closed",
+          "message": "only a declared capability, or one suspended by a schema mismatch, records homologation",
+          "details": {}
+        },
+        "events": []
+      }
+    },
+    {
+      "name": "enable-accepted",
+      "doc": "Ramo Accepted de Enable: homologated com acordo e perfil vigentes vai a enabled e CapabilityEnabled é emitido.",
+      "state_before": {
+        "capability": "cap-1",
+        "partner": "prt-1",
+        "operation": "register-receivable",
+        "asset_type": "duplicata",
+        "environment": "production",
+        "version": "1",
+        "supersedes": "",
+        "is_write": "true",
+        "state_query_supported": "true",
+        "restriction_note": "",
+        "callback_applicable": "false",
+        "status": "homologated",
+        "homologation": "H1:true:evd-H1:1755432000000000000,H2:true:evd-H2:1755432000000000000,H4:true:evd-H4:1755432000000000000,H5:true:evd-H5:1755432000000000000,H6:true:evd-H6:1755432000000000000,H7:true:evd-H7:1755432000000000000,H8:true:evd-H8:1755432000000000000,H10:true:evd-H10:1755432000000000000,H11:true:evd-H11:1755432000000000000,H12:true:evd-H12:1755432000000000000,H3:true:evd-H3:1755432000000000000",
+        "rollout_mode": "disabled",
+        "rollout_allowlist": "",
+        "rollout_percentage": "0",
+        "rollout_excluded": "",
+        "suspension_reason": "",
+        "suspension_trigger": "",
+        "suspended_at": "0",
+        "enabled_at": "0"
+      },
+      "command": {
+        "upr": "enable",
+        "has_effective_agreement": "true",
+        "has_effective_profile": "true",
+        "at": "1755604800000000000"
+      },
+      "expected": {
+        "branch": "accepted",
+        "response": {
+          "capability": "cap-1"
+        },
+        "events": [
+          {
+            "name": "partner-management.capability.enabled",
+            "fields": {
+              "capability": "cap-1",
+              "partner": "prt-1",
+              "operation": "register-receivable",
+              "asset_type": "duplicata",
+              "environment": "production",
+              "version": "1",
+              "rollout_mode": "disabled",
+              "state_query_supported": "true",
+              "restriction_note": "",
+              "at": "1755604800000000000"
+            }
+          }
+        ],
+        "state_after": {
+          "capability": "cap-1",
+          "partner": "prt-1",
+          "operation": "register-receivable",
+          "asset_type": "duplicata",
+          "environment": "production",
+          "version": "1",
+          "supersedes": "",
+          "is_write": "true",
+          "state_query_supported": "true",
+          "restriction_note": "",
+          "callback_applicable": "false",
+          "status": "enabled",
+          "homologation": "H1:true:evd-H1:1755432000000000000,H2:true:evd-H2:1755432000000000000,H4:true:evd-H4:1755432000000000000,H5:true:evd-H5:1755432000000000000,H6:true:evd-H6:1755432000000000000,H7:true:evd-H7:1755432000000000000,H8:true:evd-H8:1755432000000000000,H10:true:evd-H10:1755432000000000000,H11:true:evd-H11:1755432000000000000,H12:true:evd-H12:1755432000000000000,H3:true:evd-H3:1755432000000000000",
+          "rollout_mode": "disabled",
+          "rollout_allowlist": "",
+          "rollout_percentage": "0",
+          "rollout_excluded": "",
+          "suspension_reason": "",
+          "suspension_trigger": "",
+          "suspended_at": "0",
+          "enabled_at": "1755604800000000000"
+        }
+      }
+    },
+    {
+      "name": "enable-resumes-manual",
+      "doc": "Ramo Accepted de Enable: suspensa com trigger manual volta a enabled sem nova homologação e a suspensão é limpa.",
+      "state_before": {
+        "capability": "cap-1",
+        "partner": "prt-1",
+        "operation": "register-receivable",
+        "asset_type": "duplicata",
+        "environment": "production",
+        "version": "1",
+        "supersedes": "",
+        "is_write": "true",
+        "state_query_supported": "true",
+        "restriction_note": "",
+        "callback_applicable": "false",
+        "status": "suspended",
+        "homologation": "H1:true:evd-H1:1755432000000000000,H2:true:evd-H2:1755432000000000000,H4:true:evd-H4:1755432000000000000,H5:true:evd-H5:1755432000000000000,H6:true:evd-H6:1755432000000000000,H7:true:evd-H7:1755432000000000000,H8:true:evd-H8:1755432000000000000,H10:true:evd-H10:1755432000000000000,H11:true:evd-H11:1755432000000000000,H12:true:evd-H12:1755432000000000000,H3:true:evd-H3:1755432000000000000",
+        "rollout_mode": "disabled",
+        "rollout_allowlist": "",
+        "rollout_percentage": "0",
+        "rollout_excluded": "",
+        "suspension_reason": "partner incident",
+        "suspension_trigger": "manual",
+        "suspended_at": "1755518400000000000",
+        "enabled_at": "1755432000000000000"
+      },
+      "command": {
+        "upr": "enable",
+        "has_effective_agreement": "true",
+        "has_effective_profile": "true",
+        "at": "1755604800000000000"
+      },
+      "expected": {
+        "branch": "accepted",
+        "response": {
+          "capability": "cap-1"
+        },
+        "events": [
+          {
+            "name": "partner-management.capability.enabled",
+            "fields": {
+              "capability": "cap-1",
+              "partner": "prt-1",
+              "operation": "register-receivable",
+              "asset_type": "duplicata",
+              "environment": "production",
+              "version": "1",
+              "rollout_mode": "disabled",
+              "state_query_supported": "true",
+              "restriction_note": "",
+              "at": "1755604800000000000"
+            }
+          }
+        ],
+        "state_after": {
+          "capability": "cap-1",
+          "partner": "prt-1",
+          "operation": "register-receivable",
+          "asset_type": "duplicata",
+          "environment": "production",
+          "version": "1",
+          "supersedes": "",
+          "is_write": "true",
+          "state_query_supported": "true",
+          "restriction_note": "",
+          "callback_applicable": "false",
+          "status": "enabled",
+          "homologation": "H1:true:evd-H1:1755432000000000000,H2:true:evd-H2:1755432000000000000,H4:true:evd-H4:1755432000000000000,H5:true:evd-H5:1755432000000000000,H6:true:evd-H6:1755432000000000000,H7:true:evd-H7:1755432000000000000,H8:true:evd-H8:1755432000000000000,H10:true:evd-H10:1755432000000000000,H11:true:evd-H11:1755432000000000000,H12:true:evd-H12:1755432000000000000,H3:true:evd-H3:1755432000000000000",
+          "rollout_mode": "disabled",
+          "rollout_allowlist": "",
+          "rollout_percentage": "0",
+          "rollout_excluded": "",
+          "suspension_reason": "",
+          "suspension_trigger": "",
+          "suspended_at": "0",
+          "enabled_at": "1755604800000000000"
+        }
+      }
+    },
+    {
+      "name": "enable-not-homologated",
+      "doc": "Ramo Rejected de Enable: a capacidade ainda está declared.",
+      "state_before": {
+        "capability": "cap-1",
+        "partner": "prt-1",
+        "operation": "register-receivable",
+        "asset_type": "duplicata",
+        "environment": "production",
+        "version": "1",
+        "supersedes": "",
+        "is_write": "true",
+        "state_query_supported": "true",
+        "restriction_note": "",
+        "callback_applicable": "false",
+        "status": "declared",
+        "homologation": "",
+        "rollout_mode": "disabled",
+        "rollout_allowlist": "",
+        "rollout_percentage": "0",
+        "rollout_excluded": "",
+        "suspension_reason": "",
+        "suspension_trigger": "",
+        "suspended_at": "0",
+        "enabled_at": "0"
+      },
+      "command": {
+        "upr": "enable",
+        "has_effective_agreement": "true",
+        "has_effective_profile": "true",
+        "at": "1755604800000000000"
+      },
+      "expected": {
+        "branch": "rejected",
+        "rejection": {
+          "code": "partner-management/capability/not-homologated",
+          "message": "only a homologated or suspended capability is enabled",
+          "details": {}
+        },
+        "events": []
+      }
+    },
+    {
+      "name": "enable-rehomologation-required",
+      "doc": "Ramo Rejected de Enable: suspensa por schema_mismatch exige nova homologação.",
+      "state_before": {
+        "capability": "cap-1",
+        "partner": "prt-1",
+        "operation": "register-receivable",
+        "asset_type": "duplicata",
+        "environment": "production",
+        "version": "1",
+        "supersedes": "",
+        "is_write": "true",
+        "state_query_supported": "true",
+        "restriction_note": "",
+        "callback_applicable": "false",
+        "status": "suspended",
+        "homologation": "H1:true:evd-H1:1755432000000000000,H2:true:evd-H2:1755432000000000000,H4:true:evd-H4:1755432000000000000,H5:true:evd-H5:1755432000000000000,H6:true:evd-H6:1755432000000000000,H7:true:evd-H7:1755432000000000000,H8:true:evd-H8:1755432000000000000,H10:true:evd-H10:1755432000000000000,H11:true:evd-H11:1755432000000000000,H12:true:evd-H12:1755432000000000000,H3:true:evd-H3:1755432000000000000",
+        "rollout_mode": "disabled",
+        "rollout_allowlist": "",
+        "rollout_percentage": "0",
+        "rollout_excluded": "",
+        "suspension_reason": "schema v4 rejected",
+        "suspension_trigger": "schema_mismatch",
+        "suspended_at": "1755518400000000000",
+        "enabled_at": "1755432000000000000"
+      },
+      "command": {
+        "upr": "enable",
+        "has_effective_agreement": "true",
+        "has_effective_profile": "true",
+        "at": "1755604800000000000"
+      },
+      "expected": {
+        "branch": "rejected",
+        "rejection": {
+          "code": "partner-management/capability/rehomologation-required",
+          "message": "a capability suspended by a schema mismatch must be homologated again",
+          "details": {}
+        },
+        "events": []
+      }
+    },
+    {
+      "name": "enable-agreement-not-active",
+      "doc": "Ramo Rejected de Enable: sem acordo ativo e vigente do parceiro.",
+      "state_before": {
+        "capability": "cap-1",
+        "partner": "prt-1",
+        "operation": "register-receivable",
+        "asset_type": "duplicata",
+        "environment": "production",
+        "version": "1",
+        "supersedes": "",
+        "is_write": "true",
+        "state_query_supported": "true",
+        "restriction_note": "",
+        "callback_applicable": "false",
+        "status": "homologated",
+        "homologation": "H1:true:evd-H1:1755432000000000000,H2:true:evd-H2:1755432000000000000,H4:true:evd-H4:1755432000000000000,H5:true:evd-H5:1755432000000000000,H6:true:evd-H6:1755432000000000000,H7:true:evd-H7:1755432000000000000,H8:true:evd-H8:1755432000000000000,H10:true:evd-H10:1755432000000000000,H11:true:evd-H11:1755432000000000000,H12:true:evd-H12:1755432000000000000,H3:true:evd-H3:1755432000000000000",
+        "rollout_mode": "disabled",
+        "rollout_allowlist": "",
+        "rollout_percentage": "0",
+        "rollout_excluded": "",
+        "suspension_reason": "",
+        "suspension_trigger": "",
+        "suspended_at": "0",
+        "enabled_at": "0"
+      },
+      "command": {
+        "upr": "enable",
+        "has_effective_agreement": "false",
+        "has_effective_profile": "true",
+        "at": "1755604800000000000"
+      },
+      "expected": {
+        "branch": "rejected",
+        "rejection": {
+          "code": "partner-management/capability/agreement-not-active",
+          "message": "an active agreement in effect is required",
+          "details": {}
+        },
+        "events": []
+      }
+    },
+    {
+      "name": "enable-integration-profile-missing",
+      "doc": "Ramo Rejected de Enable: sem perfil de integração vigente para o ambiente.",
+      "state_before": {
+        "capability": "cap-1",
+        "partner": "prt-1",
+        "operation": "register-receivable",
+        "asset_type": "duplicata",
+        "environment": "production",
+        "version": "1",
+        "supersedes": "",
+        "is_write": "true",
+        "state_query_supported": "true",
+        "restriction_note": "",
+        "callback_applicable": "false",
+        "status": "homologated",
+        "homologation": "H1:true:evd-H1:1755432000000000000,H2:true:evd-H2:1755432000000000000,H4:true:evd-H4:1755432000000000000,H5:true:evd-H5:1755432000000000000,H6:true:evd-H6:1755432000000000000,H7:true:evd-H7:1755432000000000000,H8:true:evd-H8:1755432000000000000,H10:true:evd-H10:1755432000000000000,H11:true:evd-H11:1755432000000000000,H12:true:evd-H12:1755432000000000000,H3:true:evd-H3:1755432000000000000",
+        "rollout_mode": "disabled",
+        "rollout_allowlist": "",
+        "rollout_percentage": "0",
+        "rollout_excluded": "",
+        "suspension_reason": "",
+        "suspension_trigger": "",
+        "suspended_at": "0",
+        "enabled_at": "0"
+      },
+      "command": {
+        "upr": "enable",
+        "has_effective_agreement": "true",
+        "has_effective_profile": "false",
+        "at": "1755604800000000000"
+      },
+      "expected": {
+        "branch": "rejected",
+        "rejection": {
+          "code": "partner-management/capability/integration-profile-missing",
+          "message": "an integration profile in effect for the environment is required",
+          "details": {}
+        },
+        "events": []
+      }
+    },
+    {
+      "name": "suspend-accepted",
+      "doc": "Ramo Accepted de Suspend: enabled vai a suspended com trigger manual e CapabilitySuspended é emitido com environment e version.",
+      "state_before": {
+        "capability": "cap-1",
+        "partner": "prt-1",
+        "operation": "register-receivable",
+        "asset_type": "duplicata",
+        "environment": "production",
+        "version": "1",
+        "supersedes": "",
+        "is_write": "true",
+        "state_query_supported": "true",
+        "restriction_note": "",
+        "callback_applicable": "false",
+        "status": "enabled",
+        "homologation": "H1:true:evd-H1:1755432000000000000,H2:true:evd-H2:1755432000000000000,H4:true:evd-H4:1755432000000000000,H5:true:evd-H5:1755432000000000000,H6:true:evd-H6:1755432000000000000,H7:true:evd-H7:1755432000000000000,H8:true:evd-H8:1755432000000000000,H10:true:evd-H10:1755432000000000000,H11:true:evd-H11:1755432000000000000,H12:true:evd-H12:1755432000000000000,H3:true:evd-H3:1755432000000000000",
+        "rollout_mode": "disabled",
+        "rollout_allowlist": "",
+        "rollout_percentage": "0",
+        "rollout_excluded": "",
+        "suspension_reason": "",
+        "suspension_trigger": "",
+        "suspended_at": "0",
+        "enabled_at": "1755432000000000000"
+      },
+      "command": {
+        "upr": "suspend",
+        "reason": "partner incident",
+        "trigger": "manual",
+        "at": "1755604800000000000"
+      },
+      "expected": {
+        "branch": "accepted",
+        "response": {
+          "capability": "cap-1"
+        },
+        "events": [
+          {
+            "name": "partner-management.capability.suspended",
+            "fields": {
+              "capability": "cap-1",
+              "partner": "prt-1",
+              "operation": "register-receivable",
+              "asset_type": "duplicata",
+              "environment": "production",
+              "version": "1",
+              "reason": "partner incident",
+              "trigger": "manual",
+              "at": "1755604800000000000"
+            }
+          }
+        ],
+        "state_after": {
+          "capability": "cap-1",
+          "partner": "prt-1",
+          "operation": "register-receivable",
+          "asset_type": "duplicata",
+          "environment": "production",
+          "version": "1",
+          "supersedes": "",
+          "is_write": "true",
+          "state_query_supported": "true",
+          "restriction_note": "",
+          "callback_applicable": "false",
+          "status": "suspended",
+          "homologation": "H1:true:evd-H1:1755432000000000000,H2:true:evd-H2:1755432000000000000,H4:true:evd-H4:1755432000000000000,H5:true:evd-H5:1755432000000000000,H6:true:evd-H6:1755432000000000000,H7:true:evd-H7:1755432000000000000,H8:true:evd-H8:1755432000000000000,H10:true:evd-H10:1755432000000000000,H11:true:evd-H11:1755432000000000000,H12:true:evd-H12:1755432000000000000,H3:true:evd-H3:1755432000000000000",
+          "rollout_mode": "disabled",
+          "rollout_allowlist": "",
+          "rollout_percentage": "0",
+          "rollout_excluded": "",
+          "suspension_reason": "partner incident",
+          "suspension_trigger": "manual",
+          "suspended_at": "1755604800000000000",
+          "enabled_at": "1755432000000000000"
+        }
+      }
+    },
+    {
+      "name": "suspend-not-enabled",
+      "doc": "Ramo Rejected de Suspend: a capacidade está declared.",
+      "state_before": {
+        "capability": "cap-1",
+        "partner": "prt-1",
+        "operation": "register-receivable",
+        "asset_type": "duplicata",
+        "environment": "production",
+        "version": "1",
+        "supersedes": "",
+        "is_write": "true",
+        "state_query_supported": "true",
+        "restriction_note": "",
+        "callback_applicable": "false",
+        "status": "declared",
+        "homologation": "",
+        "rollout_mode": "disabled",
+        "rollout_allowlist": "",
+        "rollout_percentage": "0",
+        "rollout_excluded": "",
+        "suspension_reason": "",
+        "suspension_trigger": "",
+        "suspended_at": "0",
+        "enabled_at": "0"
+      },
+      "command": {
+        "upr": "suspend",
+        "reason": "partner incident",
+        "trigger": "manual",
+        "at": "1755604800000000000"
+      },
+      "expected": {
+        "branch": "rejected",
+        "rejection": {
+          "code": "partner-management/capability/not-enabled",
+          "message": "only an enabled capability is suspended",
+          "details": {}
+        },
+        "events": []
+      }
+    },
+    {
+      "name": "suspend-reason-empty",
+      "doc": "Ramo Rejected de Suspend: reason vazio.",
+      "state_before": {
+        "capability": "cap-1",
+        "partner": "prt-1",
+        "operation": "register-receivable",
+        "asset_type": "duplicata",
+        "environment": "production",
+        "version": "1",
+        "supersedes": "",
+        "is_write": "true",
+        "state_query_supported": "true",
+        "restriction_note": "",
+        "callback_applicable": "false",
+        "status": "enabled",
+        "homologation": "H1:true:evd-H1:1755432000000000000,H2:true:evd-H2:1755432000000000000,H4:true:evd-H4:1755432000000000000,H5:true:evd-H5:1755432000000000000,H6:true:evd-H6:1755432000000000000,H7:true:evd-H7:1755432000000000000,H8:true:evd-H8:1755432000000000000,H10:true:evd-H10:1755432000000000000,H11:true:evd-H11:1755432000000000000,H12:true:evd-H12:1755432000000000000,H3:true:evd-H3:1755432000000000000",
+        "rollout_mode": "disabled",
+        "rollout_allowlist": "",
+        "rollout_percentage": "0",
+        "rollout_excluded": "",
+        "suspension_reason": "",
+        "suspension_trigger": "",
+        "suspended_at": "0",
+        "enabled_at": "1755432000000000000"
+      },
+      "command": {
+        "upr": "suspend",
+        "reason": "",
+        "trigger": "manual",
+        "at": "1755604800000000000"
+      },
+      "expected": {
+        "branch": "rejected",
+        "rejection": {
+          "code": "partner-management/capability/reason-empty",
+          "message": "reason must not be empty when suspending",
+          "details": {}
+        },
+        "events": []
+      }
+    },
+    {
+      "name": "change-rollout-percentage",
+      "doc": "Ramo Accepted de ChangeRollout: o rollout enabled é substituído por percentage 10 com excluídos e CapabilityRolloutChanged é emitido.",
+      "state_before": {
+        "capability": "cap-1",
+        "partner": "prt-1",
+        "operation": "register-receivable",
+        "asset_type": "duplicata",
+        "environment": "production",
+        "version": "1",
+        "supersedes": "",
+        "is_write": "true",
+        "state_query_supported": "true",
+        "restriction_note": "",
+        "callback_applicable": "false",
+        "status": "enabled",
+        "homologation": "H1:true:evd-H1:1755432000000000000,H2:true:evd-H2:1755432000000000000,H4:true:evd-H4:1755432000000000000,H5:true:evd-H5:1755432000000000000,H6:true:evd-H6:1755432000000000000,H7:true:evd-H7:1755432000000000000,H8:true:evd-H8:1755432000000000000,H10:true:evd-H10:1755432000000000000,H11:true:evd-H11:1755432000000000000,H12:true:evd-H12:1755432000000000000,H3:true:evd-H3:1755432000000000000",
+        "rollout_mode": "enabled",
+        "rollout_allowlist": "",
+        "rollout_percentage": "0",
+        "rollout_excluded": "",
+        "suspension_reason": "",
+        "suspension_trigger": "",
+        "suspended_at": "0",
+        "enabled_at": "1755432000000000000"
+      },
+      "command": {
+        "upr": "change-rollout",
+        "mode": "percentage",
+        "allowlist": "",
+        "percentage": "10",
+        "excluded": "tenant-x",
+        "at": "1755604800000000000"
+      },
+      "expected": {
+        "branch": "accepted",
+        "response": {
+          "capability": "cap-1"
+        },
+        "events": [
+          {
+            "name": "partner-management.capability.rollout-changed",
+            "fields": {
+              "capability": "cap-1",
+              "partner": "prt-1",
+              "operation": "register-receivable",
+              "asset_type": "duplicata",
+              "environment": "production",
+              "version": "1",
+              "mode": "percentage",
+              "percentage": "10",
+              "at": "1755604800000000000"
+            }
+          }
+        ],
+        "state_after": {
+          "capability": "cap-1",
+          "partner": "prt-1",
+          "operation": "register-receivable",
+          "asset_type": "duplicata",
+          "environment": "production",
+          "version": "1",
+          "supersedes": "",
+          "is_write": "true",
+          "state_query_supported": "true",
+          "restriction_note": "",
+          "callback_applicable": "false",
+          "status": "enabled",
+          "homologation": "H1:true:evd-H1:1755432000000000000,H2:true:evd-H2:1755432000000000000,H4:true:evd-H4:1755432000000000000,H5:true:evd-H5:1755432000000000000,H6:true:evd-H6:1755432000000000000,H7:true:evd-H7:1755432000000000000,H8:true:evd-H8:1755432000000000000,H10:true:evd-H10:1755432000000000000,H11:true:evd-H11:1755432000000000000,H12:true:evd-H12:1755432000000000000,H3:true:evd-H3:1755432000000000000",
+          "rollout_mode": "percentage",
+          "rollout_allowlist": "",
+          "rollout_percentage": "10",
+          "rollout_excluded": "tenant-x",
+          "suspension_reason": "",
+          "suspension_trigger": "",
+          "suspended_at": "0",
+          "enabled_at": "1755432000000000000"
+        }
+      }
+    },
+    {
+      "name": "change-rollout-percentage-out-of-range",
+      "doc": "Ramo Rejected de ChangeRollout: percentage 101 no modo percentage.",
+      "state_before": {
+        "capability": "cap-1",
+        "partner": "prt-1",
+        "operation": "register-receivable",
+        "asset_type": "duplicata",
+        "environment": "production",
+        "version": "1",
+        "supersedes": "",
+        "is_write": "true",
+        "state_query_supported": "true",
+        "restriction_note": "",
+        "callback_applicable": "false",
+        "status": "enabled",
+        "homologation": "H1:true:evd-H1:1755432000000000000,H2:true:evd-H2:1755432000000000000,H4:true:evd-H4:1755432000000000000,H5:true:evd-H5:1755432000000000000,H6:true:evd-H6:1755432000000000000,H7:true:evd-H7:1755432000000000000,H8:true:evd-H8:1755432000000000000,H10:true:evd-H10:1755432000000000000,H11:true:evd-H11:1755432000000000000,H12:true:evd-H12:1755432000000000000,H3:true:evd-H3:1755432000000000000",
+        "rollout_mode": "disabled",
+        "rollout_allowlist": "",
+        "rollout_percentage": "0",
+        "rollout_excluded": "",
+        "suspension_reason": "",
+        "suspension_trigger": "",
+        "suspended_at": "0",
+        "enabled_at": "1755432000000000000"
+      },
+      "command": {
+        "upr": "change-rollout",
+        "mode": "percentage",
+        "allowlist": "",
+        "percentage": "101",
+        "excluded": "",
+        "at": "1755604800000000000"
+      },
+      "expected": {
+        "branch": "rejected",
+        "rejection": {
+          "code": "partner-management/capability/percentage-out-of-range",
+          "message": "the percentage is between 0 and 100",
+          "details": {
+            "percentage": "101"
+          }
+        },
+        "events": []
+      }
+    },
+    {
+      "name": "change-rollout-allowlist-empty",
+      "doc": "Ramo Rejected de ChangeRollout: modo allowlist sem tenant.",
+      "state_before": {
+        "capability": "cap-1",
+        "partner": "prt-1",
+        "operation": "register-receivable",
+        "asset_type": "duplicata",
+        "environment": "production",
+        "version": "1",
+        "supersedes": "",
+        "is_write": "true",
+        "state_query_supported": "true",
+        "restriction_note": "",
+        "callback_applicable": "false",
+        "status": "enabled",
+        "homologation": "H1:true:evd-H1:1755432000000000000,H2:true:evd-H2:1755432000000000000,H4:true:evd-H4:1755432000000000000,H5:true:evd-H5:1755432000000000000,H6:true:evd-H6:1755432000000000000,H7:true:evd-H7:1755432000000000000,H8:true:evd-H8:1755432000000000000,H10:true:evd-H10:1755432000000000000,H11:true:evd-H11:1755432000000000000,H12:true:evd-H12:1755432000000000000,H3:true:evd-H3:1755432000000000000",
+        "rollout_mode": "disabled",
+        "rollout_allowlist": "",
+        "rollout_percentage": "0",
+        "rollout_excluded": "",
+        "suspension_reason": "",
+        "suspension_trigger": "",
+        "suspended_at": "0",
+        "enabled_at": "1755432000000000000"
+      },
+      "command": {
+        "upr": "change-rollout",
+        "mode": "allowlist",
+        "allowlist": "",
+        "percentage": "0",
+        "excluded": "",
+        "at": "1755604800000000000"
+      },
+      "expected": {
+        "branch": "rejected",
+        "rejection": {
+          "code": "partner-management/capability/allowlist-empty",
+          "message": "an allowlist rollout names at least one tenant",
+          "details": {}
+        },
+        "events": []
+      }
+    }
+  ]
+}

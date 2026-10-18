@@ -1,0 +1,1948 @@
+openapi: 3.1.0
+info:
+  title: Partner — partner-management bounded context
+  version: 1.0.0
+  description: >-
+    Public REST edge of the partner-management context, served by
+    apps/backend/bff, which calls company.partner.service.v1.PartnerService
+    over gRPC, one operation per RPC, and exposes no route this published
+    contract does not declare. Writes are idempotent by Idempotency-Key; reads
+    run outside any transaction and never write to the outbox. The client
+    mints the id of every aggregate it creates, including the id of each new
+    version of a versioned aggregate. Schemas bound the form only; within
+    those bounds, the emptiness, range and validity refusals the spec declares
+    come back from the domain as 422 rejections. Secrets travel only as
+    references, never as values. The contract is not covered by the Buf gates.
+servers:
+  - url: http://localhost:8080
+    description: local backend-for-frontend
+security:
+  - bearerAuth: []
+paths:
+  /partner/partners:
+    post:
+      operationId: registerPartner
+      summary: Register a partner of an organization in the prospect stage
+      parameters:
+        - $ref: '#/components/parameters/IdempotencyKey'
+        - $ref: '#/components/parameters/CorrelationID'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RegisterPartnerRequest'
+      responses:
+        '201':
+          description: Partner registered
+          headers:
+            Idempotent-Replayed:
+              $ref: '#/components/headers/IdempotentReplayed'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RegisteredPartner'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/CreateConflict'
+        '422':
+          $ref: '#/components/responses/Rejected'
+        '429':
+          $ref: '#/components/responses/AdmissionRefused'
+        '503':
+          $ref: '#/components/responses/Unavailable'
+        '504':
+          $ref: '#/components/responses/Timeout'
+        default:
+          $ref: '#/components/responses/Failure'
+    get:
+      operationId: findPartnersByOrganization
+      summary: List the partners of an organization
+      parameters:
+        - $ref: '#/components/parameters/OrganizationIDQuery'
+        - $ref: '#/components/parameters/CorrelationID'
+      responses:
+        '200':
+          description: Partners of the organization
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Partner'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '429':
+          $ref: '#/components/responses/AdmissionRefused'
+        '503':
+          $ref: '#/components/responses/Unavailable'
+        '504':
+          $ref: '#/components/responses/Timeout'
+        default:
+          $ref: '#/components/responses/Failure'
+  /partner/partners/{partnerId}:
+    get:
+      operationId: findPartner
+      summary: Read the observable state of a partner
+      parameters:
+        - $ref: '#/components/parameters/PartnerID'
+        - $ref: '#/components/parameters/CorrelationID'
+      responses:
+        '200':
+          description: Current snapshot of the partner
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Partner'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '429':
+          $ref: '#/components/responses/AdmissionRefused'
+        '503':
+          $ref: '#/components/responses/Unavailable'
+        '504':
+          $ref: '#/components/responses/Timeout'
+        default:
+          $ref: '#/components/responses/Failure'
+  /partner/partners/{partnerId}/stage:
+    post:
+      operationId: changePartnerStage
+      summary: Move a partner to another stage
+      parameters:
+        - $ref: '#/components/parameters/PartnerID'
+        - $ref: '#/components/parameters/IdempotencyKey'
+        - $ref: '#/components/parameters/CorrelationID'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ChangePartnerStageRequest'
+      responses:
+        '200':
+          description: Partner stage changed
+          headers:
+            Idempotent-Replayed:
+              $ref: '#/components/headers/IdempotentReplayed'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ChangedPartnerStage'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/VersionConflict'
+        '422':
+          $ref: '#/components/responses/Rejected'
+        '429':
+          $ref: '#/components/responses/AdmissionRefused'
+        '503':
+          $ref: '#/components/responses/Unavailable'
+        '504':
+          $ref: '#/components/responses/Timeout'
+        default:
+          $ref: '#/components/responses/Failure'
+  /partner/partners/{partnerId}/agreements:
+    post:
+      operationId: registerAgreement
+      summary: Register a draft agreement, or a new version of one
+      parameters:
+        - $ref: '#/components/parameters/PartnerID'
+        - $ref: '#/components/parameters/IdempotencyKey'
+        - $ref: '#/components/parameters/CorrelationID'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RegisterAgreementRequest'
+      responses:
+        '201':
+          description: Agreement registered
+          headers:
+            Idempotent-Replayed:
+              $ref: '#/components/headers/IdempotentReplayed'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RegisteredAgreement'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/CreateConflict'
+        '422':
+          $ref: '#/components/responses/Rejected'
+        '429':
+          $ref: '#/components/responses/AdmissionRefused'
+        '503':
+          $ref: '#/components/responses/Unavailable'
+        '504':
+          $ref: '#/components/responses/Timeout'
+        default:
+          $ref: '#/components/responses/Failure'
+    get:
+      operationId: findAgreementsByPartner
+      summary: List every agreement version of a partner
+      parameters:
+        - $ref: '#/components/parameters/PartnerID'
+        - $ref: '#/components/parameters/CorrelationID'
+      responses:
+        '200':
+          description: Agreements of the partner
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/PartnerAgreement'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '429':
+          $ref: '#/components/responses/AdmissionRefused'
+        '503':
+          $ref: '#/components/responses/Unavailable'
+        '504':
+          $ref: '#/components/responses/Timeout'
+        default:
+          $ref: '#/components/responses/Failure'
+  /partner/agreements/{agreementId}/activate:
+    post:
+      operationId: activateAgreement
+      summary: Activate a draft agreement
+      parameters:
+        - $ref: '#/components/parameters/AgreementID'
+        - $ref: '#/components/parameters/IdempotencyKey'
+        - $ref: '#/components/parameters/CorrelationID'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ActivateAgreementRequest'
+      responses:
+        '200':
+          description: Agreement activated
+          headers:
+            Idempotent-Replayed:
+              $ref: '#/components/headers/IdempotentReplayed'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ActivatedAgreement'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/VersionConflict'
+        '422':
+          $ref: '#/components/responses/Rejected'
+        '429':
+          $ref: '#/components/responses/AdmissionRefused'
+        '503':
+          $ref: '#/components/responses/Unavailable'
+        '504':
+          $ref: '#/components/responses/Timeout'
+        default:
+          $ref: '#/components/responses/Failure'
+  /partner/partners/{partnerId}/capabilities:
+    post:
+      operationId: declareCapability
+      summary: Declare a capability, or a new version of one
+      parameters:
+        - $ref: '#/components/parameters/PartnerID'
+        - $ref: '#/components/parameters/IdempotencyKey'
+        - $ref: '#/components/parameters/CorrelationID'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DeclareCapabilityRequest'
+      responses:
+        '201':
+          description: Capability declared
+          headers:
+            Idempotent-Replayed:
+              $ref: '#/components/headers/IdempotentReplayed'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DeclaredCapability'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/CreateConflict'
+        '422':
+          $ref: '#/components/responses/Rejected'
+        '429':
+          $ref: '#/components/responses/AdmissionRefused'
+        '503':
+          $ref: '#/components/responses/Unavailable'
+        '504':
+          $ref: '#/components/responses/Timeout'
+        default:
+          $ref: '#/components/responses/Failure'
+    get:
+      operationId: findCapabilitiesByPartner
+      summary: List the capabilities of a partner
+      parameters:
+        - $ref: '#/components/parameters/PartnerID'
+        - $ref: '#/components/parameters/EnvironmentQuery'
+        - $ref: '#/components/parameters/CapabilityStatusQuery'
+        - $ref: '#/components/parameters/CorrelationID'
+      responses:
+        '200':
+          description: Capabilities of the partner
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Capability'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '429':
+          $ref: '#/components/responses/AdmissionRefused'
+        '503':
+          $ref: '#/components/responses/Unavailable'
+        '504':
+          $ref: '#/components/responses/Timeout'
+        default:
+          $ref: '#/components/responses/Failure'
+  /partner/capabilities/{capabilityId}/homologation:
+    post:
+      operationId: recordHomologation
+      summary: Record homologation results of a capability
+      description: >-
+        Repeatable until every applicable criterion has passed; each result
+        replaces the previous one of the same criterion.
+      parameters:
+        - $ref: '#/components/parameters/CapabilityID'
+        - $ref: '#/components/parameters/IdempotencyKey'
+        - $ref: '#/components/parameters/CorrelationID'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RecordHomologationRequest'
+      responses:
+        '200':
+          description: Homologation results recorded
+          headers:
+            Idempotent-Replayed:
+              $ref: '#/components/headers/IdempotentReplayed'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RecordedHomologation'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/VersionConflict'
+        '422':
+          $ref: '#/components/responses/Rejected'
+        '429':
+          $ref: '#/components/responses/AdmissionRefused'
+        '503':
+          $ref: '#/components/responses/Unavailable'
+        '504':
+          $ref: '#/components/responses/Timeout'
+        default:
+          $ref: '#/components/responses/Failure'
+  /partner/capabilities/{capabilityId}/enable:
+    post:
+      operationId: enableCapability
+      summary: Enable a homologated capability, or resume a suspended one
+      parameters:
+        - $ref: '#/components/parameters/CapabilityID'
+        - $ref: '#/components/parameters/IdempotencyKey'
+        - $ref: '#/components/parameters/CorrelationID'
+      responses:
+        '200':
+          description: Capability enabled
+          headers:
+            Idempotent-Replayed:
+              $ref: '#/components/headers/IdempotentReplayed'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EnabledCapability'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/VersionConflict'
+        '422':
+          $ref: '#/components/responses/Rejected'
+        '429':
+          $ref: '#/components/responses/AdmissionRefused'
+        '503':
+          $ref: '#/components/responses/Unavailable'
+        '504':
+          $ref: '#/components/responses/Timeout'
+        default:
+          $ref: '#/components/responses/Failure'
+  /partner/capabilities/{capabilityId}/suspend:
+    post:
+      operationId: suspendCapability
+      summary: Suspend an enabled capability by hand
+      description: >-
+        The suspension blocks new commands and never the follow-up of the ones
+        already sent; this route only suspends by hand.
+      parameters:
+        - $ref: '#/components/parameters/CapabilityID'
+        - $ref: '#/components/parameters/IdempotencyKey'
+        - $ref: '#/components/parameters/CorrelationID'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SuspendCapabilityRequest'
+      responses:
+        '200':
+          description: Capability suspended
+          headers:
+            Idempotent-Replayed:
+              $ref: '#/components/headers/IdempotentReplayed'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuspendedCapability'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/VersionConflict'
+        '422':
+          $ref: '#/components/responses/Rejected'
+        '429':
+          $ref: '#/components/responses/AdmissionRefused'
+        '503':
+          $ref: '#/components/responses/Unavailable'
+        '504':
+          $ref: '#/components/responses/Timeout'
+        default:
+          $ref: '#/components/responses/Failure'
+  /partner/capabilities/{capabilityId}/rollout:
+    post:
+      operationId: changeRollout
+      summary: Replace the rollout of a capability
+      parameters:
+        - $ref: '#/components/parameters/CapabilityID'
+        - $ref: '#/components/parameters/IdempotencyKey'
+        - $ref: '#/components/parameters/CorrelationID'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ChangeRolloutRequest'
+      responses:
+        '200':
+          description: Rollout replaced
+          headers:
+            Idempotent-Replayed:
+              $ref: '#/components/headers/IdempotentReplayed'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ChangedRollout'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/VersionConflict'
+        '422':
+          $ref: '#/components/responses/Rejected'
+        '429':
+          $ref: '#/components/responses/AdmissionRefused'
+        '503':
+          $ref: '#/components/responses/Unavailable'
+        '504':
+          $ref: '#/components/responses/Timeout'
+        default:
+          $ref: '#/components/responses/Failure'
+  /partner/partners/{partnerId}/products:
+    post:
+      operationId: defineProduct
+      summary: Define a financial product, or a new version of one
+      parameters:
+        - $ref: '#/components/parameters/PartnerID'
+        - $ref: '#/components/parameters/IdempotencyKey'
+        - $ref: '#/components/parameters/CorrelationID'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DefineProductRequest'
+      responses:
+        '201':
+          description: Product defined
+          headers:
+            Idempotent-Replayed:
+              $ref: '#/components/headers/IdempotentReplayed'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DefinedProduct'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/CreateConflict'
+        '422':
+          $ref: '#/components/responses/Rejected'
+        '429':
+          $ref: '#/components/responses/AdmissionRefused'
+        '503':
+          $ref: '#/components/responses/Unavailable'
+        '504':
+          $ref: '#/components/responses/Timeout'
+        default:
+          $ref: '#/components/responses/Failure'
+    get:
+      operationId: findProductsByPartner
+      summary: List the version in force of each product of a partner
+      parameters:
+        - $ref: '#/components/parameters/PartnerID'
+        - $ref: '#/components/parameters/AsOfQuery'
+        - $ref: '#/components/parameters/CorrelationID'
+      responses:
+        '200':
+          description: Products of the partner in force at asOf
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/FinancialProduct'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '429':
+          $ref: '#/components/responses/AdmissionRefused'
+        '503':
+          $ref: '#/components/responses/Unavailable'
+        '504':
+          $ref: '#/components/responses/Timeout'
+        default:
+          $ref: '#/components/responses/Failure'
+  /partner/products/{productId}/retire:
+    post:
+      operationId: retireProduct
+      summary: Retire an active product
+      parameters:
+        - $ref: '#/components/parameters/ProductID'
+        - $ref: '#/components/parameters/IdempotencyKey'
+        - $ref: '#/components/parameters/CorrelationID'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RetireProductRequest'
+      responses:
+        '200':
+          description: Product retired
+          headers:
+            Idempotent-Replayed:
+              $ref: '#/components/headers/IdempotentReplayed'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RetiredProduct'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/VersionConflict'
+        '422':
+          $ref: '#/components/responses/Rejected'
+        '429':
+          $ref: '#/components/responses/AdmissionRefused'
+        '503':
+          $ref: '#/components/responses/Unavailable'
+        '504':
+          $ref: '#/components/responses/Timeout'
+        default:
+          $ref: '#/components/responses/Failure'
+  /partner/partners/{partnerId}/integration-profiles:
+    post:
+      operationId: registerIntegrationProfile
+      summary: Register an integration profile, or a new version of one
+      parameters:
+        - $ref: '#/components/parameters/PartnerID'
+        - $ref: '#/components/parameters/IdempotencyKey'
+        - $ref: '#/components/parameters/CorrelationID'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RegisterIntegrationProfileRequest'
+      responses:
+        '201':
+          description: Integration profile registered
+          headers:
+            Idempotent-Replayed:
+              $ref: '#/components/headers/IdempotentReplayed'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RegisteredIntegrationProfile'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/CreateConflict'
+        '422':
+          $ref: '#/components/responses/Rejected'
+        '429':
+          $ref: '#/components/responses/AdmissionRefused'
+        '503':
+          $ref: '#/components/responses/Unavailable'
+        '504':
+          $ref: '#/components/responses/Timeout'
+        default:
+          $ref: '#/components/responses/Failure'
+  /partner/partners/{partnerId}/integration-profiles/{environment}:
+    get:
+      operationId: findIntegrationProfile
+      summary: Read the integration profile in force of a partner in an environment
+      parameters:
+        - $ref: '#/components/parameters/PartnerID'
+        - $ref: '#/components/parameters/EnvironmentPath'
+        - $ref: '#/components/parameters/AsOfQuery'
+        - $ref: '#/components/parameters/CorrelationID'
+      responses:
+        '200':
+          description: Integration profile in force at asOf
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/IntegrationProfile'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '429':
+          $ref: '#/components/responses/AdmissionRefused'
+        '503':
+          $ref: '#/components/responses/Unavailable'
+        '504':
+          $ref: '#/components/responses/Timeout'
+        default:
+          $ref: '#/components/responses/Failure'
+  /partner/integration-profiles/{profileId}/certificate-expiry-alerts:
+    post:
+      operationId: raiseCertificateExpiryAlert
+      summary: Raise the expiry alert of a certificate
+      description: >-
+        Called by an external trigger with the deterministic key
+        cert-alert.<profileId>.<thresholdDays>.<yyyymmdd>, with the UTC day of the
+        evaluation, so a repeated call on the same day answers the stored response.
+      parameters:
+        - $ref: '#/components/parameters/ProfileID'
+        - $ref: '#/components/parameters/IdempotencyKey'
+        - $ref: '#/components/parameters/CorrelationID'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RaiseCertificateExpiryAlertRequest'
+      responses:
+        '200':
+          description: Certificate expiry alert raised
+          headers:
+            Idempotent-Replayed:
+              $ref: '#/components/headers/IdempotentReplayed'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RaisedCertificateExpiryAlert'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/VersionConflict'
+        '422':
+          $ref: '#/components/responses/Rejected'
+        '429':
+          $ref: '#/components/responses/AdmissionRefused'
+        '503':
+          $ref: '#/components/responses/Unavailable'
+        '504':
+          $ref: '#/components/responses/Timeout'
+        default:
+          $ref: '#/components/responses/Failure'
+  /partner/partners/{partnerId}/operational-policies:
+    post:
+      operationId: defineOperationalPolicy
+      summary: Define an operational policy, or a new version of one
+      parameters:
+        - $ref: '#/components/parameters/PartnerID'
+        - $ref: '#/components/parameters/IdempotencyKey'
+        - $ref: '#/components/parameters/CorrelationID'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DefineOperationalPolicyRequest'
+      responses:
+        '201':
+          description: Operational policy defined
+          headers:
+            Idempotent-Replayed:
+              $ref: '#/components/headers/IdempotentReplayed'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DefinedOperationalPolicy'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/CreateConflict'
+        '422':
+          $ref: '#/components/responses/Rejected'
+        '429':
+          $ref: '#/components/responses/AdmissionRefused'
+        '503':
+          $ref: '#/components/responses/Unavailable'
+        '504':
+          $ref: '#/components/responses/Timeout'
+        default:
+          $ref: '#/components/responses/Failure'
+  /partner/partners/{partnerId}/operational-policy:
+    get:
+      operationId: findOperationalPolicy
+      summary: Read the operational policy in force of a partner
+      parameters:
+        - $ref: '#/components/parameters/PartnerID'
+        - $ref: '#/components/parameters/AsOfQuery'
+        - $ref: '#/components/parameters/CorrelationID'
+      responses:
+        '200':
+          description: Operational policy in force at asOf
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OperationalPolicy'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '429':
+          $ref: '#/components/responses/AdmissionRefused'
+        '503':
+          $ref: '#/components/responses/Unavailable'
+        '504':
+          $ref: '#/components/responses/Timeout'
+        default:
+          $ref: '#/components/responses/Failure'
+  /partner/effective-capability:
+    get:
+      operationId: findEffectiveCapability
+      summary: Resolve whether a capability is in effect for a tenant
+      description: >-
+        The conditions are evaluated in the order of the failedCondition enum,
+        and the product condition only when productId is present. When the
+        answer cannot be obtained, the consumer denies.
+      parameters:
+        - $ref: '#/components/parameters/PartnerIDQuery'
+        - $ref: '#/components/parameters/OperationQuery'
+        - $ref: '#/components/parameters/AssetTypeQuery'
+        - $ref: '#/components/parameters/RequiredEnvironmentQuery'
+        - $ref: '#/components/parameters/TenantIDQuery'
+        - $ref: '#/components/parameters/AsOfQuery'
+        - $ref: '#/components/parameters/ProductIDQuery'
+        - $ref: '#/components/parameters/AmountMinorQuery'
+        - $ref: '#/components/parameters/TermDaysQuery'
+        - $ref: '#/components/parameters/CorrelationID'
+      responses:
+        '200':
+          description: Allowed, or denied with the first condition that failed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EffectiveCapability'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '429':
+          $ref: '#/components/responses/AdmissionRefused'
+        '503':
+          $ref: '#/components/responses/Unavailable'
+        '504':
+          $ref: '#/components/responses/Timeout'
+        default:
+          $ref: '#/components/responses/Failure'
+  /partner/eligible-partners:
+    get:
+      operationId: findEligiblePartners
+      summary: List the funders eligible to a funding request
+      parameters:
+        - $ref: '#/components/parameters/AssetTypeQuery'
+        - $ref: '#/components/parameters/OperationQuery'
+        - $ref: '#/components/parameters/RequiredEnvironmentQuery'
+        - $ref: '#/components/parameters/TenantIDQuery'
+        - $ref: '#/components/parameters/RequiredAmountMinorQuery'
+        - $ref: '#/components/parameters/RequiredTermDaysQuery'
+        - $ref: '#/components/parameters/RegionQuery'
+        - $ref: '#/components/parameters/AsOfQuery'
+        - $ref: '#/components/parameters/CorrelationID'
+      responses:
+        '200':
+          description: Eligible funders
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Partner'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '429':
+          $ref: '#/components/responses/AdmissionRefused'
+        '503':
+          $ref: '#/components/responses/Unavailable'
+        '504':
+          $ref: '#/components/responses/Timeout'
+        default:
+          $ref: '#/components/responses/Failure'
+  /partner/expiring-certificates:
+    get:
+      operationId: findCertificatesExpiring
+      summary: List the integration profiles whose certificate expires before an instant
+      parameters:
+        - $ref: '#/components/parameters/RequiredEnvironmentQuery'
+        - $ref: '#/components/parameters/ExpiresBeforeQuery'
+        - $ref: '#/components/parameters/CorrelationID'
+      responses:
+        '200':
+          description: Integration profiles with the certificate expiring
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/IntegrationProfile'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '429':
+          $ref: '#/components/responses/AdmissionRefused'
+        '503':
+          $ref: '#/components/responses/Unavailable'
+        '504':
+          $ref: '#/components/responses/Timeout'
+        default:
+          $ref: '#/components/responses/Failure'
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      description: >-
+        Access token of the authorization server the backend-for-frontend
+        verifies (OIDC). A request is authenticated only when the token is
+        presented, verified and resolves a subject, and the tenant comes only
+        from that verified token, never from the request input. Each route
+        requires the permission partner:<operation in kebab-case>, for example
+        partner:enable-capability, checked by the backend-for-frontend; the
+        context itself only requires the tenant.
+  parameters:
+    PartnerID:
+      name: partnerId
+      in: path
+      required: true
+      description: Identifier of the partner; the client mints it on registration
+      schema:
+        $ref: '#/components/schemas/Identifier'
+    AgreementID:
+      name: agreementId
+      in: path
+      required: true
+      description: Identifier of one version of an agreement
+      schema:
+        $ref: '#/components/schemas/Identifier'
+    CapabilityID:
+      name: capabilityId
+      in: path
+      required: true
+      description: Identifier of one version of a capability
+      schema:
+        $ref: '#/components/schemas/Identifier'
+    ProductID:
+      name: productId
+      in: path
+      required: true
+      description: Identifier of one version of a financial product
+      schema:
+        $ref: '#/components/schemas/Identifier'
+    ProfileID:
+      name: profileId
+      in: path
+      required: true
+      description: Identifier of one version of an integration profile
+      schema:
+        $ref: '#/components/schemas/Identifier'
+    EnvironmentPath:
+      name: environment
+      in: path
+      required: true
+      schema:
+        $ref: '#/components/schemas/Environment'
+    OrganizationIDQuery:
+      name: organizationId
+      in: query
+      required: true
+      description: Identifier of the organization in the identity-organization context
+      schema:
+        $ref: '#/components/schemas/Identifier'
+    PartnerIDQuery:
+      name: partnerId
+      in: query
+      required: true
+      schema:
+        $ref: '#/components/schemas/Identifier'
+    TenantIDQuery:
+      name: tenantId
+      in: query
+      required: true
+      description: The tenant the rollout is evaluated for
+      schema:
+        $ref: '#/components/schemas/Identifier'
+    ProductIDQuery:
+      name: productId
+      in: query
+      required: false
+      description: When present, the product in force is also required
+      schema:
+        $ref: '#/components/schemas/Identifier'
+    EnvironmentQuery:
+      name: environment
+      in: query
+      required: false
+      description: When absent, every environment
+      schema:
+        $ref: '#/components/schemas/Environment'
+    RequiredEnvironmentQuery:
+      name: environment
+      in: query
+      required: true
+      schema:
+        $ref: '#/components/schemas/Environment'
+    CapabilityStatusQuery:
+      name: status
+      in: query
+      required: false
+      description: When absent, every status
+      schema:
+        $ref: '#/components/schemas/CapabilityStatus'
+    OperationQuery:
+      name: operation
+      in: query
+      required: true
+      schema:
+        $ref: '#/components/schemas/Code'
+    AssetTypeQuery:
+      name: assetType
+      in: query
+      required: true
+      schema:
+        $ref: '#/components/schemas/Code'
+    RegionQuery:
+      name: region
+      in: query
+      required: true
+      schema:
+        $ref: '#/components/schemas/Code'
+    AsOfQuery:
+      name: asOf
+      in: query
+      required: true
+      description: The instant the versions in force are evaluated at, in nanoseconds since the Unix epoch
+      schema:
+        type: integer
+        format: int64
+        minimum: 0
+    ExpiresBeforeQuery:
+      name: expiresBefore
+      in: query
+      required: true
+      description: Nanoseconds since the Unix epoch; only certificates expiring before it
+      schema:
+        type: integer
+        format: int64
+        minimum: 0
+    AmountMinorQuery:
+      name: amountMinor
+      in: query
+      required: false
+      description: Amount in minor units, checked against the product when present
+      schema:
+        type: integer
+        format: int64
+        minimum: 0
+    TermDaysQuery:
+      name: termDays
+      in: query
+      required: false
+      description: Term in days, checked against the product when present
+      schema:
+        type: integer
+        format: int32
+        minimum: 0
+    RequiredAmountMinorQuery:
+      name: amountMinor
+      in: query
+      required: true
+      description: Amount of the funding request in minor units
+      schema:
+        type: integer
+        format: int64
+        minimum: 0
+    RequiredTermDaysQuery:
+      name: termDays
+      in: query
+      required: true
+      description: Term of the funding request in days
+      schema:
+        type: integer
+        format: int32
+        minimum: 0
+    IdempotencyKey:
+      name: Idempotency-Key
+      in: header
+      required: true
+      description: >-
+        Client-chosen key that makes a command POST idempotent.
+        A POST without it, or with a key outside this format, is refused with
+        400 before any call to the context. The edge scopes the key to the
+        authenticated subject. Within 24h, the same key with the same request
+        answers the stored response, marked by the Idempotent-Replayed header;
+        with another request it is refused with 422 reused-idempotency-key, and
+        while the first request is still in progress with 409
+        in-flight-idempotency-key.
+      schema:
+        type: string
+        minLength: 1
+        maxLength: 128
+        pattern: '^[A-Za-z0-9._-]{1,128}$'
+    CorrelationID:
+      name: X-Correlation-ID
+      in: header
+      required: false
+      description: >-
+        Correlation of the whole chain the request starts, carried unchanged
+        through every hop and message it produces. When
+        absent or outside this shape the edge mints one.
+      schema:
+        type: string
+        minLength: 1
+        maxLength: 128
+        pattern: '^[A-Za-z0-9._-]+$'
+  schemas:
+    Identifier:
+      type: string
+      minLength: 1
+      maxLength: 128
+      pattern: '^[A-Za-z0-9._:-]+$'
+    OptionalIdentifier:
+      type: string
+      maxLength: 128
+      pattern: '^[A-Za-z0-9._:-]*$'
+      description: Absent or empty when not informed
+    Code:
+      type: string
+      maxLength: 64
+      pattern: '^[\x20-\x7E]*$'
+      description: At most 64 bytes of printable ASCII
+    Name:
+      type: string
+      maxLength: 256
+      pattern: '^[^\x00-\x1F\x7F-\x9F]*$'
+      description: At most 256 characters, none of them a control character
+    Text:
+      type: string
+      maxLength: 512
+      pattern: '^[^\x00-\x1F\x7F-\x9F]*$'
+      description: At most 512 characters, none of them a control character
+    OpaqueRef:
+      type: string
+      maxLength: 256
+      pattern: '^[\x20-\x7E]*$'
+      description: >-
+        Opaque reference to an object kept outside this context, such as an
+        evidence or a secret; never its content. At most 256 bytes of printable
+        ASCII
+    Instant:
+      type: integer
+      format: int64
+      description: Nanoseconds since the Unix epoch, the domain's instant
+    OptionalInstant:
+      type: integer
+      format: int64
+      minimum: 0
+      description: Nanoseconds since the Unix epoch; absent or zero is an indefinite validity
+    Environment:
+      type: string
+      enum: [development, integration, homologation, production]
+    PartnerRole:
+      type: string
+      enum: [funder, bookkeeper, registry, depository, data_provider, settlement_institution]
+    PartnerStatus:
+      type: string
+      enum: [prospect, contracting, integrating, homologating, active, suspended, offboarding]
+    AgreementStatus:
+      type: string
+      enum: [draft, active]
+    CapabilityStatus:
+      type: string
+      enum: [declared, homologated, enabled, suspended]
+    SuspensionTrigger:
+      type: string
+      enum: [manual, schema_mismatch, offboarding]
+    RolloutMode:
+      type: string
+      enum: [disabled, allowlist, percentage, enabled]
+    ProductStatus:
+      type: string
+      enum: [active, retired]
+    ProductRetireReason:
+      type: string
+      enum: [expired, withdrawn]
+    IntegrationChangeKind:
+      type: string
+      enum: [initial, announced, unannounced]
+    EffectiveCapabilityCondition:
+      type: string
+      enum:
+        - capability_not_found
+        - partner_not_active
+        - agreement_not_effective
+        - capability_not_enabled
+        - product_not_effective
+        - not_in_rollout
+        - parameters_incompatible
+    RegisterPartnerRequest:
+      type: object
+      required: [partnerId, organizationId, role]
+      additionalProperties: false
+      properties:
+        partnerId:
+          $ref: '#/components/schemas/Identifier'
+        organizationId:
+          $ref: '#/components/schemas/Identifier'
+        role:
+          $ref: '#/components/schemas/PartnerRole'
+    ChangePartnerStageRequest:
+      type: object
+      required: [target]
+      additionalProperties: false
+      properties:
+        target:
+          type: string
+          enum: [contracting, integrating, homologating, active, suspended, offboarding]
+        reason:
+          $ref: '#/components/schemas/Text'
+          description: Required to suspend or to start the offboarding
+    RegisterAgreementRequest:
+      type: object
+      required: [agreementId, validFrom]
+      additionalProperties: false
+      properties:
+        agreementId:
+          $ref: '#/components/schemas/Identifier'
+        validFrom:
+          $ref: '#/components/schemas/Instant'
+        validUntil:
+          $ref: '#/components/schemas/OptionalInstant'
+        instrumentTemplateId:
+          $ref: '#/components/schemas/OptionalIdentifier'
+        supersedesId:
+          $ref: '#/components/schemas/OptionalIdentifier'
+          description: The last version of the series of the partner; absent only for the first version
+    ActivateAgreementRequest:
+      type: object
+      required: [satisfiedCriteria, regulatoryCheckApplicable]
+      additionalProperties: false
+      properties:
+        contractEvidenceId:
+          $ref: '#/components/schemas/OpaqueRef'
+        satisfiedCriteria:
+          type: array
+          maxItems: 16
+          uniqueItems: true
+          description: The contractual criteria H14 to H18 the operator declares satisfied
+          items:
+            $ref: '#/components/schemas/Code'
+        regulatoryCheckApplicable:
+          type: boolean
+    DeclareCapabilityRequest:
+      type: object
+      required:
+        - capabilityId
+        - operation
+        - assetType
+        - environment
+        - isWrite
+        - stateQuerySupported
+        - callbackApplicable
+      additionalProperties: false
+      properties:
+        capabilityId:
+          $ref: '#/components/schemas/Identifier'
+        operation:
+          $ref: '#/components/schemas/Code'
+        assetType:
+          $ref: '#/components/schemas/Code'
+        environment:
+          $ref: '#/components/schemas/Environment'
+        isWrite:
+          type: boolean
+        stateQuerySupported:
+          type: boolean
+        restrictionNote:
+          $ref: '#/components/schemas/Text'
+          description: Required for a write operation without state query
+        callbackApplicable:
+          type: boolean
+        supersedesId:
+          $ref: '#/components/schemas/OptionalIdentifier'
+          description: >-
+            The last version of the series partnerId, operation, assetType and
+            environment; absent only for the first version
+    HomologationResult:
+      type: object
+      required: [criterionId, passed]
+      additionalProperties: false
+      properties:
+        criterionId:
+          $ref: '#/components/schemas/Code'
+          description: One of the technical criteria H1 to H12
+        passed:
+          type: boolean
+        evidenceId:
+          $ref: '#/components/schemas/OpaqueRef'
+    RecordHomologationRequest:
+      type: object
+      required: [results]
+      additionalProperties: false
+      properties:
+        results:
+          type: array
+          maxItems: 12
+          items:
+            $ref: '#/components/schemas/HomologationResult'
+    SuspendCapabilityRequest:
+      type: object
+      required: [reason]
+      additionalProperties: false
+      properties:
+        reason:
+          $ref: '#/components/schemas/Text'
+    ChangeRolloutRequest:
+      type: object
+      required: [mode]
+      additionalProperties: false
+      properties:
+        mode:
+          $ref: '#/components/schemas/RolloutMode'
+        allowlistTenantIds:
+          type: array
+          maxItems: 1000
+          uniqueItems: true
+          items:
+            $ref: '#/components/schemas/Identifier'
+        percentage:
+          type: integer
+          format: int32
+          description: From 0 to 100, in the percentage mode
+        excludedTenantIds:
+          type: array
+          maxItems: 1000
+          uniqueItems: true
+          description: Excluded tenants prevail over every mode
+          items:
+            $ref: '#/components/schemas/Identifier'
+    DefineProductRequest:
+      type: object
+      required:
+        - productId
+        - agreementId
+        - code
+        - name
+        - assetTypes
+        - currency
+        - minAmountMinor
+        - maxAmountMinor
+        - minTermDays
+        - maxTermDays
+        - validFrom
+      additionalProperties: false
+      properties:
+        productId:
+          $ref: '#/components/schemas/Identifier'
+        agreementId:
+          $ref: '#/components/schemas/Identifier'
+        code:
+          $ref: '#/components/schemas/Code'
+        name:
+          $ref: '#/components/schemas/Name'
+        assetTypes:
+          type: array
+          maxItems: 32
+          uniqueItems: true
+          items:
+            $ref: '#/components/schemas/Code'
+        regions:
+          type: array
+          maxItems: 64
+          uniqueItems: true
+          items:
+            $ref: '#/components/schemas/Code'
+        currency:
+          type: string
+          maxLength: 8
+          pattern: '^[\x20-\x7E]*$'
+          description: ISO 4217 code. At most 8 bytes of printable ASCII
+        minAmountMinor:
+          type: integer
+          format: int64
+        maxAmountMinor:
+          type: integer
+          format: int64
+        minTermDays:
+          type: integer
+          format: int32
+        maxTermDays:
+          type: integer
+          format: int32
+        requiredCheckIds:
+          type: array
+          maxItems: 64
+          uniqueItems: true
+          description: The CHK-* checks the product requires in the KYB
+          items:
+            $ref: '#/components/schemas/Code'
+        validFrom:
+          $ref: '#/components/schemas/Instant'
+        validUntil:
+          $ref: '#/components/schemas/OptionalInstant'
+        supersedesId:
+          $ref: '#/components/schemas/OptionalIdentifier'
+          description: The last version of the series partnerId and code; absent only for the first version
+    RetireProductRequest:
+      type: object
+      required: [reason]
+      additionalProperties: false
+      properties:
+        reason:
+          $ref: '#/components/schemas/ProductRetireReason'
+    RegisterIntegrationProfileRequest:
+      type: object
+      required:
+        - profileId
+        - environment
+        - changeKind
+        - endpoint
+        - certificateExpiresAt
+        - effectiveFrom
+      additionalProperties: false
+      properties:
+        profileId:
+          $ref: '#/components/schemas/Identifier'
+        environment:
+          $ref: '#/components/schemas/Environment'
+        changeKind:
+          $ref: '#/components/schemas/IntegrationChangeKind'
+        protocols:
+          type: array
+          maxItems: 16
+          uniqueItems: true
+          items:
+            $ref: '#/components/schemas/Code'
+        endpoint:
+          type: string
+          maxLength: 2048
+          pattern: '^[\x20-\x7E]*$'
+          description: At most 2048 bytes of printable ASCII
+        schemaVersion:
+          $ref: '#/components/schemas/Code'
+        secretRef:
+          $ref: '#/components/schemas/OpaqueRef'
+        certificateRef:
+          $ref: '#/components/schemas/OpaqueRef'
+        certificateExpiresAt:
+          $ref: '#/components/schemas/Instant'
+        effectiveFrom:
+          $ref: '#/components/schemas/Instant'
+        supersedesId:
+          $ref: '#/components/schemas/OptionalIdentifier'
+          description: >-
+            The last version of the series partnerId and environment; absent
+            only for the first version
+    RaiseCertificateExpiryAlertRequest:
+      type: object
+      required: [thresholdDays]
+      additionalProperties: false
+      properties:
+        thresholdDays:
+          type: integer
+          format: int32
+          description: One of 60, 30 or 7
+    DefineOperationalPolicyRequest:
+      type: object
+      required: [policyId, effectiveFrom, rateLimitPerMinute]
+      additionalProperties: false
+      properties:
+        policyId:
+          $ref: '#/components/schemas/Identifier'
+        effectiveFrom:
+          $ref: '#/components/schemas/Instant'
+        supersedesId:
+          $ref: '#/components/schemas/OptionalIdentifier'
+          description: The last version of the series of the partner; absent only for the first version
+        rateLimitPerMinute:
+          type: integer
+          format: int32
+        businessDays:
+          type: array
+          maxItems: 7
+          uniqueItems: true
+          items:
+            $ref: '#/components/schemas/Code'
+        cutoffTime:
+          $ref: '#/components/schemas/Code'
+        processingWindow:
+          $ref: '#/components/schemas/Code'
+        slaRef:
+          $ref: '#/components/schemas/Text'
+        fallback:
+          $ref: '#/components/schemas/Text'
+        supportContact:
+          $ref: '#/components/schemas/Text'
+          description: Personal data; it never reaches a log or an event
+        incidentContact:
+          $ref: '#/components/schemas/Text'
+          description: Personal data; it never reaches a log or an event
+    RegisteredPartner:
+      type: object
+      required: [partnerId]
+      properties:
+        partnerId:
+          type: string
+    ChangedPartnerStage:
+      type: object
+      required: [partnerId, status]
+      properties:
+        partnerId:
+          type: string
+        status:
+          $ref: '#/components/schemas/PartnerStatus'
+    RegisteredAgreement:
+      type: object
+      required: [agreementId]
+      properties:
+        agreementId:
+          type: string
+    ActivatedAgreement:
+      type: object
+      required: [agreementId]
+      properties:
+        agreementId:
+          type: string
+    DeclaredCapability:
+      type: object
+      required: [capabilityId]
+      properties:
+        capabilityId:
+          type: string
+    RecordedHomologation:
+      type: object
+      required: [capabilityId, status]
+      properties:
+        capabilityId:
+          type: string
+        status:
+          $ref: '#/components/schemas/CapabilityStatus'
+    EnabledCapability:
+      type: object
+      required: [capabilityId]
+      properties:
+        capabilityId:
+          type: string
+    SuspendedCapability:
+      type: object
+      required: [capabilityId]
+      properties:
+        capabilityId:
+          type: string
+    ChangedRollout:
+      type: object
+      required: [capabilityId]
+      properties:
+        capabilityId:
+          type: string
+    DefinedProduct:
+      type: object
+      required: [productId]
+      properties:
+        productId:
+          type: string
+    RetiredProduct:
+      type: object
+      required: [productId]
+      properties:
+        productId:
+          type: string
+    RegisteredIntegrationProfile:
+      type: object
+      required: [profileId]
+      properties:
+        profileId:
+          type: string
+    RaisedCertificateExpiryAlert:
+      type: object
+      required: [profileId]
+      properties:
+        profileId:
+          type: string
+    DefinedOperationalPolicy:
+      type: object
+      required: [policyId]
+      properties:
+        policyId:
+          type: string
+    Partner:
+      type: object
+      required: [partnerId, organizationId, role, status, registeredAt, stageChangedAt]
+      properties:
+        partnerId:
+          type: string
+        organizationId:
+          type: string
+        role:
+          $ref: '#/components/schemas/PartnerRole'
+        status:
+          $ref: '#/components/schemas/PartnerStatus'
+        registeredAt:
+          $ref: '#/components/schemas/Instant'
+        stageChangedAt:
+          $ref: '#/components/schemas/Instant'
+        stageReason:
+          type: string
+        offboardingStartedAt:
+          $ref: '#/components/schemas/Instant'
+    PartnerAgreement:
+      type: object
+      required: [agreementId, partnerId, version, status, validFrom]
+      properties:
+        agreementId:
+          type: string
+        partnerId:
+          type: string
+        version:
+          type: integer
+          format: int32
+        supersedesId:
+          type: string
+        status:
+          $ref: '#/components/schemas/AgreementStatus'
+        validFrom:
+          $ref: '#/components/schemas/Instant'
+        validUntil:
+          $ref: '#/components/schemas/Instant'
+          description: Nanoseconds since the Unix epoch; zero is an indefinite validity
+        contractEvidenceId:
+          type: string
+        instrumentTemplateId:
+          type: string
+        activatedAt:
+          $ref: '#/components/schemas/Instant'
+    CriterionResult:
+      type: object
+      required: [criterionId, passed, recordedAt]
+      properties:
+        criterionId:
+          type: string
+        passed:
+          type: boolean
+        evidenceId:
+          type: string
+        recordedAt:
+          $ref: '#/components/schemas/Instant'
+    Rollout:
+      type: object
+      required: [mode, allowlistTenantIds, percentage, excludedTenantIds]
+      properties:
+        mode:
+          $ref: '#/components/schemas/RolloutMode'
+        allowlistTenantIds:
+          type: array
+          items:
+            type: string
+        percentage:
+          type: integer
+          format: int32
+        excludedTenantIds:
+          type: array
+          items:
+            type: string
+    Suspension:
+      type: object
+      required: [reason, trigger, suspendedAt]
+      properties:
+        reason:
+          type: string
+        trigger:
+          $ref: '#/components/schemas/SuspensionTrigger'
+        suspendedAt:
+          $ref: '#/components/schemas/Instant'
+    Capability:
+      type: object
+      required:
+        - capabilityId
+        - partnerId
+        - operation
+        - assetType
+        - environment
+        - version
+        - isWrite
+        - stateQuerySupported
+        - callbackApplicable
+        - status
+        - homologation
+        - rollout
+      properties:
+        capabilityId:
+          type: string
+        partnerId:
+          type: string
+        operation:
+          type: string
+        assetType:
+          type: string
+        environment:
+          $ref: '#/components/schemas/Environment'
+        version:
+          type: integer
+          format: int32
+        supersedesId:
+          type: string
+        isWrite:
+          type: boolean
+        stateQuerySupported:
+          type: boolean
+        restrictionNote:
+          type: string
+        callbackApplicable:
+          type: boolean
+        status:
+          $ref: '#/components/schemas/CapabilityStatus'
+        homologation:
+          type: array
+          items:
+            $ref: '#/components/schemas/CriterionResult'
+        rollout:
+          $ref: '#/components/schemas/Rollout'
+        suspension:
+          $ref: '#/components/schemas/Suspension'
+          description: Present only while suspended
+        enabledAt:
+          $ref: '#/components/schemas/Instant'
+    FinancialProduct:
+      type: object
+      required:
+        - productId
+        - partnerId
+        - agreementId
+        - code
+        - name
+        - version
+        - status
+        - validFrom
+        - assetTypes
+        - regions
+        - currency
+        - minAmountMinor
+        - maxAmountMinor
+        - minTermDays
+        - maxTermDays
+        - requiredCheckIds
+      properties:
+        productId:
+          type: string
+        partnerId:
+          type: string
+        agreementId:
+          type: string
+        code:
+          type: string
+        name:
+          type: string
+        version:
+          type: integer
+          format: int32
+        supersedesId:
+          type: string
+        status:
+          $ref: '#/components/schemas/ProductStatus'
+        validFrom:
+          $ref: '#/components/schemas/Instant'
+        validUntil:
+          $ref: '#/components/schemas/Instant'
+          description: Nanoseconds since the Unix epoch; zero is an indefinite validity
+        assetTypes:
+          type: array
+          items:
+            type: string
+        regions:
+          type: array
+          items:
+            type: string
+        currency:
+          type: string
+        minAmountMinor:
+          type: integer
+          format: int64
+        maxAmountMinor:
+          type: integer
+          format: int64
+        minTermDays:
+          type: integer
+          format: int32
+        maxTermDays:
+          type: integer
+          format: int32
+        requiredCheckIds:
+          type: array
+          items:
+            type: string
+    IntegrationProfile:
+      type: object
+      required:
+        - profileId
+        - partnerId
+        - environment
+        - version
+        - changeKind
+        - protocols
+        - endpoint
+        - secretRef
+        - certificateExpiresAt
+        - effectiveFrom
+      properties:
+        profileId:
+          type: string
+        partnerId:
+          type: string
+        environment:
+          $ref: '#/components/schemas/Environment'
+        version:
+          type: integer
+          format: int32
+        supersedesId:
+          type: string
+        changeKind:
+          $ref: '#/components/schemas/IntegrationChangeKind'
+        protocols:
+          type: array
+          items:
+            type: string
+        endpoint:
+          type: string
+        schemaVersion:
+          type: string
+        secretRef:
+          type: string
+          description: Reference to the secret; its value never reaches this context
+        certificateRef:
+          type: string
+        certificateExpiresAt:
+          $ref: '#/components/schemas/Instant'
+        effectiveFrom:
+          $ref: '#/components/schemas/Instant'
+        lastAlertedThresholdDays:
+          type: integer
+          format: int32
+          description: Zero until the first alert
+    OperationalPolicy:
+      type: object
+      required:
+        - policyId
+        - partnerId
+        - version
+        - effectiveFrom
+        - rateLimitPerMinute
+        - supportContact
+        - incidentContact
+      properties:
+        policyId:
+          type: string
+        partnerId:
+          type: string
+        version:
+          type: integer
+          format: int32
+        supersedesId:
+          type: string
+        effectiveFrom:
+          $ref: '#/components/schemas/Instant'
+        rateLimitPerMinute:
+          type: integer
+          format: int32
+        businessDays:
+          type: array
+          items:
+            type: string
+        cutoffTime:
+          type: string
+        processingWindow:
+          type: string
+        slaRef:
+          type: string
+        fallback:
+          type: string
+        supportContact:
+          type: string
+        incidentContact:
+          type: string
+    EffectiveCapability:
+      type: object
+      required: [allowed]
+      properties:
+        allowed:
+          type: boolean
+        failedCondition:
+          $ref: '#/components/schemas/EffectiveCapabilityCondition'
+          description: The first condition that failed; absent when allowed
+    Rejection:
+      type: object
+      required: [code, message]
+      description: >-
+        A refusal the domain or the edge declared. Domain codes take the
+        stable "context/aggregate/reason" form, the same in every context.
+      properties:
+        code:
+          type: string
+          examples:
+            - partner-management/partner/invalid-stage-transition
+            - partner-management/capability/not-homologated
+            - partner-management/financial-product/range-invalid
+            - missing-idempotency-key
+            - invalid-idempotency-key
+            - reused-idempotency-key
+            - in-flight-idempotency-key
+            - already-exists
+        message:
+          type: string
+  headers:
+    IdempotentReplayed:
+      description: >-
+        Present with the value true when the answer is the stored response of
+        an earlier request with the same Idempotency-Key, so the effect did not
+        happen again; absent on the first answer.
+      schema:
+        type: string
+        enum: ['true']
+  responses:
+    BadRequest:
+      description: The request is malformed or misses Idempotency-Key, or carries it outside its format
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Rejection'
+    NotFound:
+      description: No record with this id in the tenant of the request
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Rejection'
+    VersionConflict:
+      description: >-
+        A concurrent write advanced the aggregate (replay the request), or a
+        request with the same Idempotency-Key is still in progress
+        (in-flight-idempotency-key)
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Rejection'
+    CreateConflict:
+      description: >-
+        The aggregate already exists (already-exists), a request with the same
+        Idempotency-Key is still in progress (in-flight-idempotency-key), or a
+        concurrent creation of the same aggregate or of the same version of a
+        series won; replay the request
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Rejection'
+    Rejected:
+      description: >-
+        The domain refused the command (a business rejection, not a failure), or
+        the Idempotency-Key was already used with another request
+        (reused-idempotency-key)
+      headers:
+        Idempotent-Replayed:
+          $ref: '#/components/headers/IdempotentReplayed'
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Rejection'
+    AdmissionRefused:
+      description: >-
+        Admission control refused the request before reading the body, cheaply
+        and with a category of its own, so an overload never costs a decode
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Rejection'
+    Unavailable:
+      description: The partner context is unavailable
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Rejection'
+    Timeout:
+      description: >-
+        The deadline every call to the context carries expired before the
+        context answered
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Rejection'
+    Failure:
+      description: >-
+        Technical failure; the body carries only the code and a safe message,
+        never the technical cause, business data or secrets
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Rejection'

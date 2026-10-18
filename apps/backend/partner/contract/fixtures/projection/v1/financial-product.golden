@@ -1,0 +1,684 @@
+{
+  "format_version": "1",
+  "identity": {
+    "context": "partner",
+    "aggregate": "financial-product"
+  },
+  "cases": [
+    {
+      "name": "define-first-version",
+      "doc": "Ramo Accepted de Define: a série vazia do parceiro e do código recebe a version 1, active, e PartnerProductDefined leva as faixas sem as verificações exigidas.",
+      "state_before": {
+        "product": "fpr-1",
+        "partner": "",
+        "agreement": "",
+        "code": "",
+        "name": "",
+        "version": "0",
+        "supersedes": "",
+        "status": "",
+        "valid_from": "0",
+        "valid_until": "0",
+        "asset_types": "",
+        "regions": "",
+        "currency": "",
+        "min_amount_minor": "0",
+        "max_amount_minor": "0",
+        "min_term_days": "0",
+        "max_term_days": "0",
+        "required_check_ids": ""
+      },
+      "command": {
+        "upr": "define",
+        "partner": "prt-1",
+        "agreement": "agr-1",
+        "code": "receivables-advance",
+        "name": "Antecipação de duplicatas",
+        "asset_types": "duplicata,cheque",
+        "regions": "SP,RJ",
+        "currency": "BRL",
+        "min_amount_minor": "100000",
+        "max_amount_minor": "50000000",
+        "min_term_days": "7",
+        "max_term_days": "180",
+        "required_check_ids": "CHK-01,CHK-07",
+        "valid_from": "1755432000000000000",
+        "valid_until": "1786968000000000000",
+        "supersedes": "",
+        "head": "",
+        "head_version": "0",
+        "has_effective_agreement": "true",
+        "at": "1755432000000000000"
+      },
+      "expected": {
+        "branch": "accepted",
+        "response": {
+          "product": "fpr-1"
+        },
+        "events": [
+          {
+            "name": "partner-management.financial-product.defined",
+            "fields": {
+              "product": "fpr-1",
+              "partner": "prt-1",
+              "agreement": "agr-1",
+              "code": "receivables-advance",
+              "version": "1",
+              "valid_from": "1755432000000000000",
+              "valid_until": "1786968000000000000",
+              "asset_types": "duplicata,cheque",
+              "regions": "SP,RJ",
+              "currency": "BRL",
+              "min_amount_minor": "100000",
+              "max_amount_minor": "50000000",
+              "min_term_days": "7",
+              "max_term_days": "180",
+              "at": "1755432000000000000"
+            }
+          }
+        ],
+        "state_after": {
+          "product": "fpr-1",
+          "partner": "prt-1",
+          "agreement": "agr-1",
+          "code": "receivables-advance",
+          "name": "Antecipação de duplicatas",
+          "version": "1",
+          "supersedes": "",
+          "status": "active",
+          "valid_from": "1755432000000000000",
+          "valid_until": "1786968000000000000",
+          "asset_types": "duplicata,cheque",
+          "regions": "SP,RJ",
+          "currency": "BRL",
+          "min_amount_minor": "100000",
+          "max_amount_minor": "50000000",
+          "min_term_days": "7",
+          "max_term_days": "180",
+          "required_check_ids": "CHK-01,CHK-07"
+        }
+      }
+    },
+    {
+      "name": "define-next-version",
+      "doc": "Ramo Accepted de Define: supersedes aponta a última versão da série, a version passa a 3 e PartnerProductChanged leva o supersedes.",
+      "state_before": {
+        "product": "fpr-3",
+        "partner": "",
+        "agreement": "",
+        "code": "",
+        "name": "",
+        "version": "0",
+        "supersedes": "",
+        "status": "",
+        "valid_from": "0",
+        "valid_until": "0",
+        "asset_types": "",
+        "regions": "",
+        "currency": "",
+        "min_amount_minor": "0",
+        "max_amount_minor": "0",
+        "min_term_days": "0",
+        "max_term_days": "0",
+        "required_check_ids": ""
+      },
+      "command": {
+        "upr": "define",
+        "partner": "prt-1",
+        "agreement": "agr-1",
+        "code": "receivables-advance",
+        "name": "Antecipação de duplicatas",
+        "asset_types": "duplicata,cheque",
+        "regions": "SP,RJ",
+        "currency": "BRL",
+        "min_amount_minor": "100000",
+        "max_amount_minor": "50000000",
+        "min_term_days": "7",
+        "max_term_days": "180",
+        "required_check_ids": "CHK-01,CHK-07",
+        "valid_from": "1755432000000000000",
+        "valid_until": "1786968000000000000",
+        "supersedes": "fpr-2",
+        "head": "fpr-2",
+        "head_version": "2",
+        "has_effective_agreement": "true",
+        "at": "1755432000000000000"
+      },
+      "expected": {
+        "branch": "accepted",
+        "response": {
+          "product": "fpr-3"
+        },
+        "events": [
+          {
+            "name": "partner-management.financial-product.changed",
+            "fields": {
+              "product": "fpr-3",
+              "partner": "prt-1",
+              "agreement": "agr-1",
+              "code": "receivables-advance",
+              "version": "3",
+              "supersedes": "fpr-2",
+              "valid_from": "1755432000000000000",
+              "valid_until": "1786968000000000000",
+              "asset_types": "duplicata,cheque",
+              "regions": "SP,RJ",
+              "currency": "BRL",
+              "min_amount_minor": "100000",
+              "max_amount_minor": "50000000",
+              "min_term_days": "7",
+              "max_term_days": "180",
+              "at": "1755432000000000000"
+            }
+          }
+        ],
+        "state_after": {
+          "product": "fpr-3",
+          "partner": "prt-1",
+          "agreement": "agr-1",
+          "code": "receivables-advance",
+          "name": "Antecipação de duplicatas",
+          "version": "3",
+          "supersedes": "fpr-2",
+          "status": "active",
+          "valid_from": "1755432000000000000",
+          "valid_until": "1786968000000000000",
+          "asset_types": "duplicata,cheque",
+          "regions": "SP,RJ",
+          "currency": "BRL",
+          "min_amount_minor": "100000",
+          "max_amount_minor": "50000000",
+          "min_term_days": "7",
+          "max_term_days": "180",
+          "required_check_ids": "CHK-01,CHK-07"
+        }
+      }
+    },
+    {
+      "name": "define-asset-types-empty",
+      "doc": "Ramo Rejected de Define: nenhum tipo de ativo.",
+      "state_before": {
+        "product": "fpr-1",
+        "partner": "",
+        "agreement": "",
+        "code": "",
+        "name": "",
+        "version": "0",
+        "supersedes": "",
+        "status": "",
+        "valid_from": "0",
+        "valid_until": "0",
+        "asset_types": "",
+        "regions": "",
+        "currency": "",
+        "min_amount_minor": "0",
+        "max_amount_minor": "0",
+        "min_term_days": "0",
+        "max_term_days": "0",
+        "required_check_ids": ""
+      },
+      "command": {
+        "upr": "define",
+        "partner": "prt-1",
+        "agreement": "agr-1",
+        "code": "receivables-advance",
+        "name": "Antecipação de duplicatas",
+        "asset_types": "",
+        "regions": "SP,RJ",
+        "currency": "BRL",
+        "min_amount_minor": "100000",
+        "max_amount_minor": "50000000",
+        "min_term_days": "7",
+        "max_term_days": "180",
+        "required_check_ids": "CHK-01,CHK-07",
+        "valid_from": "1755432000000000000",
+        "valid_until": "1786968000000000000",
+        "supersedes": "",
+        "head": "",
+        "head_version": "0",
+        "has_effective_agreement": "true",
+        "at": "1755432000000000000"
+      },
+      "expected": {
+        "branch": "rejected",
+        "rejection": {
+          "code": "partner-management/financial-product/asset-types-empty",
+          "message": "at least one asset type is required",
+          "details": {}
+        },
+        "events": []
+      }
+    },
+    {
+      "name": "define-range-invalid",
+      "doc": "Ramo Rejected de Define: o prazo mínimo excede o máximo.",
+      "state_before": {
+        "product": "fpr-1",
+        "partner": "",
+        "agreement": "",
+        "code": "",
+        "name": "",
+        "version": "0",
+        "supersedes": "",
+        "status": "",
+        "valid_from": "0",
+        "valid_until": "0",
+        "asset_types": "",
+        "regions": "",
+        "currency": "",
+        "min_amount_minor": "0",
+        "max_amount_minor": "0",
+        "min_term_days": "0",
+        "max_term_days": "0",
+        "required_check_ids": ""
+      },
+      "command": {
+        "upr": "define",
+        "partner": "prt-1",
+        "agreement": "agr-1",
+        "code": "receivables-advance",
+        "name": "Antecipação de duplicatas",
+        "asset_types": "duplicata,cheque",
+        "regions": "SP,RJ",
+        "currency": "BRL",
+        "min_amount_minor": "100000",
+        "max_amount_minor": "50000000",
+        "min_term_days": "181",
+        "max_term_days": "180",
+        "required_check_ids": "CHK-01,CHK-07",
+        "valid_from": "1755432000000000000",
+        "valid_until": "1786968000000000000",
+        "supersedes": "",
+        "head": "",
+        "head_version": "0",
+        "has_effective_agreement": "true",
+        "at": "1755432000000000000"
+      },
+      "expected": {
+        "branch": "rejected",
+        "rejection": {
+          "code": "partner-management/financial-product/range-invalid",
+          "message": "the minimum amount and term must not exceed the maximum",
+          "details": {}
+        },
+        "events": []
+      }
+    },
+    {
+      "name": "define-validity-invalid",
+      "doc": "Ramo Rejected de Define: o fim da vigência coincide com o início.",
+      "state_before": {
+        "product": "fpr-1",
+        "partner": "",
+        "agreement": "",
+        "code": "",
+        "name": "",
+        "version": "0",
+        "supersedes": "",
+        "status": "",
+        "valid_from": "0",
+        "valid_until": "0",
+        "asset_types": "",
+        "regions": "",
+        "currency": "",
+        "min_amount_minor": "0",
+        "max_amount_minor": "0",
+        "min_term_days": "0",
+        "max_term_days": "0",
+        "required_check_ids": ""
+      },
+      "command": {
+        "upr": "define",
+        "partner": "prt-1",
+        "agreement": "agr-1",
+        "code": "receivables-advance",
+        "name": "Antecipação de duplicatas",
+        "asset_types": "duplicata,cheque",
+        "regions": "SP,RJ",
+        "currency": "BRL",
+        "min_amount_minor": "100000",
+        "max_amount_minor": "50000000",
+        "min_term_days": "7",
+        "max_term_days": "180",
+        "required_check_ids": "CHK-01,CHK-07",
+        "valid_from": "1755432000000000000",
+        "valid_until": "1755432000000000000",
+        "supersedes": "",
+        "head": "",
+        "head_version": "0",
+        "has_effective_agreement": "true",
+        "at": "1755432000000000000"
+      },
+      "expected": {
+        "branch": "rejected",
+        "rejection": {
+          "code": "partner-management/financial-product/validity-invalid",
+          "message": "the end of the validity must come after its start",
+          "details": {}
+        },
+        "events": []
+      }
+    },
+    {
+      "name": "define-agreement-not-active",
+      "doc": "Ramo Rejected de Define: o acordo informado não está ativo e vigente no instante.",
+      "state_before": {
+        "product": "fpr-1",
+        "partner": "",
+        "agreement": "",
+        "code": "",
+        "name": "",
+        "version": "0",
+        "supersedes": "",
+        "status": "",
+        "valid_from": "0",
+        "valid_until": "0",
+        "asset_types": "",
+        "regions": "",
+        "currency": "",
+        "min_amount_minor": "0",
+        "max_amount_minor": "0",
+        "min_term_days": "0",
+        "max_term_days": "0",
+        "required_check_ids": ""
+      },
+      "command": {
+        "upr": "define",
+        "partner": "prt-1",
+        "agreement": "agr-1",
+        "code": "receivables-advance",
+        "name": "Antecipação de duplicatas",
+        "asset_types": "duplicata,cheque",
+        "regions": "SP,RJ",
+        "currency": "BRL",
+        "min_amount_minor": "100000",
+        "max_amount_minor": "50000000",
+        "min_term_days": "7",
+        "max_term_days": "180",
+        "required_check_ids": "CHK-01,CHK-07",
+        "valid_from": "1755432000000000000",
+        "valid_until": "1786968000000000000",
+        "supersedes": "",
+        "head": "",
+        "head_version": "0",
+        "has_effective_agreement": "false",
+        "at": "1755432000000000000"
+      },
+      "expected": {
+        "branch": "rejected",
+        "rejection": {
+          "code": "partner-management/financial-product/agreement-not-active",
+          "message": "an active agreement of the partner in effect is required",
+          "details": {}
+        },
+        "events": []
+      }
+    },
+    {
+      "name": "define-supersedes-invalid",
+      "doc": "Ramo Rejected de Define: a série do código já tem a version 1 e o comando não informa supersedes.",
+      "state_before": {
+        "product": "fpr-1",
+        "partner": "",
+        "agreement": "",
+        "code": "",
+        "name": "",
+        "version": "0",
+        "supersedes": "",
+        "status": "",
+        "valid_from": "0",
+        "valid_until": "0",
+        "asset_types": "",
+        "regions": "",
+        "currency": "",
+        "min_amount_minor": "0",
+        "max_amount_minor": "0",
+        "min_term_days": "0",
+        "max_term_days": "0",
+        "required_check_ids": ""
+      },
+      "command": {
+        "upr": "define",
+        "partner": "prt-1",
+        "agreement": "agr-1",
+        "code": "receivables-advance",
+        "name": "Antecipação de duplicatas",
+        "asset_types": "duplicata,cheque",
+        "regions": "SP,RJ",
+        "currency": "BRL",
+        "min_amount_minor": "100000",
+        "max_amount_minor": "50000000",
+        "min_term_days": "7",
+        "max_term_days": "180",
+        "required_check_ids": "CHK-01,CHK-07",
+        "valid_from": "1755432000000000000",
+        "valid_until": "1786968000000000000",
+        "supersedes": "",
+        "head": "fpr-0",
+        "head_version": "1",
+        "has_effective_agreement": "true",
+        "at": "1755432000000000000"
+      },
+      "expected": {
+        "branch": "rejected",
+        "rejection": {
+          "code": "partner-management/financial-product/supersedes-invalid",
+          "message": "supersedes must name the last version of the series of the partner and code, and a series holds one first version",
+          "details": {
+            "supersedes": ""
+          }
+        },
+        "events": []
+      }
+    },
+    {
+      "name": "retire-expired",
+      "doc": "Ramo Accepted de Retire: a vigência terminou no instante, o produto vai a retired e PartnerProductExpired é emitido.",
+      "state_before": {
+        "product": "fpr-1",
+        "partner": "prt-1",
+        "agreement": "agr-1",
+        "code": "receivables-advance",
+        "name": "Antecipação de duplicatas",
+        "version": "2",
+        "supersedes": "fpr-0",
+        "status": "active",
+        "valid_from": "1752840000000000000",
+        "valid_until": "1755432000000000000",
+        "asset_types": "duplicata",
+        "regions": "SP",
+        "currency": "BRL",
+        "min_amount_minor": "100000",
+        "max_amount_minor": "50000000",
+        "min_term_days": "7",
+        "max_term_days": "180",
+        "required_check_ids": "CHK-01"
+      },
+      "command": {
+        "upr": "retire",
+        "reason": "expired",
+        "at": "1755432000000000000"
+      },
+      "expected": {
+        "branch": "accepted",
+        "response": {
+          "product": "fpr-1"
+        },
+        "events": [
+          {
+            "name": "partner-management.financial-product.expired",
+            "fields": {
+              "product": "fpr-1",
+              "partner": "prt-1",
+              "version": "2",
+              "valid_until": "1755432000000000000",
+              "at": "1755432000000000000"
+            }
+          }
+        ],
+        "state_after": {
+          "product": "fpr-1",
+          "partner": "prt-1",
+          "agreement": "agr-1",
+          "code": "receivables-advance",
+          "name": "Antecipação de duplicatas",
+          "version": "2",
+          "supersedes": "fpr-0",
+          "status": "retired",
+          "valid_from": "1752840000000000000",
+          "valid_until": "1755432000000000000",
+          "asset_types": "duplicata",
+          "regions": "SP",
+          "currency": "BRL",
+          "min_amount_minor": "100000",
+          "max_amount_minor": "50000000",
+          "min_term_days": "7",
+          "max_term_days": "180",
+          "required_check_ids": "CHK-01"
+        }
+      }
+    },
+    {
+      "name": "retire-withdrawn",
+      "doc": "Ramo Accepted de Retire: a retirada dentro da vigência leva o produto a retired e emite PartnerProductRetired.",
+      "state_before": {
+        "product": "fpr-1",
+        "partner": "prt-1",
+        "agreement": "agr-1",
+        "code": "receivables-advance",
+        "name": "Antecipação de duplicatas",
+        "version": "2",
+        "supersedes": "fpr-0",
+        "status": "active",
+        "valid_from": "1752840000000000000",
+        "valid_until": "1758024000000000000",
+        "asset_types": "duplicata",
+        "regions": "SP",
+        "currency": "BRL",
+        "min_amount_minor": "100000",
+        "max_amount_minor": "50000000",
+        "min_term_days": "7",
+        "max_term_days": "180",
+        "required_check_ids": "CHK-01"
+      },
+      "command": {
+        "upr": "retire",
+        "reason": "withdrawn",
+        "at": "1755432000000000000"
+      },
+      "expected": {
+        "branch": "accepted",
+        "response": {
+          "product": "fpr-1"
+        },
+        "events": [
+          {
+            "name": "partner-management.financial-product.retired",
+            "fields": {
+              "product": "fpr-1",
+              "partner": "prt-1",
+              "version": "2",
+              "at": "1755432000000000000"
+            }
+          }
+        ],
+        "state_after": {
+          "product": "fpr-1",
+          "partner": "prt-1",
+          "agreement": "agr-1",
+          "code": "receivables-advance",
+          "name": "Antecipação de duplicatas",
+          "version": "2",
+          "supersedes": "fpr-0",
+          "status": "retired",
+          "valid_from": "1752840000000000000",
+          "valid_until": "1758024000000000000",
+          "asset_types": "duplicata",
+          "regions": "SP",
+          "currency": "BRL",
+          "min_amount_minor": "100000",
+          "max_amount_minor": "50000000",
+          "min_term_days": "7",
+          "max_term_days": "180",
+          "required_check_ids": "CHK-01"
+        }
+      }
+    },
+    {
+      "name": "retire-not-active",
+      "doc": "Ramo Rejected de Retire: o produto já está retired.",
+      "state_before": {
+        "product": "fpr-1",
+        "partner": "prt-1",
+        "agreement": "agr-1",
+        "code": "receivables-advance",
+        "name": "Antecipação de duplicatas",
+        "version": "2",
+        "supersedes": "fpr-0",
+        "status": "retired",
+        "valid_from": "1752840000000000000",
+        "valid_until": "1755432000000000000",
+        "asset_types": "duplicata",
+        "regions": "SP",
+        "currency": "BRL",
+        "min_amount_minor": "100000",
+        "max_amount_minor": "50000000",
+        "min_term_days": "7",
+        "max_term_days": "180",
+        "required_check_ids": "CHK-01"
+      },
+      "command": {
+        "upr": "retire",
+        "reason": "withdrawn",
+        "at": "1755432000000000000"
+      },
+      "expected": {
+        "branch": "rejected",
+        "rejection": {
+          "code": "partner-management/financial-product/not-active",
+          "message": "only an active product is retired",
+          "details": {}
+        },
+        "events": []
+      }
+    },
+    {
+      "name": "retire-not-yet-expired",
+      "doc": "Ramo Rejected de Retire: a expiração pedida dentro da vigência.",
+      "state_before": {
+        "product": "fpr-1",
+        "partner": "prt-1",
+        "agreement": "agr-1",
+        "code": "receivables-advance",
+        "name": "Antecipação de duplicatas",
+        "version": "2",
+        "supersedes": "fpr-0",
+        "status": "active",
+        "valid_from": "1752840000000000000",
+        "valid_until": "1755518400000000000",
+        "asset_types": "duplicata",
+        "regions": "SP",
+        "currency": "BRL",
+        "min_amount_minor": "100000",
+        "max_amount_minor": "50000000",
+        "min_term_days": "7",
+        "max_term_days": "180",
+        "required_check_ids": "CHK-01"
+      },
+      "command": {
+        "upr": "retire",
+        "reason": "expired",
+        "at": "1755432000000000000"
+      },
+      "expected": {
+        "branch": "rejected",
+        "rejection": {
+          "code": "partner-management/financial-product/not-yet-expired",
+          "message": "the validity of the product has not ended yet",
+          "details": {}
+        },
+        "events": []
+      }
+    }
+  ]
+}

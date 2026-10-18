@@ -1,0 +1,151 @@
+{
+  "format_version": "1",
+  "identity": {
+    "fixture": "partner/event/v1/capability-enabled",
+    "contract": {
+      "package": "company.partner.event.v1",
+      "message": "CapabilityEnabled"
+    },
+    "type": "com.company.partner.capability-enabled.v1",
+    "dataschema": "type.googleapis.com/company.partner.event.v1.CapabilityEnabled"
+  },
+  "covers": {
+    "profile_major": "1",
+    "contract_major": "v1"
+  },
+  "cases": [
+    {
+      "name": "all-conditionals-present",
+      "doc": "Caminho típico com os três atributos condicionais presentes (aggregateversion, tenantid, tracestate).",
+      "envelope": {
+        "aggregateversion": "7",
+        "causationid": "evt-0001",
+        "correlationid": "corr-0001",
+        "datacontenttype": "application/protobuf",
+        "dataschema": "type.googleapis.com/company.partner.event.v1.CapabilityEnabled",
+        "id": "evt-0001",
+        "partitionkey": "c-42",
+        "source": "urn:dmpf:reference-partner",
+        "specversion": "1.0",
+        "subject": "cap-1001",
+        "tenantid": "tenant-a",
+        "time": "2026-09-02T12:00:00Z",
+        "traceparent": "00-0af7651916cd43dd8448eb211c80319c-b7ad6b7169203331-01",
+        "tracestate": "vendor=1",
+        "type": "com.company.partner.capability-enabled.v1"
+      },
+      "payload": {
+        "asset_type": "duplicata",
+        "at": "2026-09-02T12:00:00Z",
+        "capability_id": "cap-1001",
+        "environment": "ENVIRONMENT_PRODUCTION",
+        "operation": "register_effect",
+        "partner_id": "prt-1001",
+        "restriction_note": "",
+        "rollout_mode": "ROLLOUT_MODE_DISABLED",
+        "state_query_supported": "true",
+        "version": "1"
+      },
+      "payload_bytes_hex": "0a086361702d3130303112087072742d313030311a0f72656769737465725f65666665637422096475706c69636174612804300138014001520608c09fe0d406",
+      "payload_hash": "4b1cf0fd7adc5150beecc292b562bfa3a414bc630673d6b809070c6eedd4dcc2"
+    },
+    {
+      "name": "all-conditionals-absent",
+      "doc": "Os três condicionais ausentes: nenhum entra no mapa de atributos (ENV-12, sem valor de preenchimento).",
+      "envelope": {
+        "causationid": "evt-0001",
+        "correlationid": "corr-0001",
+        "datacontenttype": "application/protobuf",
+        "dataschema": "type.googleapis.com/company.partner.event.v1.CapabilityEnabled",
+        "id": "evt-0002",
+        "partitionkey": "c-42",
+        "source": "urn:dmpf:reference-partner",
+        "specversion": "1.0",
+        "subject": "cap-1001",
+        "time": "2026-09-02T12:00:00Z",
+        "traceparent": "00-0af7651916cd43dd8448eb211c80319c-b7ad6b7169203331-01",
+        "type": "com.company.partner.capability-enabled.v1"
+      },
+      "payload": {
+        "asset_type": "cdca",
+        "at": "2026-09-02T12:00:01Z",
+        "capability_id": "cap-1002",
+        "environment": "ENVIRONMENT_HOMOLOGATION",
+        "operation": "register_effect",
+        "partner_id": "prt-1001",
+        "restriction_note": "write without state query, reconciled daily",
+        "rollout_mode": "ROLLOUT_MODE_PERCENTAGE",
+        "state_query_supported": "false",
+        "version": "2"
+      },
+      "payload_bytes_hex": "0a086361702d3130303212087072742d313030311a0f72656769737465725f6566666563742204636463612803300238034a2b777269746520776974686f75742073746174652071756572792c207265636f6e63696c6564206461696c79520608c19fe0d406",
+      "payload_hash": "0659a4040279306f860451f5e3122bc79feb144b287d86d0197808cfa5009f9c"
+    }
+  ],
+  "discriminators": [
+    {
+      "name": "unknown-field",
+      "doc": "Bytes canônicos mais um campo de número 99 (varint 42) que o contrato não conhece: a desserialização o preserva (PTB-10) e o hash o cobre (ENV-17).",
+      "envelope": {
+        "causationid": "evt-0001",
+        "correlationid": "corr-0001",
+        "datacontenttype": "application/protobuf",
+        "dataschema": "type.googleapis.com/company.partner.event.v1.CapabilityEnabled",
+        "id": "evt-2001",
+        "partitionkey": "c-42",
+        "source": "urn:dmpf:reference-partner",
+        "specversion": "1.0",
+        "subject": "cap-1001",
+        "time": "2026-09-02T12:00:00Z",
+        "traceparent": "00-0af7651916cd43dd8448eb211c80319c-b7ad6b7169203331-01",
+        "type": "com.company.partner.capability-enabled.v1"
+      },
+      "payload": {
+        "asset_type": "duplicata",
+        "at": "2026-09-02T12:00:02Z",
+        "capability_id": "cap-2001",
+        "environment": "ENVIRONMENT_INTEGRATION",
+        "operation": "query_assets",
+        "partner_id": "prt-2001",
+        "restriction_note": "",
+        "rollout_mode": "ROLLOUT_MODE_ALLOWLIST",
+        "state_query_supported": "true",
+        "version": "1"
+      },
+      "payload_bytes_hex": "0a086361702d3230303112087072742d323030311a0c71756572795f61737365747322096475706c69636174612802300138024001520608c29fe0d40698062a",
+      "payload_hash": "df091ad2e0dc8cd8f6ff8df879c4ee83ccede51ff8648c3e8f342b10606bd335"
+    },
+    {
+      "name": "non-canonical-field-order",
+      "doc": "Campos em ordem decrescente de número, o instante como sub-mensagem: decodifica no mesmo valor, mas o hash é o dos bytes transportados e difere do hash de uma reserialização (ENV-18). Campo repetido fica vazio e booleano fica falso, porque o codificador não canônico do kit cobre só strings, inteiros, enums e mensagens.",
+      "envelope": {
+        "causationid": "evt-0001",
+        "correlationid": "corr-0001",
+        "datacontenttype": "application/protobuf",
+        "dataschema": "type.googleapis.com/company.partner.event.v1.CapabilityEnabled",
+        "id": "evt-2002",
+        "partitionkey": "c-42",
+        "source": "urn:dmpf:reference-partner",
+        "specversion": "1.0",
+        "subject": "cap-1001",
+        "time": "2026-09-02T12:00:00Z",
+        "traceparent": "00-0af7651916cd43dd8448eb211c80319c-b7ad6b7169203331-01",
+        "type": "com.company.partner.capability-enabled.v1"
+      },
+      "payload": {
+        "asset_type": "cpr",
+        "at": "2026-09-02T12:00:03.123456789Z",
+        "capability_id": "cap-2002",
+        "environment": "ENVIRONMENT_DEVELOPMENT",
+        "operation": "query_assets",
+        "partner_id": "prt-2001",
+        "restriction_note": "read only, no state to query",
+        "rollout_mode": "ROLLOUT_MODE_ENABLED",
+        "state_query_supported": "false",
+        "version": "3"
+      },
+      "payload_bytes_hex": "520b08c39fe0d40610959aef3a4a1c72656164206f6e6c792c206e6f20737461746520746f20717565727938043003280122036370721a0c71756572795f61737365747312087072742d323030310a086361702d32303032",
+      "payload_hash": "11802e906a6e2b61ff0feba3c993a41046488cdc285522296f09adf1d297f3b6"
+    }
+  ]
+}

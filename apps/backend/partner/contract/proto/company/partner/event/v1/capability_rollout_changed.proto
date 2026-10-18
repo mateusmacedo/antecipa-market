@@ -1,0 +1,18 @@
+syntax = "proto3";
+
+package company.partner.event.v1;
+
+import "company/partner/event/v1/types.proto";
+import "google/protobuf/timestamp.proto";
+
+message CapabilityRolloutChanged {
+  string capability_id = 1;
+  string partner_id = 2;
+  string operation = 3;
+  string asset_type = 4;
+  Environment environment = 5;
+  int32 version = 6;
+  RolloutMode mode = 7;
+  int32 percentage = 8;
+  google.protobuf.Timestamp at = 9;
+}

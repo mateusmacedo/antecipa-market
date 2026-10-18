@@ -1,0 +1,147 @@
+{
+  "format_version": "1",
+  "identity": {
+    "fixture": "partner/event/v1/capability-suspended",
+    "contract": {
+      "package": "company.partner.event.v1",
+      "message": "CapabilitySuspended"
+    },
+    "type": "com.company.partner.capability-suspended.v1",
+    "dataschema": "type.googleapis.com/company.partner.event.v1.CapabilitySuspended"
+  },
+  "covers": {
+    "profile_major": "1",
+    "contract_major": "v1"
+  },
+  "cases": [
+    {
+      "name": "all-conditionals-present",
+      "doc": "Caminho típico com os três atributos condicionais presentes (aggregateversion, tenantid, tracestate).",
+      "envelope": {
+        "aggregateversion": "7",
+        "causationid": "evt-0001",
+        "correlationid": "corr-0001",
+        "datacontenttype": "application/protobuf",
+        "dataschema": "type.googleapis.com/company.partner.event.v1.CapabilitySuspended",
+        "id": "evt-0001",
+        "partitionkey": "c-42",
+        "source": "urn:dmpf:reference-partner",
+        "specversion": "1.0",
+        "subject": "cap-1001",
+        "tenantid": "tenant-a",
+        "time": "2026-09-02T12:00:00Z",
+        "traceparent": "00-0af7651916cd43dd8448eb211c80319c-b7ad6b7169203331-01",
+        "tracestate": "vendor=1",
+        "type": "com.company.partner.capability-suspended.v1"
+      },
+      "payload": {
+        "asset_type": "duplicata",
+        "at": "2026-09-02T12:00:00Z",
+        "capability_id": "cap-1001",
+        "environment": "ENVIRONMENT_PRODUCTION",
+        "operation": "register_effect",
+        "partner_id": "prt-1001",
+        "reason": "incident under analysis",
+        "trigger": "SUSPENSION_TRIGGER_MANUAL",
+        "version": "1"
+      },
+      "payload_bytes_hex": "0a086361702d3130303112087072742d313030311a0f72656769737465725f65666665637422096475706c6963617461280430013a17696e636964656e7420756e64657220616e616c7973697340014a0608c09fe0d406",
+      "payload_hash": "140a05110f8879301a82102197b7d1bd51447ff70c9b4f8633e4e9e78a4e3f5b"
+    },
+    {
+      "name": "all-conditionals-absent",
+      "doc": "Os três condicionais ausentes: nenhum entra no mapa de atributos (ENV-12, sem valor de preenchimento).",
+      "envelope": {
+        "causationid": "evt-0001",
+        "correlationid": "corr-0001",
+        "datacontenttype": "application/protobuf",
+        "dataschema": "type.googleapis.com/company.partner.event.v1.CapabilitySuspended",
+        "id": "evt-0002",
+        "partitionkey": "c-42",
+        "source": "urn:dmpf:reference-partner",
+        "specversion": "1.0",
+        "subject": "cap-1001",
+        "time": "2026-09-02T12:00:00Z",
+        "traceparent": "00-0af7651916cd43dd8448eb211c80319c-b7ad6b7169203331-01",
+        "type": "com.company.partner.capability-suspended.v1"
+      },
+      "payload": {
+        "asset_type": "cdca",
+        "at": "2026-09-02T12:00:01Z",
+        "capability_id": "cap-1002",
+        "environment": "ENVIRONMENT_HOMOLOGATION",
+        "operation": "register_effect",
+        "partner_id": "prt-1001",
+        "reason": "schema of the response changed",
+        "trigger": "SUSPENSION_TRIGGER_SCHEMA_MISMATCH",
+        "version": "2"
+      },
+      "payload_bytes_hex": "0a086361702d3130303212087072742d313030311a0f72656769737465725f656666656374220463646361280330023a1e736368656d61206f662074686520726573706f6e7365206368616e67656440024a0608c19fe0d406",
+      "payload_hash": "c29ab6f0cff0a9b2a48cf79ebef883c2f61f7ab1f9bdc1c0013bd5da28b71681"
+    }
+  ],
+  "discriminators": [
+    {
+      "name": "unknown-field",
+      "doc": "Bytes canônicos mais um campo de número 99 (varint 42) que o contrato não conhece: a desserialização o preserva (PTB-10) e o hash o cobre (ENV-17).",
+      "envelope": {
+        "causationid": "evt-0001",
+        "correlationid": "corr-0001",
+        "datacontenttype": "application/protobuf",
+        "dataschema": "type.googleapis.com/company.partner.event.v1.CapabilitySuspended",
+        "id": "evt-2001",
+        "partitionkey": "c-42",
+        "source": "urn:dmpf:reference-partner",
+        "specversion": "1.0",
+        "subject": "cap-1001",
+        "time": "2026-09-02T12:00:00Z",
+        "traceparent": "00-0af7651916cd43dd8448eb211c80319c-b7ad6b7169203331-01",
+        "type": "com.company.partner.capability-suspended.v1"
+      },
+      "payload": {
+        "asset_type": "duplicata",
+        "at": "2026-09-02T12:00:02Z",
+        "capability_id": "cap-2001",
+        "environment": "ENVIRONMENT_INTEGRATION",
+        "operation": "query_assets",
+        "partner_id": "prt-2001",
+        "reason": "partner offboarding",
+        "trigger": "SUSPENSION_TRIGGER_OFFBOARDING",
+        "version": "1"
+      },
+      "payload_bytes_hex": "0a086361702d3230303112087072742d323030311a0c71756572795f61737365747322096475706c6963617461280230013a13706172746e6572206f6666626f617264696e6740034a0608c29fe0d40698062a",
+      "payload_hash": "71772ed64a32fc13917b63f1a7e07b64d4ff4d295bf0f425397c0dfaae4cf86f"
+    },
+    {
+      "name": "non-canonical-field-order",
+      "doc": "Campos em ordem decrescente de número, o instante como sub-mensagem: decodifica no mesmo valor, mas o hash é o dos bytes transportados e difere do hash de uma reserialização (ENV-18). Campo repetido fica vazio e booleano fica falso, porque o codificador não canônico do kit cobre só strings, inteiros, enums e mensagens.",
+      "envelope": {
+        "causationid": "evt-0001",
+        "correlationid": "corr-0001",
+        "datacontenttype": "application/protobuf",
+        "dataschema": "type.googleapis.com/company.partner.event.v1.CapabilitySuspended",
+        "id": "evt-2002",
+        "partitionkey": "c-42",
+        "source": "urn:dmpf:reference-partner",
+        "specversion": "1.0",
+        "subject": "cap-1001",
+        "time": "2026-09-02T12:00:00Z",
+        "traceparent": "00-0af7651916cd43dd8448eb211c80319c-b7ad6b7169203331-01",
+        "type": "com.company.partner.capability-suspended.v1"
+      },
+      "payload": {
+        "asset_type": "cpr",
+        "at": "2026-09-02T12:00:03.123456789Z",
+        "capability_id": "cap-2002",
+        "environment": "ENVIRONMENT_DEVELOPMENT",
+        "operation": "query_assets",
+        "partner_id": "prt-2001",
+        "reason": "maintenance window",
+        "trigger": "SUSPENSION_TRIGGER_MANUAL",
+        "version": "3"
+      },
+      "payload_bytes_hex": "4a0b08c39fe0d40610959aef3a40013a126d61696e74656e616e63652077696e646f773003280122036370721a0c71756572795f61737365747312087072742d323030310a086361702d32303032",
+      "payload_hash": "1528483da45a9f857bfebe5a91104de3fa57b519267c83cbef33296cb0009067"
+    }
+  ]
+}

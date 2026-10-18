@@ -1,0 +1,179 @@
+{
+  "format_version": "1",
+  "identity": {
+    "fixture": "partner/event/v1/partner-registered",
+    "contract": {
+      "package": "company.partner.event.v1",
+      "message": "PartnerRegistered"
+    },
+    "type": "com.company.partner.partner-registered.v1",
+    "dataschema": "type.googleapis.com/company.partner.event.v1.PartnerRegistered"
+  },
+  "covers": {
+    "profile_major": "1",
+    "contract_major": "v1"
+  },
+  "cases": [
+    {
+      "name": "all-conditionals-present",
+      "doc": "Caminho típico com os três atributos condicionais presentes (aggregateversion, tenantid, tracestate).",
+      "envelope": {
+        "aggregateversion": "7",
+        "causationid": "evt-0001",
+        "correlationid": "corr-0001",
+        "datacontenttype": "application/protobuf",
+        "dataschema": "type.googleapis.com/company.partner.event.v1.PartnerRegistered",
+        "id": "evt-0001",
+        "partitionkey": "c-42",
+        "source": "urn:dmpf:reference-partner",
+        "specversion": "1.0",
+        "subject": "prt-1001",
+        "tenantid": "tenant-a",
+        "time": "2026-09-02T12:00:00Z",
+        "traceparent": "00-0af7651916cd43dd8448eb211c80319c-b7ad6b7169203331-01",
+        "tracestate": "vendor=1",
+        "type": "com.company.partner.partner-registered.v1"
+      },
+      "payload": {
+        "at": "2026-09-02T12:00:00Z",
+        "organization_id": "org-1001",
+        "partner_id": "prt-1001",
+        "role": "PARTNER_ROLE_FUNDER"
+      },
+      "payload_bytes_hex": "0a087072742d3130303112086f72672d313030311801220608c09fe0d406",
+      "payload_hash": "30e22b5fe33a0fe78914e17abe6a37c97f9d19b805099b046d4d7ea7b055a5f0"
+    },
+    {
+      "name": "all-conditionals-absent",
+      "doc": "Os três condicionais ausentes: nenhum entra no mapa de atributos (ENV-12, sem valor de preenchimento).",
+      "envelope": {
+        "causationid": "evt-0001",
+        "correlationid": "corr-0001",
+        "datacontenttype": "application/protobuf",
+        "dataschema": "type.googleapis.com/company.partner.event.v1.PartnerRegistered",
+        "id": "evt-0002",
+        "partitionkey": "c-42",
+        "source": "urn:dmpf:reference-partner",
+        "specversion": "1.0",
+        "subject": "prt-1001",
+        "time": "2026-09-02T12:00:00Z",
+        "traceparent": "00-0af7651916cd43dd8448eb211c80319c-b7ad6b7169203331-01",
+        "type": "com.company.partner.partner-registered.v1"
+      },
+      "payload": {
+        "at": "2026-09-02T12:00:01Z",
+        "organization_id": "org-1002",
+        "partner_id": "prt-1002",
+        "role": "PARTNER_ROLE_BOOKKEEPER"
+      },
+      "payload_bytes_hex": "0a087072742d3130303212086f72672d313030321802220608c19fe0d406",
+      "payload_hash": "136be980776658209eb3c542e0894ab9ff50769d74962ab2eef16c4aee735f49"
+    },
+    {
+      "name": "enum-coverage-1",
+      "doc": "Caso empacotado que cobre o valor PARTNER_ROLE_DEPOSITORY do campo role, que os quatro casos da fixture enxuta não alcançam.",
+      "envelope": {
+        "causationid": "evt-0001",
+        "correlationid": "corr-0001",
+        "datacontenttype": "application/protobuf",
+        "dataschema": "type.googleapis.com/company.partner.event.v1.PartnerRegistered",
+        "id": "evt-0003",
+        "partitionkey": "c-42",
+        "source": "urn:dmpf:reference-partner",
+        "specversion": "1.0",
+        "subject": "prt-1001",
+        "time": "2026-09-02T12:00:00Z",
+        "traceparent": "00-0af7651916cd43dd8448eb211c80319c-b7ad6b7169203331-01",
+        "type": "com.company.partner.partner-registered.v1"
+      },
+      "payload": {
+        "at": "2026-09-02T12:00:04Z",
+        "organization_id": "org-3001",
+        "partner_id": "prt-3001",
+        "role": "PARTNER_ROLE_DEPOSITORY"
+      },
+      "payload_bytes_hex": "0a087072742d3330303112086f72672d333030311804220608c49fe0d406",
+      "payload_hash": "a85d4f8cefa30f7abea04384e2798e597d6cc3c25ac121ad53e48cc20595a992"
+    },
+    {
+      "name": "enum-coverage-2",
+      "doc": "Caso empacotado que cobre o valor PARTNER_ROLE_SETTLEMENT_INSTITUTION do campo role, que os quatro casos da fixture enxuta não alcançam.",
+      "envelope": {
+        "causationid": "evt-0001",
+        "correlationid": "corr-0001",
+        "datacontenttype": "application/protobuf",
+        "dataschema": "type.googleapis.com/company.partner.event.v1.PartnerRegistered",
+        "id": "evt-0004",
+        "partitionkey": "c-42",
+        "source": "urn:dmpf:reference-partner",
+        "specversion": "1.0",
+        "subject": "prt-1001",
+        "time": "2026-09-02T12:00:00Z",
+        "traceparent": "00-0af7651916cd43dd8448eb211c80319c-b7ad6b7169203331-01",
+        "type": "com.company.partner.partner-registered.v1"
+      },
+      "payload": {
+        "at": "2026-09-02T12:00:05Z",
+        "organization_id": "org-3001",
+        "partner_id": "prt-3002",
+        "role": "PARTNER_ROLE_SETTLEMENT_INSTITUTION"
+      },
+      "payload_bytes_hex": "0a087072742d3330303212086f72672d333030311806220608c59fe0d406",
+      "payload_hash": "73cfdbea3ef2dfe14aa652268af02f21c3d964723a7cd6afb103ec00ceb6d369"
+    }
+  ],
+  "discriminators": [
+    {
+      "name": "unknown-field",
+      "doc": "Bytes canônicos mais um campo de número 99 (varint 42) que o contrato não conhece: a desserialização o preserva (PTB-10) e o hash o cobre (ENV-17).",
+      "envelope": {
+        "causationid": "evt-0001",
+        "correlationid": "corr-0001",
+        "datacontenttype": "application/protobuf",
+        "dataschema": "type.googleapis.com/company.partner.event.v1.PartnerRegistered",
+        "id": "evt-2001",
+        "partitionkey": "c-42",
+        "source": "urn:dmpf:reference-partner",
+        "specversion": "1.0",
+        "subject": "prt-1001",
+        "time": "2026-09-02T12:00:00Z",
+        "traceparent": "00-0af7651916cd43dd8448eb211c80319c-b7ad6b7169203331-01",
+        "type": "com.company.partner.partner-registered.v1"
+      },
+      "payload": {
+        "at": "2026-09-02T12:00:02Z",
+        "organization_id": "org-2001",
+        "partner_id": "prt-2001",
+        "role": "PARTNER_ROLE_REGISTRY"
+      },
+      "payload_bytes_hex": "0a087072742d3230303112086f72672d323030311803220608c29fe0d40698062a",
+      "payload_hash": "a680f1f1220924857b6cd8f92e395ee473ddab4477d544a2f88a95935a73d926"
+    },
+    {
+      "name": "non-canonical-field-order",
+      "doc": "Campos em ordem decrescente de número, o instante como sub-mensagem: decodifica no mesmo valor, mas o hash é o dos bytes transportados e difere do hash de uma reserialização (ENV-18). Campo repetido fica vazio e booleano fica falso, porque o codificador não canônico do kit cobre só strings, inteiros, enums e mensagens.",
+      "envelope": {
+        "causationid": "evt-0001",
+        "correlationid": "corr-0001",
+        "datacontenttype": "application/protobuf",
+        "dataschema": "type.googleapis.com/company.partner.event.v1.PartnerRegistered",
+        "id": "evt-2002",
+        "partitionkey": "c-42",
+        "source": "urn:dmpf:reference-partner",
+        "specversion": "1.0",
+        "subject": "prt-1001",
+        "time": "2026-09-02T12:00:00Z",
+        "traceparent": "00-0af7651916cd43dd8448eb211c80319c-b7ad6b7169203331-01",
+        "type": "com.company.partner.partner-registered.v1"
+      },
+      "payload": {
+        "at": "2026-09-02T12:00:03.123456789Z",
+        "organization_id": "org-2002",
+        "partner_id": "prt-2002",
+        "role": "PARTNER_ROLE_DATA_PROVIDER"
+      },
+      "payload_bytes_hex": "220b08c39fe0d40610959aef3a180512086f72672d323030320a087072742d32303032",
+      "payload_hash": "b2e07a230c7ab921fd9a673e05222d4df9da63f99859ca35a36d0d52f1530114"
+    }
+  ]
+}

@@ -1,0 +1,171 @@
+{
+  "format_version": "1",
+  "identity": {
+    "fixture": "partner/event/v1/partner-product-defined",
+    "contract": {
+      "package": "company.partner.event.v1",
+      "message": "PartnerProductDefined"
+    },
+    "type": "com.company.partner.partner-product-defined.v1",
+    "dataschema": "type.googleapis.com/company.partner.event.v1.PartnerProductDefined"
+  },
+  "covers": {
+    "profile_major": "1",
+    "contract_major": "v1"
+  },
+  "cases": [
+    {
+      "name": "all-conditionals-present",
+      "doc": "Caminho típico com os três atributos condicionais presentes (aggregateversion, tenantid, tracestate).",
+      "envelope": {
+        "aggregateversion": "7",
+        "causationid": "evt-0001",
+        "correlationid": "corr-0001",
+        "datacontenttype": "application/protobuf",
+        "dataschema": "type.googleapis.com/company.partner.event.v1.PartnerProductDefined",
+        "id": "evt-0001",
+        "partitionkey": "c-42",
+        "source": "urn:dmpf:reference-partner",
+        "specversion": "1.0",
+        "subject": "prd-1001",
+        "tenantid": "tenant-a",
+        "time": "2026-09-02T12:00:00Z",
+        "traceparent": "00-0af7651916cd43dd8448eb211c80319c-b7ad6b7169203331-01",
+        "tracestate": "vendor=1",
+        "type": "com.company.partner.partner-product-defined.v1"
+      },
+      "payload": {
+        "agreement_id": "agr-1001",
+        "asset_types": "duplicata,cdca",
+        "at": "2026-09-02T12:00:00Z",
+        "code": "ANT-30",
+        "currency": "BRL",
+        "max_amount_minor": "50000000",
+        "max_term_days": "180",
+        "min_amount_minor": "100000",
+        "min_term_days": "7",
+        "partner_id": "prt-1001",
+        "product_id": "prd-1001",
+        "regions": "SP,RJ",
+        "valid_from": "2026-09-01T00:00:00Z",
+        "valid_until": "2027-09-01T00:00:00Z",
+        "version": "1"
+      },
+      "payload_bytes_hex": "0a087072642d3130303112087072742d313030311a086167722d313030312206414e542d3330280132060880abd8d4063a06088092dde30642096475706c69636174614204636463614a0253504a02524a520342524c58a08d066080e1eb17680770b4017a0608c09fe0d406",
+      "payload_hash": "ada59b697c4d04a0a968300e5b3edb5d3ed27a8ca38139d68a7ae5f5ef94dd3a"
+    },
+    {
+      "name": "all-conditionals-absent",
+      "doc": "Os três condicionais ausentes: nenhum entra no mapa de atributos (ENV-12, sem valor de preenchimento).",
+      "envelope": {
+        "causationid": "evt-0001",
+        "correlationid": "corr-0001",
+        "datacontenttype": "application/protobuf",
+        "dataschema": "type.googleapis.com/company.partner.event.v1.PartnerProductDefined",
+        "id": "evt-0002",
+        "partitionkey": "c-42",
+        "source": "urn:dmpf:reference-partner",
+        "specversion": "1.0",
+        "subject": "prd-1001",
+        "time": "2026-09-02T12:00:00Z",
+        "traceparent": "00-0af7651916cd43dd8448eb211c80319c-b7ad6b7169203331-01",
+        "type": "com.company.partner.partner-product-defined.v1"
+      },
+      "payload": {
+        "agreement_id": "agr-1001",
+        "asset_types": "duplicata",
+        "at": "2026-09-02T12:00:01Z",
+        "code": "ANT-90",
+        "currency": "BRL",
+        "max_amount_minor": "100000000",
+        "max_term_days": "360",
+        "min_amount_minor": "500000",
+        "min_term_days": "30",
+        "partner_id": "prt-1001",
+        "product_id": "prd-1002",
+        "regions": "BR",
+        "valid_from": "2026-09-01T00:00:00Z",
+        "valid_until": "",
+        "version": "1"
+      },
+      "payload_bytes_hex": "0a087072642d3130303212087072742d313030311a086167722d313030312206414e542d3930280132060880abd8d40642096475706c69636174614a024252520342524c58a0c21e6080c2d72f681e70e8027a0608c19fe0d406",
+      "payload_hash": "56f33c2efa63af491b38deed1f8b9cea4dcd85664e55835eb79c219423c5d8ed"
+    }
+  ],
+  "discriminators": [
+    {
+      "name": "unknown-field",
+      "doc": "Bytes canônicos mais um campo de número 99 (varint 42) que o contrato não conhece: a desserialização o preserva (PTB-10) e o hash o cobre (ENV-17).",
+      "envelope": {
+        "causationid": "evt-0001",
+        "correlationid": "corr-0001",
+        "datacontenttype": "application/protobuf",
+        "dataschema": "type.googleapis.com/company.partner.event.v1.PartnerProductDefined",
+        "id": "evt-2001",
+        "partitionkey": "c-42",
+        "source": "urn:dmpf:reference-partner",
+        "specversion": "1.0",
+        "subject": "prd-1001",
+        "time": "2026-09-02T12:00:00Z",
+        "traceparent": "00-0af7651916cd43dd8448eb211c80319c-b7ad6b7169203331-01",
+        "type": "com.company.partner.partner-product-defined.v1"
+      },
+      "payload": {
+        "agreement_id": "agr-2001",
+        "asset_types": "cpr",
+        "at": "2026-09-02T12:00:02Z",
+        "code": "CPR-60",
+        "currency": "BRL",
+        "max_amount_minor": "20000000",
+        "max_term_days": "120",
+        "min_amount_minor": "1000000",
+        "min_term_days": "15",
+        "partner_id": "prt-2001",
+        "product_id": "prd-2001",
+        "regions": "MT,GO",
+        "valid_from": "2026-09-01T00:00:00Z",
+        "valid_until": "2027-03-01T00:00:00Z",
+        "version": "1"
+      },
+      "payload_bytes_hex": "0a087072642d3230303112087072742d323030311a086167722d3230303122064350522d3630280132060880abd8d4063a060880ea92dc0642036370724a024d544a02474f520342524c58c0843d6080dac409680f70787a0608c29fe0d40698062a",
+      "payload_hash": "f328013c7b314342535e84a955f72205541805461636fb149eea88be8c34f1a5"
+    },
+    {
+      "name": "non-canonical-field-order",
+      "doc": "Campos em ordem decrescente de número, o instante como sub-mensagem: decodifica no mesmo valor, mas o hash é o dos bytes transportados e difere do hash de uma reserialização (ENV-18). Campo repetido fica vazio e booleano fica falso, porque o codificador não canônico do kit cobre só strings, inteiros, enums e mensagens.",
+      "envelope": {
+        "causationid": "evt-0001",
+        "correlationid": "corr-0001",
+        "datacontenttype": "application/protobuf",
+        "dataschema": "type.googleapis.com/company.partner.event.v1.PartnerProductDefined",
+        "id": "evt-2002",
+        "partitionkey": "c-42",
+        "source": "urn:dmpf:reference-partner",
+        "specversion": "1.0",
+        "subject": "prd-1001",
+        "time": "2026-09-02T12:00:00Z",
+        "traceparent": "00-0af7651916cd43dd8448eb211c80319c-b7ad6b7169203331-01",
+        "type": "com.company.partner.partner-product-defined.v1"
+      },
+      "payload": {
+        "agreement_id": "agr-2001",
+        "asset_types": "",
+        "at": "2026-09-02T12:00:03.123456789Z",
+        "code": "CPR-90",
+        "currency": "BRL",
+        "max_amount_minor": "40000000",
+        "max_term_days": "90",
+        "min_amount_minor": "2000000",
+        "min_term_days": "30",
+        "partner_id": "prt-2001",
+        "product_id": "prd-2002",
+        "regions": "",
+        "valid_from": "2026-09-01T00:00:00Z",
+        "valid_until": "2027-09-01T00:00:00Z",
+        "version": "1"
+      },
+      "payload_bytes_hex": "7a0b08c39fe0d40610959aef3a705a681e6080b489135880897a520342524c3a06088092dde30632060880abd8d406280122064350522d39301a086167722d3230303112087072742d323030310a087072642d32303032",
+      "payload_hash": "0ef4fded518ac6e3466fe11c815c7b553e4958ca52d4052c7b43446adbdb978e"
+    }
+  ]
+}

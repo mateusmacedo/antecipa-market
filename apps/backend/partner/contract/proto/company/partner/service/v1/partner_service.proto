@@ -1,0 +1,627 @@
+syntax = "proto3";
+
+package company.partner.service.v1;
+
+service PartnerService {
+  rpc RegisterPartner(RegisterPartnerRequest) returns (RegisterPartnerResponse);
+  rpc ChangePartnerStage(ChangePartnerStageRequest) returns (ChangePartnerStageResponse);
+  rpc RegisterAgreement(RegisterAgreementRequest) returns (RegisterAgreementResponse);
+  rpc ActivateAgreement(ActivateAgreementRequest) returns (ActivateAgreementResponse);
+  rpc DeclareCapability(DeclareCapabilityRequest) returns (DeclareCapabilityResponse);
+  rpc RecordHomologation(RecordHomologationRequest) returns (RecordHomologationResponse);
+  rpc EnableCapability(EnableCapabilityRequest) returns (EnableCapabilityResponse);
+  rpc SuspendCapability(SuspendCapabilityRequest) returns (SuspendCapabilityResponse);
+  rpc ChangeRollout(ChangeRolloutRequest) returns (ChangeRolloutResponse);
+  rpc DefineProduct(DefineProductRequest) returns (DefineProductResponse);
+  rpc RetireProduct(RetireProductRequest) returns (RetireProductResponse);
+  rpc RegisterIntegrationProfile(RegisterIntegrationProfileRequest) returns (RegisterIntegrationProfileResponse);
+  rpc RaiseCertificateExpiryAlert(RaiseCertificateExpiryAlertRequest) returns (RaiseCertificateExpiryAlertResponse);
+  rpc DefineOperationalPolicy(DefineOperationalPolicyRequest) returns (DefineOperationalPolicyResponse);
+  rpc FindPartner(FindPartnerRequest) returns (FindPartnerResponse);
+  rpc FindPartnersByOrganization(FindPartnersByOrganizationRequest) returns (FindPartnersByOrganizationResponse);
+  rpc FindAgreementsByPartner(FindAgreementsByPartnerRequest) returns (FindAgreementsByPartnerResponse);
+  rpc FindCapabilitiesByPartner(FindCapabilitiesByPartnerRequest) returns (FindCapabilitiesByPartnerResponse);
+  rpc FindEffectiveCapability(FindEffectiveCapabilityRequest) returns (FindEffectiveCapabilityResponse);
+  rpc FindEligiblePartners(FindEligiblePartnersRequest) returns (FindEligiblePartnersResponse);
+  rpc FindProductsByPartner(FindProductsByPartnerRequest) returns (FindProductsByPartnerResponse);
+  rpc FindIntegrationProfile(FindIntegrationProfileRequest) returns (FindIntegrationProfileResponse);
+  rpc FindOperationalPolicy(FindOperationalPolicyRequest) returns (FindOperationalPolicyResponse);
+  rpc FindCertificatesExpiring(FindCertificatesExpiringRequest) returns (FindCertificatesExpiringResponse);
+}
+
+message Rejection {
+  string code = 1;
+  string message = 2;
+}
+
+message RegisterPartnerRequest {
+  string partner_id = 1;
+  string organization_id = 2;
+  PartnerRole role = 3;
+}
+
+message RegisterPartnerResponse {
+  oneof result {
+    RegisteredPartner registered = 1;
+    Rejection rejection = 2;
+  }
+}
+
+message RegisteredPartner {
+  string partner_id = 1;
+}
+
+message ChangePartnerStageRequest {
+  string partner_id = 1;
+  PartnerStatus target = 2;
+  string reason = 3;
+}
+
+message ChangePartnerStageResponse {
+  oneof result {
+    ChangedPartnerStage changed = 1;
+    Rejection rejection = 2;
+  }
+}
+
+message ChangedPartnerStage {
+  string partner_id = 1;
+  PartnerStatus status = 2;
+}
+
+message RegisterAgreementRequest {
+  string agreement_id = 1;
+  string partner_id = 2;
+  int64 valid_from = 3;
+  int64 valid_until = 4;
+  string instrument_template_id = 5;
+  string supersedes_id = 6;
+}
+
+message RegisterAgreementResponse {
+  oneof result {
+    RegisteredAgreement registered = 1;
+    Rejection rejection = 2;
+  }
+}
+
+message RegisteredAgreement {
+  string agreement_id = 1;
+}
+
+message ActivateAgreementRequest {
+  string agreement_id = 1;
+  string contract_evidence_id = 2;
+  repeated string satisfied_criteria = 3;
+  bool regulatory_check_applicable = 4;
+}
+
+message ActivateAgreementResponse {
+  oneof result {
+    ActivatedAgreement activated = 1;
+    Rejection rejection = 2;
+  }
+}
+
+message ActivatedAgreement {
+  string agreement_id = 1;
+}
+
+message DeclareCapabilityRequest {
+  string capability_id = 1;
+  string partner_id = 2;
+  string operation = 3;
+  string asset_type = 4;
+  Environment environment = 5;
+  bool is_write = 6;
+  bool state_query_supported = 7;
+  string restriction_note = 8;
+  bool callback_applicable = 9;
+  string supersedes_id = 10;
+}
+
+message DeclareCapabilityResponse {
+  oneof result {
+    DeclaredCapability declared = 1;
+    Rejection rejection = 2;
+  }
+}
+
+message DeclaredCapability {
+  string capability_id = 1;
+}
+
+message HomologationResult {
+  string criterion_id = 1;
+  bool passed = 2;
+  string evidence_id = 3;
+}
+
+message RecordHomologationRequest {
+  string capability_id = 1;
+  repeated HomologationResult results = 2;
+}
+
+message RecordHomologationResponse {
+  oneof result {
+    RecordedHomologation recorded = 1;
+    Rejection rejection = 2;
+  }
+}
+
+message RecordedHomologation {
+  string capability_id = 1;
+  CapabilityStatus status = 2;
+}
+
+message EnableCapabilityRequest {
+  string capability_id = 1;
+}
+
+message EnableCapabilityResponse {
+  oneof result {
+    EnabledCapability enabled = 1;
+    Rejection rejection = 2;
+  }
+}
+
+message EnabledCapability {
+  string capability_id = 1;
+}
+
+message SuspendCapabilityRequest {
+  string capability_id = 1;
+  string reason = 2;
+}
+
+message SuspendCapabilityResponse {
+  oneof result {
+    SuspendedCapability suspended = 1;
+    Rejection rejection = 2;
+  }
+}
+
+message SuspendedCapability {
+  string capability_id = 1;
+}
+
+message ChangeRolloutRequest {
+  string capability_id = 1;
+  RolloutMode mode = 2;
+  repeated string allowlist_tenant_ids = 3;
+  int32 percentage = 4;
+  repeated string excluded_tenant_ids = 5;
+}
+
+message ChangeRolloutResponse {
+  oneof result {
+    ChangedRollout changed = 1;
+    Rejection rejection = 2;
+  }
+}
+
+message ChangedRollout {
+  string capability_id = 1;
+}
+
+message DefineProductRequest {
+  string product_id = 1;
+  string partner_id = 2;
+  string agreement_id = 3;
+  string code = 4;
+  string name = 5;
+  repeated string asset_types = 6;
+  repeated string regions = 7;
+  string currency = 8;
+  int64 min_amount_minor = 9;
+  int64 max_amount_minor = 10;
+  int32 min_term_days = 11;
+  int32 max_term_days = 12;
+  repeated string required_check_ids = 13;
+  int64 valid_from = 14;
+  int64 valid_until = 15;
+  string supersedes_id = 16;
+}
+
+message DefineProductResponse {
+  oneof result {
+    DefinedProduct defined = 1;
+    Rejection rejection = 2;
+  }
+}
+
+message DefinedProduct {
+  string product_id = 1;
+}
+
+message RetireProductRequest {
+  string product_id = 1;
+  ProductRetireReason reason = 2;
+}
+
+message RetireProductResponse {
+  oneof result {
+    RetiredProduct retired = 1;
+    Rejection rejection = 2;
+  }
+}
+
+message RetiredProduct {
+  string product_id = 1;
+}
+
+message RegisterIntegrationProfileRequest {
+  string profile_id = 1;
+  string partner_id = 2;
+  Environment environment = 3;
+  IntegrationChangeKind change_kind = 4;
+  repeated string protocols = 5;
+  string endpoint = 6;
+  string schema_version = 7;
+  string secret_ref = 8;
+  string certificate_ref = 9;
+  int64 certificate_expires_at = 10;
+  int64 effective_from = 11;
+  string supersedes_id = 12;
+}
+
+message RegisterIntegrationProfileResponse {
+  oneof result {
+    RegisteredIntegrationProfile registered = 1;
+    Rejection rejection = 2;
+  }
+}
+
+message RegisteredIntegrationProfile {
+  string profile_id = 1;
+}
+
+message RaiseCertificateExpiryAlertRequest {
+  string profile_id = 1;
+  int32 threshold_days = 2;
+}
+
+message RaiseCertificateExpiryAlertResponse {
+  oneof result {
+    RaisedCertificateExpiryAlert raised = 1;
+    Rejection rejection = 2;
+  }
+}
+
+message RaisedCertificateExpiryAlert {
+  string profile_id = 1;
+}
+
+message DefineOperationalPolicyRequest {
+  string policy_id = 1;
+  string partner_id = 2;
+  int64 effective_from = 3;
+  string supersedes_id = 4;
+  int32 rate_limit_per_minute = 5;
+  repeated string business_days = 6;
+  string cutoff_time = 7;
+  string processing_window = 8;
+  string sla_ref = 9;
+  string fallback = 10;
+  string support_contact = 11;
+  string incident_contact = 12;
+}
+
+message DefineOperationalPolicyResponse {
+  oneof result {
+    DefinedOperationalPolicy defined = 1;
+    Rejection rejection = 2;
+  }
+}
+
+message DefinedOperationalPolicy {
+  string policy_id = 1;
+}
+
+message FindPartnerRequest {
+  string partner_id = 1;
+}
+
+message FindPartnerResponse {
+  Partner partner = 1;
+}
+
+message FindPartnersByOrganizationRequest {
+  string organization_id = 1;
+}
+
+message FindPartnersByOrganizationResponse {
+  repeated Partner partners = 1;
+}
+
+message FindAgreementsByPartnerRequest {
+  string partner_id = 1;
+}
+
+message FindAgreementsByPartnerResponse {
+  repeated PartnerAgreement agreements = 1;
+}
+
+message FindCapabilitiesByPartnerRequest {
+  string partner_id = 1;
+  Environment environment = 2;
+  CapabilityStatus status = 3;
+}
+
+message FindCapabilitiesByPartnerResponse {
+  repeated Capability capabilities = 1;
+}
+
+message FindEffectiveCapabilityRequest {
+  string partner_id = 1;
+  string operation = 2;
+  string asset_type = 3;
+  Environment environment = 4;
+  string tenant_id = 5;
+  int64 as_of = 6;
+  string product_id = 7;
+  optional int64 amount_minor = 8;
+  optional int32 term_days = 9;
+}
+
+message FindEffectiveCapabilityResponse {
+  bool allowed = 1;
+  EffectiveCapabilityCondition failed_condition = 2;
+}
+
+message FindEligiblePartnersRequest {
+  string asset_type = 1;
+  string operation = 2;
+  Environment environment = 3;
+  string tenant_id = 4;
+  int64 amount_minor = 5;
+  int32 term_days = 6;
+  string region = 7;
+  int64 as_of = 8;
+}
+
+message FindEligiblePartnersResponse {
+  repeated Partner partners = 1;
+}
+
+message FindProductsByPartnerRequest {
+  string partner_id = 1;
+  int64 as_of = 2;
+}
+
+message FindProductsByPartnerResponse {
+  repeated FinancialProduct products = 1;
+}
+
+message FindIntegrationProfileRequest {
+  string partner_id = 1;
+  Environment environment = 2;
+  int64 as_of = 3;
+}
+
+message FindIntegrationProfileResponse {
+  IntegrationProfile profile = 1;
+}
+
+message FindOperationalPolicyRequest {
+  string partner_id = 1;
+  int64 as_of = 2;
+}
+
+message FindOperationalPolicyResponse {
+  OperationalPolicy policy = 1;
+}
+
+message FindCertificatesExpiringRequest {
+  Environment environment = 1;
+  int64 expires_before = 2;
+}
+
+message FindCertificatesExpiringResponse {
+  repeated IntegrationProfile profiles = 1;
+}
+
+message Partner {
+  string partner_id = 1;
+  string organization_id = 2;
+  PartnerRole role = 3;
+  PartnerStatus status = 4;
+  int64 registered_at = 5;
+  int64 stage_changed_at = 6;
+  string stage_reason = 7;
+  int64 offboarding_started_at = 8;
+}
+
+message PartnerAgreement {
+  string agreement_id = 1;
+  string partner_id = 2;
+  int32 version = 3;
+  string supersedes_id = 4;
+  AgreementStatus status = 5;
+  int64 valid_from = 6;
+  int64 valid_until = 7;
+  string contract_evidence_id = 8;
+  string instrument_template_id = 9;
+  int64 activated_at = 10;
+}
+
+message CriterionResult {
+  string criterion_id = 1;
+  bool passed = 2;
+  string evidence_id = 3;
+  int64 recorded_at = 4;
+}
+
+message Rollout {
+  RolloutMode mode = 1;
+  repeated string allowlist_tenant_ids = 2;
+  int32 percentage = 3;
+  repeated string excluded_tenant_ids = 4;
+}
+
+message Suspension {
+  string reason = 1;
+  SuspensionTrigger trigger = 2;
+  int64 suspended_at = 3;
+}
+
+message Capability {
+  string capability_id = 1;
+  string partner_id = 2;
+  string operation = 3;
+  string asset_type = 4;
+  Environment environment = 5;
+  int32 version = 6;
+  string supersedes_id = 7;
+  bool is_write = 8;
+  bool state_query_supported = 9;
+  string restriction_note = 10;
+  bool callback_applicable = 11;
+  CapabilityStatus status = 12;
+  repeated CriterionResult homologation = 13;
+  Rollout rollout = 14;
+  Suspension suspension = 15;
+  int64 enabled_at = 16;
+}
+
+message FinancialProduct {
+  string product_id = 1;
+  string partner_id = 2;
+  string agreement_id = 3;
+  string code = 4;
+  string name = 5;
+  int32 version = 6;
+  string supersedes_id = 7;
+  ProductStatus status = 8;
+  int64 valid_from = 9;
+  int64 valid_until = 10;
+  repeated string asset_types = 11;
+  repeated string regions = 12;
+  string currency = 13;
+  int64 min_amount_minor = 14;
+  int64 max_amount_minor = 15;
+  int32 min_term_days = 16;
+  int32 max_term_days = 17;
+  repeated string required_check_ids = 18;
+}
+
+message IntegrationProfile {
+  string profile_id = 1;
+  string partner_id = 2;
+  Environment environment = 3;
+  int32 version = 4;
+  string supersedes_id = 5;
+  IntegrationChangeKind change_kind = 6;
+  repeated string protocols = 7;
+  string endpoint = 8;
+  string schema_version = 9;
+  string secret_ref = 10;
+  string certificate_ref = 11;
+  int64 certificate_expires_at = 12;
+  int64 effective_from = 13;
+  int32 last_alerted_threshold_days = 14;
+}
+
+message OperationalPolicy {
+  string policy_id = 1;
+  string partner_id = 2;
+  int32 version = 3;
+  string supersedes_id = 4;
+  int64 effective_from = 5;
+  int32 rate_limit_per_minute = 6;
+  repeated string business_days = 7;
+  string cutoff_time = 8;
+  string processing_window = 9;
+  string sla_ref = 10;
+  string fallback = 11;
+  string support_contact = 12;
+  string incident_contact = 13;
+}
+
+enum Environment {
+  ENVIRONMENT_UNSPECIFIED = 0;
+  ENVIRONMENT_DEVELOPMENT = 1;
+  ENVIRONMENT_INTEGRATION = 2;
+  ENVIRONMENT_HOMOLOGATION = 3;
+  ENVIRONMENT_PRODUCTION = 4;
+}
+
+enum PartnerRole {
+  PARTNER_ROLE_UNSPECIFIED = 0;
+  PARTNER_ROLE_FUNDER = 1;
+  PARTNER_ROLE_BOOKKEEPER = 2;
+  PARTNER_ROLE_REGISTRY = 3;
+  PARTNER_ROLE_DEPOSITORY = 4;
+  PARTNER_ROLE_DATA_PROVIDER = 5;
+  PARTNER_ROLE_SETTLEMENT_INSTITUTION = 6;
+}
+
+enum PartnerStatus {
+  PARTNER_STATUS_UNSPECIFIED = 0;
+  PARTNER_STATUS_PROSPECT = 1;
+  PARTNER_STATUS_CONTRACTING = 2;
+  PARTNER_STATUS_INTEGRATING = 3;
+  PARTNER_STATUS_HOMOLOGATING = 4;
+  PARTNER_STATUS_ACTIVE = 5;
+  PARTNER_STATUS_SUSPENDED = 6;
+  PARTNER_STATUS_OFFBOARDING = 7;
+}
+
+enum AgreementStatus {
+  AGREEMENT_STATUS_UNSPECIFIED = 0;
+  AGREEMENT_STATUS_DRAFT = 1;
+  AGREEMENT_STATUS_ACTIVE = 2;
+}
+
+enum CapabilityStatus {
+  CAPABILITY_STATUS_UNSPECIFIED = 0;
+  CAPABILITY_STATUS_DECLARED = 1;
+  CAPABILITY_STATUS_HOMOLOGATED = 2;
+  CAPABILITY_STATUS_ENABLED = 3;
+  CAPABILITY_STATUS_SUSPENDED = 4;
+}
+
+enum SuspensionTrigger {
+  SUSPENSION_TRIGGER_UNSPECIFIED = 0;
+  SUSPENSION_TRIGGER_MANUAL = 1;
+  SUSPENSION_TRIGGER_SCHEMA_MISMATCH = 2;
+  SUSPENSION_TRIGGER_OFFBOARDING = 3;
+}
+
+enum RolloutMode {
+  ROLLOUT_MODE_UNSPECIFIED = 0;
+  ROLLOUT_MODE_DISABLED = 1;
+  ROLLOUT_MODE_ALLOWLIST = 2;
+  ROLLOUT_MODE_PERCENTAGE = 3;
+  ROLLOUT_MODE_ENABLED = 4;
+}
+
+enum ProductStatus {
+  PRODUCT_STATUS_UNSPECIFIED = 0;
+  PRODUCT_STATUS_ACTIVE = 1;
+  PRODUCT_STATUS_RETIRED = 2;
+}
+
+enum ProductRetireReason {
+  PRODUCT_RETIRE_REASON_UNSPECIFIED = 0;
+  PRODUCT_RETIRE_REASON_EXPIRED = 1;
+  PRODUCT_RETIRE_REASON_WITHDRAWN = 2;
+}
+
+enum IntegrationChangeKind {
+  INTEGRATION_CHANGE_KIND_UNSPECIFIED = 0;
+  INTEGRATION_CHANGE_KIND_INITIAL = 1;
+  INTEGRATION_CHANGE_KIND_ANNOUNCED = 2;
+  INTEGRATION_CHANGE_KIND_UNANNOUNCED = 3;
+}
+
+enum EffectiveCapabilityCondition {
+  EFFECTIVE_CAPABILITY_CONDITION_UNSPECIFIED = 0;
+  EFFECTIVE_CAPABILITY_CONDITION_CAPABILITY_NOT_FOUND = 1;
+  EFFECTIVE_CAPABILITY_CONDITION_PARTNER_NOT_ACTIVE = 2;
+  EFFECTIVE_CAPABILITY_CONDITION_AGREEMENT_NOT_EFFECTIVE = 3;
+  EFFECTIVE_CAPABILITY_CONDITION_CAPABILITY_NOT_ENABLED = 4;
+  EFFECTIVE_CAPABILITY_CONDITION_PRODUCT_NOT_EFFECTIVE = 5;
+  EFFECTIVE_CAPABILITY_CONDITION_NOT_IN_ROLLOUT = 6;
+  EFFECTIVE_CAPABILITY_CONDITION_PARAMETERS_INCOMPATIBLE = 7;
+}
