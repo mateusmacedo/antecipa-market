@@ -1,0 +1,18 @@
+syntax = "proto3";
+
+package company.partner.event.v1;
+
+import "company/partner/event/v1/types.proto";
+import "google/protobuf/timestamp.proto";
+
+message CapabilitySuspended {
+  string capability_id = 1;
+  string partner_id = 2;
+  string operation = 3;
+  string asset_type = 4;
+  Environment environment = 5;
+  int32 version = 6;
+  string reason = 7;
+  SuspensionTrigger trigger = 8;
+  google.protobuf.Timestamp at = 9;
+}

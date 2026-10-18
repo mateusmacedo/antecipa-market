@@ -1,0 +1,460 @@
+{
+  "format_version": "1",
+  "identity": {
+    "context": "partner",
+    "aggregate": "partner"
+  },
+  "cases": [
+    {
+      "name": "register-accepted",
+      "doc": "Ramo Accepted de Register: organização com kind funder registrada como financiador; o parceiro nasce prospect e PartnerRegistered é emitido.",
+      "state_before": {
+        "partner": "prt-1",
+        "organization": "",
+        "role": "",
+        "status": "",
+        "registered_at": "0",
+        "stage_changed_at": "0",
+        "stage_reason": "",
+        "offboarding_started_at": "0"
+      },
+      "command": {
+        "upr": "register",
+        "organization": "org-1",
+        "role": "funder",
+        "organization_found": "true",
+        "organization_kinds": "funder",
+        "already_registered": "false",
+        "at": "1755432000000000000"
+      },
+      "expected": {
+        "branch": "accepted",
+        "response": {
+          "partner": "prt-1"
+        },
+        "events": [
+          {
+            "name": "partner-management.partner.registered",
+            "fields": {
+              "partner": "prt-1",
+              "organization": "org-1",
+              "role": "funder",
+              "at": "1755432000000000000"
+            }
+          }
+        ],
+        "state_after": {
+          "partner": "prt-1",
+          "organization": "org-1",
+          "role": "funder",
+          "status": "prospect",
+          "registered_at": "1755432000000000000",
+          "stage_changed_at": "1755432000000000000",
+          "stage_reason": "",
+          "offboarding_started_at": "0"
+        }
+      }
+    },
+    {
+      "name": "register-organization-not-found",
+      "doc": "Ramo Rejected de Register: o diretório de organizações não conhece a organização.",
+      "state_before": {
+        "partner": "prt-1",
+        "organization": "",
+        "role": "",
+        "status": "",
+        "registered_at": "0",
+        "stage_changed_at": "0",
+        "stage_reason": "",
+        "offboarding_started_at": "0"
+      },
+      "command": {
+        "upr": "register",
+        "organization": "org-1",
+        "role": "funder",
+        "organization_found": "false",
+        "organization_kinds": "",
+        "already_registered": "false",
+        "at": "1755432000000000000"
+      },
+      "expected": {
+        "branch": "rejected",
+        "rejection": {
+          "code": "partner-management/partner/organization-not-found",
+          "message": "organization must exist in identity",
+          "details": {
+            "organization": "org-1"
+          }
+        },
+        "events": []
+      }
+    },
+    {
+      "name": "register-organization-kind-mismatch",
+      "doc": "Ramo Rejected de Register: registradora pedida para uma organização que só tem o kind funder.",
+      "state_before": {
+        "partner": "prt-1",
+        "organization": "",
+        "role": "",
+        "status": "",
+        "registered_at": "0",
+        "stage_changed_at": "0",
+        "stage_reason": "",
+        "offboarding_started_at": "0"
+      },
+      "command": {
+        "upr": "register",
+        "organization": "org-1",
+        "role": "registry",
+        "organization_found": "true",
+        "organization_kinds": "funder",
+        "already_registered": "false",
+        "at": "1755432000000000000"
+      },
+      "expected": {
+        "branch": "rejected",
+        "rejection": {
+          "code": "partner-management/partner/organization-kind-mismatch",
+          "message": "organization kinds must admit the role",
+          "details": {
+            "organization": "org-1",
+            "role": "registry"
+          }
+        },
+        "events": []
+      }
+    },
+    {
+      "name": "register-already-registered",
+      "doc": "Ramo Rejected de Register: a organização já tem parceiro com o mesmo papel no tenant.",
+      "state_before": {
+        "partner": "prt-1",
+        "organization": "",
+        "role": "",
+        "status": "",
+        "registered_at": "0",
+        "stage_changed_at": "0",
+        "stage_reason": "",
+        "offboarding_started_at": "0"
+      },
+      "command": {
+        "upr": "register",
+        "organization": "org-1",
+        "role": "funder",
+        "organization_found": "true",
+        "organization_kinds": "funder",
+        "already_registered": "true",
+        "at": "1755432000000000000"
+      },
+      "expected": {
+        "branch": "rejected",
+        "rejection": {
+          "code": "partner-management/partner/already-registered",
+          "message": "organization already registered under the role",
+          "details": {
+            "organization": "org-1",
+            "role": "funder"
+          }
+        },
+        "events": []
+      }
+    },
+    {
+      "name": "change-stage-contracting",
+      "doc": "Ramo Accepted de ChangeStage: prospect avança um estágio, para contracting, sem evento.",
+      "state_before": {
+        "partner": "prt-1",
+        "organization": "org-1",
+        "role": "funder",
+        "status": "prospect",
+        "registered_at": "1755432000000000000",
+        "stage_changed_at": "1755432000000000000",
+        "stage_reason": "",
+        "offboarding_started_at": "0"
+      },
+      "command": {
+        "upr": "change-stage",
+        "target": "contracting",
+        "reason": "",
+        "has_effective_agreement": "false",
+        "has_enabled_capability": "false",
+        "at": "1755518400000000000"
+      },
+      "expected": {
+        "branch": "accepted",
+        "response": {
+          "partner": "prt-1",
+          "status": "contracting"
+        },
+        "events": [],
+        "state_after": {
+          "partner": "prt-1",
+          "organization": "org-1",
+          "role": "funder",
+          "status": "contracting",
+          "registered_at": "1755432000000000000",
+          "stage_changed_at": "1755518400000000000",
+          "stage_reason": "",
+          "offboarding_started_at": "0"
+        }
+      }
+    },
+    {
+      "name": "change-stage-active-from-homologating",
+      "doc": "Ramo Accepted de ChangeStage: homologating vai a active com acordo ativo e vigente e capacidade enabled, sem evento.",
+      "state_before": {
+        "partner": "prt-1",
+        "organization": "org-1",
+        "role": "funder",
+        "status": "homologating",
+        "registered_at": "1755432000000000000",
+        "stage_changed_at": "1755432000000000000",
+        "stage_reason": "",
+        "offboarding_started_at": "0"
+      },
+      "command": {
+        "upr": "change-stage",
+        "target": "active",
+        "reason": "",
+        "has_effective_agreement": "true",
+        "has_enabled_capability": "true",
+        "at": "1755518400000000000"
+      },
+      "expected": {
+        "branch": "accepted",
+        "response": {
+          "partner": "prt-1",
+          "status": "active"
+        },
+        "events": [],
+        "state_after": {
+          "partner": "prt-1",
+          "organization": "org-1",
+          "role": "funder",
+          "status": "active",
+          "registered_at": "1755432000000000000",
+          "stage_changed_at": "1755518400000000000",
+          "stage_reason": "",
+          "offboarding_started_at": "0"
+        }
+      }
+    },
+    {
+      "name": "change-stage-suspended",
+      "doc": "Ramo Accepted de ChangeStage: active vai a suspended guardando o motivo, sem evento.",
+      "state_before": {
+        "partner": "prt-1",
+        "organization": "org-1",
+        "role": "funder",
+        "status": "active",
+        "registered_at": "1755432000000000000",
+        "stage_changed_at": "1755432000000000000",
+        "stage_reason": "",
+        "offboarding_started_at": "0"
+      },
+      "command": {
+        "upr": "change-stage",
+        "target": "suspended",
+        "reason": "contract under review",
+        "has_effective_agreement": "false",
+        "has_enabled_capability": "false",
+        "at": "1755518400000000000"
+      },
+      "expected": {
+        "branch": "accepted",
+        "response": {
+          "partner": "prt-1",
+          "status": "suspended"
+        },
+        "events": [],
+        "state_after": {
+          "partner": "prt-1",
+          "organization": "org-1",
+          "role": "funder",
+          "status": "suspended",
+          "registered_at": "1755432000000000000",
+          "stage_changed_at": "1755518400000000000",
+          "stage_reason": "contract under review",
+          "offboarding_started_at": "0"
+        }
+      }
+    },
+    {
+      "name": "change-stage-offboarding",
+      "doc": "Ramo Accepted de ChangeStage: active entra em offboarding e PartnerOffboardingStarted é emitido com o motivo.",
+      "state_before": {
+        "partner": "prt-1",
+        "organization": "org-1",
+        "role": "funder",
+        "status": "active",
+        "registered_at": "1755432000000000000",
+        "stage_changed_at": "1755432000000000000",
+        "stage_reason": "",
+        "offboarding_started_at": "0"
+      },
+      "command": {
+        "upr": "change-stage",
+        "target": "offboarding",
+        "reason": "contract terminated",
+        "has_effective_agreement": "false",
+        "has_enabled_capability": "false",
+        "at": "1755518400000000000"
+      },
+      "expected": {
+        "branch": "accepted",
+        "response": {
+          "partner": "prt-1",
+          "status": "offboarding"
+        },
+        "events": [
+          {
+            "name": "partner-management.partner.offboarding-started",
+            "fields": {
+              "partner": "prt-1",
+              "organization": "org-1",
+              "reason": "contract terminated",
+              "at": "1755518400000000000"
+            }
+          }
+        ],
+        "state_after": {
+          "partner": "prt-1",
+          "organization": "org-1",
+          "role": "funder",
+          "status": "offboarding",
+          "registered_at": "1755432000000000000",
+          "stage_changed_at": "1755518400000000000",
+          "stage_reason": "contract terminated",
+          "offboarding_started_at": "1755518400000000000"
+        }
+      }
+    },
+    {
+      "name": "change-stage-invalid-transition",
+      "doc": "Ramo Rejected de ChangeStage: prospect não salta para active, mesmo com os fatos presentes.",
+      "state_before": {
+        "partner": "prt-1",
+        "organization": "org-1",
+        "role": "funder",
+        "status": "prospect",
+        "registered_at": "1755432000000000000",
+        "stage_changed_at": "1755432000000000000",
+        "stage_reason": "",
+        "offboarding_started_at": "0"
+      },
+      "command": {
+        "upr": "change-stage",
+        "target": "active",
+        "reason": "",
+        "has_effective_agreement": "true",
+        "has_enabled_capability": "true",
+        "at": "1755518400000000000"
+      },
+      "expected": {
+        "branch": "rejected",
+        "rejection": {
+          "code": "partner-management/partner/invalid-stage-transition",
+          "message": "the stage transition is not allowed",
+          "details": {
+            "from": "prospect",
+            "to": "active"
+          }
+        },
+        "events": []
+      }
+    },
+    {
+      "name": "change-stage-reason-empty",
+      "doc": "Ramo Rejected de ChangeStage: suspensão com motivo só de espaços.",
+      "state_before": {
+        "partner": "prt-1",
+        "organization": "org-1",
+        "role": "funder",
+        "status": "active",
+        "registered_at": "1755432000000000000",
+        "stage_changed_at": "1755432000000000000",
+        "stage_reason": "",
+        "offboarding_started_at": "0"
+      },
+      "command": {
+        "upr": "change-stage",
+        "target": "suspended",
+        "reason": "  ",
+        "has_effective_agreement": "false",
+        "has_enabled_capability": "false",
+        "at": "1755518400000000000"
+      },
+      "expected": {
+        "branch": "rejected",
+        "rejection": {
+          "code": "partner-management/partner/reason-empty",
+          "message": "reason must not be empty when suspending or offboarding",
+          "details": {}
+        },
+        "events": []
+      }
+    },
+    {
+      "name": "change-stage-agreement-not-active",
+      "doc": "Ramo Rejected de ChangeStage: suspended não volta a active sem acordo ativo e vigente.",
+      "state_before": {
+        "partner": "prt-1",
+        "organization": "org-1",
+        "role": "funder",
+        "status": "suspended",
+        "registered_at": "1755432000000000000",
+        "stage_changed_at": "1755432000000000000",
+        "stage_reason": "contract under review",
+        "offboarding_started_at": "0"
+      },
+      "command": {
+        "upr": "change-stage",
+        "target": "active",
+        "reason": "",
+        "has_effective_agreement": "false",
+        "has_enabled_capability": "true",
+        "at": "1755518400000000000"
+      },
+      "expected": {
+        "branch": "rejected",
+        "rejection": {
+          "code": "partner-management/partner/agreement-not-active",
+          "message": "an active agreement in effect is required",
+          "details": {}
+        },
+        "events": []
+      }
+    },
+    {
+      "name": "change-stage-no-enabled-capability",
+      "doc": "Ramo Rejected de ChangeStage: homologating não vai a active sem capacidade enabled.",
+      "state_before": {
+        "partner": "prt-1",
+        "organization": "org-1",
+        "role": "funder",
+        "status": "homologating",
+        "registered_at": "1755432000000000000",
+        "stage_changed_at": "1755432000000000000",
+        "stage_reason": "",
+        "offboarding_started_at": "0"
+      },
+      "command": {
+        "upr": "change-stage",
+        "target": "active",
+        "reason": "",
+        "has_effective_agreement": "true",
+        "has_enabled_capability": "false",
+        "at": "1755518400000000000"
+      },
+      "expected": {
+        "branch": "rejected",
+        "rejection": {
+          "code": "partner-management/partner/no-enabled-capability",
+          "message": "at least one enabled capability is required",
+          "details": {}
+        },
+        "events": []
+      }
+    }
+  ]
+}

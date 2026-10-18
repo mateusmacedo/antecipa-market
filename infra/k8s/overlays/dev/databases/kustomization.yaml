@@ -11,5 +11,7 @@ secretGenerator:
   - name: databases
     literals:
       - identity=identity-dev
+      - partner=partner-dev
+      - partner_migrator=partner-migrator-dev
     options:
       disableNameSuffixHash: true

@@ -1,0 +1,12 @@
+syntax = "proto3";
+
+package company.partner.event.v1;
+
+import "google/protobuf/timestamp.proto";
+
+message PartnerOffboardingStarted {
+  string partner_id = 1;
+  string organization_id = 2;
+  string reason = 3;
+  google.protobuf.Timestamp at = 4;
+}

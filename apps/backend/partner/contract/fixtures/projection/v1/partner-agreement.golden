@@ -1,0 +1,413 @@
+{
+  "format_version": "1",
+  "identity": {
+    "context": "partner",
+    "aggregate": "partner-agreement"
+  },
+  "cases": [
+    {
+      "name": "register-first-version",
+      "doc": "Ramo Accepted de Register: a série vazia recebe a version 1 em draft, sem evento.",
+      "state_before": {
+        "agreement": "agr-1",
+        "partner": "",
+        "version": "0",
+        "supersedes": "",
+        "status": "",
+        "valid_from": "0",
+        "valid_until": "0",
+        "contract_evidence": "",
+        "instrument_template": "",
+        "activated_at": "0"
+      },
+      "command": {
+        "upr": "register",
+        "partner": "prt-1",
+        "valid_from": "1755432000000000000",
+        "valid_until": "1786968000000000000",
+        "instrument_template": "tpl-1",
+        "supersedes": "",
+        "head": "",
+        "head_version": "0",
+        "at": "1755432000000000000"
+      },
+      "expected": {
+        "branch": "accepted",
+        "response": {
+          "agreement": "agr-1"
+        },
+        "events": [],
+        "state_after": {
+          "agreement": "agr-1",
+          "partner": "prt-1",
+          "version": "1",
+          "supersedes": "",
+          "status": "draft",
+          "valid_from": "1755432000000000000",
+          "valid_until": "1786968000000000000",
+          "contract_evidence": "",
+          "instrument_template": "tpl-1",
+          "activated_at": "0"
+        }
+      }
+    },
+    {
+      "name": "register-successor",
+      "doc": "Ramo Accepted de Register: supersedes aponta a última versão da série e o acordo nasce na version seguinte, de vigência indeterminada.",
+      "state_before": {
+        "agreement": "agr-2",
+        "partner": "",
+        "version": "0",
+        "supersedes": "",
+        "status": "",
+        "valid_from": "0",
+        "valid_until": "0",
+        "contract_evidence": "",
+        "instrument_template": "",
+        "activated_at": "0"
+      },
+      "command": {
+        "upr": "register",
+        "partner": "prt-1",
+        "valid_from": "1755432000000000000",
+        "valid_until": "0",
+        "instrument_template": "",
+        "supersedes": "agr-1",
+        "head": "agr-1",
+        "head_version": "1",
+        "at": "1755432000000000000"
+      },
+      "expected": {
+        "branch": "accepted",
+        "response": {
+          "agreement": "agr-2"
+        },
+        "events": [],
+        "state_after": {
+          "agreement": "agr-2",
+          "partner": "prt-1",
+          "version": "2",
+          "supersedes": "agr-1",
+          "status": "draft",
+          "valid_from": "1755432000000000000",
+          "valid_until": "0",
+          "contract_evidence": "",
+          "instrument_template": "",
+          "activated_at": "0"
+        }
+      }
+    },
+    {
+      "name": "register-validity-invalid",
+      "doc": "Ramo Rejected de Register: validUntil igual a validFrom.",
+      "state_before": {
+        "agreement": "agr-1",
+        "partner": "",
+        "version": "0",
+        "supersedes": "",
+        "status": "",
+        "valid_from": "0",
+        "valid_until": "0",
+        "contract_evidence": "",
+        "instrument_template": "",
+        "activated_at": "0"
+      },
+      "command": {
+        "upr": "register",
+        "partner": "prt-1",
+        "valid_from": "1755432000000000000",
+        "valid_until": "1755432000000000000",
+        "instrument_template": "tpl-1",
+        "supersedes": "",
+        "head": "",
+        "head_version": "0",
+        "at": "1755432000000000000"
+      },
+      "expected": {
+        "branch": "rejected",
+        "rejection": {
+          "code": "partner-management/partner-agreement/validity-invalid",
+          "message": "valid until must be after valid from",
+          "details": {}
+        },
+        "events": []
+      }
+    },
+    {
+      "name": "register-supersedes-invalid",
+      "doc": "Ramo Rejected de Register: supersedes aponta a version 1 de uma série cuja última é a version 2.",
+      "state_before": {
+        "agreement": "agr-3",
+        "partner": "",
+        "version": "0",
+        "supersedes": "",
+        "status": "",
+        "valid_from": "0",
+        "valid_until": "0",
+        "contract_evidence": "",
+        "instrument_template": "",
+        "activated_at": "0"
+      },
+      "command": {
+        "upr": "register",
+        "partner": "prt-1",
+        "valid_from": "1755432000000000000",
+        "valid_until": "1786968000000000000",
+        "instrument_template": "tpl-1",
+        "supersedes": "agr-1",
+        "head": "agr-2",
+        "head_version": "2",
+        "at": "1755432000000000000"
+      },
+      "expected": {
+        "branch": "rejected",
+        "rejection": {
+          "code": "partner-management/partner-agreement/supersedes-invalid",
+          "message": "supersedes must name the last version of the series of the partner, and a series holds one first version",
+          "details": {
+            "supersedes": "agr-1"
+          }
+        },
+        "events": []
+      }
+    },
+    {
+      "name": "activate-accepted",
+      "doc": "Ramo Accepted de Activate: acordo draft com a evidência e os critérios H14, H15, H17 e H18 vai a active e PartnerAgreementActivated é emitido.",
+      "state_before": {
+        "agreement": "agr-1",
+        "partner": "prt-1",
+        "version": "1",
+        "supersedes": "",
+        "status": "draft",
+        "valid_from": "1755432000000000000",
+        "valid_until": "1786968000000000000",
+        "contract_evidence": "",
+        "instrument_template": "tpl-1",
+        "activated_at": "0"
+      },
+      "command": {
+        "upr": "activate",
+        "contract_evidence": "evd-1",
+        "satisfied_criteria": "H14,H15,H17,H18",
+        "regulatory_check_applicable": "false",
+        "at": "1755518400000000000"
+      },
+      "expected": {
+        "branch": "accepted",
+        "response": {
+          "agreement": "agr-1"
+        },
+        "events": [
+          {
+            "name": "partner-management.partner-agreement.activated",
+            "fields": {
+              "agreement": "agr-1",
+              "partner": "prt-1",
+              "version": "1",
+              "valid_from": "1755432000000000000",
+              "valid_until": "1786968000000000000",
+              "at": "1755518400000000000"
+            }
+          }
+        ],
+        "state_after": {
+          "agreement": "agr-1",
+          "partner": "prt-1",
+          "version": "1",
+          "supersedes": "",
+          "status": "active",
+          "valid_from": "1755432000000000000",
+          "valid_until": "1786968000000000000",
+          "contract_evidence": "evd-1",
+          "instrument_template": "tpl-1",
+          "activated_at": "1755518400000000000"
+        }
+      }
+    },
+    {
+      "name": "activate-with-regulatory-check",
+      "doc": "Ramo Accepted de Activate: com a verificação regulatória aplicável, H16 completa os critérios, em qualquer ordem.",
+      "state_before": {
+        "agreement": "agr-1",
+        "partner": "prt-1",
+        "version": "1",
+        "supersedes": "",
+        "status": "draft",
+        "valid_from": "1755432000000000000",
+        "valid_until": "1786968000000000000",
+        "contract_evidence": "",
+        "instrument_template": "tpl-1",
+        "activated_at": "0"
+      },
+      "command": {
+        "upr": "activate",
+        "contract_evidence": "evd-1",
+        "satisfied_criteria": "H18,H17,H16,H15,H14",
+        "regulatory_check_applicable": "true",
+        "at": "1755518400000000000"
+      },
+      "expected": {
+        "branch": "accepted",
+        "response": {
+          "agreement": "agr-1"
+        },
+        "events": [
+          {
+            "name": "partner-management.partner-agreement.activated",
+            "fields": {
+              "agreement": "agr-1",
+              "partner": "prt-1",
+              "version": "1",
+              "valid_from": "1755432000000000000",
+              "valid_until": "1786968000000000000",
+              "at": "1755518400000000000"
+            }
+          }
+        ],
+        "state_after": {
+          "agreement": "agr-1",
+          "partner": "prt-1",
+          "version": "1",
+          "supersedes": "",
+          "status": "active",
+          "valid_from": "1755432000000000000",
+          "valid_until": "1786968000000000000",
+          "contract_evidence": "evd-1",
+          "instrument_template": "tpl-1",
+          "activated_at": "1755518400000000000"
+        }
+      }
+    },
+    {
+      "name": "activate-not-draft",
+      "doc": "Ramo Rejected de Activate: o acordo já está active.",
+      "state_before": {
+        "agreement": "agr-1",
+        "partner": "prt-1",
+        "version": "1",
+        "supersedes": "",
+        "status": "active",
+        "valid_from": "1755432000000000000",
+        "valid_until": "1786968000000000000",
+        "contract_evidence": "evd-0",
+        "instrument_template": "tpl-1",
+        "activated_at": "1755432000000000000"
+      },
+      "command": {
+        "upr": "activate",
+        "contract_evidence": "evd-1",
+        "satisfied_criteria": "H14,H15,H17,H18",
+        "regulatory_check_applicable": "false",
+        "at": "1755518400000000000"
+      },
+      "expected": {
+        "branch": "rejected",
+        "rejection": {
+          "code": "partner-management/partner-agreement/not-draft",
+          "message": "only a draft agreement is activated",
+          "details": {}
+        },
+        "events": []
+      }
+    },
+    {
+      "name": "activate-contract-evidence-missing",
+      "doc": "Ramo Rejected de Activate: sem a evidência do contrato assinado (H13).",
+      "state_before": {
+        "agreement": "agr-1",
+        "partner": "prt-1",
+        "version": "1",
+        "supersedes": "",
+        "status": "draft",
+        "valid_from": "1755432000000000000",
+        "valid_until": "1786968000000000000",
+        "contract_evidence": "",
+        "instrument_template": "tpl-1",
+        "activated_at": "0"
+      },
+      "command": {
+        "upr": "activate",
+        "contract_evidence": "",
+        "satisfied_criteria": "H14,H15,H17,H18",
+        "regulatory_check_applicable": "false",
+        "at": "1755518400000000000"
+      },
+      "expected": {
+        "branch": "rejected",
+        "rejection": {
+          "code": "partner-management/partner-agreement/contract-evidence-missing",
+          "message": "the evidence of the signed contract is required",
+          "details": {}
+        },
+        "events": []
+      }
+    },
+    {
+      "name": "activate-contractual-criteria-incomplete",
+      "doc": "Ramo Rejected de Activate: H17 falta em satisfiedCriteria.",
+      "state_before": {
+        "agreement": "agr-1",
+        "partner": "prt-1",
+        "version": "1",
+        "supersedes": "",
+        "status": "draft",
+        "valid_from": "1755432000000000000",
+        "valid_until": "1786968000000000000",
+        "contract_evidence": "",
+        "instrument_template": "tpl-1",
+        "activated_at": "0"
+      },
+      "command": {
+        "upr": "activate",
+        "contract_evidence": "evd-1",
+        "satisfied_criteria": "H14,H15,H18",
+        "regulatory_check_applicable": "false",
+        "at": "1755518400000000000"
+      },
+      "expected": {
+        "branch": "rejected",
+        "rejection": {
+          "code": "partner-management/partner-agreement/contractual-criteria-incomplete",
+          "message": "the contractual criteria must all be satisfied",
+          "details": {
+            "missing": "H17"
+          }
+        },
+        "events": []
+      }
+    },
+    {
+      "name": "activate-validity-invalid",
+      "doc": "Ramo Rejected de Activate: a vigência termina no instante da ativação.",
+      "state_before": {
+        "agreement": "agr-1",
+        "partner": "prt-1",
+        "version": "1",
+        "supersedes": "",
+        "status": "draft",
+        "valid_from": "1755432000000000000",
+        "valid_until": "1786968000000000000",
+        "contract_evidence": "",
+        "instrument_template": "tpl-1",
+        "activated_at": "0"
+      },
+      "command": {
+        "upr": "activate",
+        "contract_evidence": "evd-1",
+        "satisfied_criteria": "H14,H15,H17,H18",
+        "regulatory_check_applicable": "false",
+        "at": "1786968000000000000"
+      },
+      "expected": {
+        "branch": "rejected",
+        "rejection": {
+          "code": "partner-management/partner-agreement/validity-invalid",
+          "message": "valid until must be after the activation",
+          "details": {}
+        },
+        "events": []
+      }
+    }
+  ]
+}

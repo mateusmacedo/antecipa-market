@@ -1,0 +1,73 @@
+{
+  "schema": "dmpf/units@1",
+  "units": [
+    {
+      "id": "partner-management/domain",
+      "block": "domain",
+      "bounded_context": "partner-management",
+      "public_integration_surface": false,
+      "include": ["github.com/mateusmacedo/antecipa-market/apps/backend/partner/domain"]
+    },
+    {
+      "id": "partner-management/ports",
+      "block": "port",
+      "bounded_context": "partner-management",
+      "public_integration_surface": false,
+      "include": ["github.com/mateusmacedo/antecipa-market/apps/backend/partner/ports"]
+    },
+    {
+      "id": "partner-management/application",
+      "block": "application",
+      "bounded_context": "partner-management",
+      "public_integration_surface": false,
+      "include": ["github.com/mateusmacedo/antecipa-market/apps/backend/partner/application"]
+    },
+    {
+      "id": "partner-management/provider-postgres",
+      "block": "provider",
+      "bounded_context": "partner-management",
+      "public_integration_surface": false,
+      "include": ["github.com/mateusmacedo/antecipa-market/apps/backend/partner/provider"]
+    },
+    {
+      "id": "partner-management/app",
+      "block": "app",
+      "bounded_context": "partner-management",
+      "public_integration_surface": false,
+      "include": [
+        "github.com/mateusmacedo/antecipa-market/apps/backend/partner/app",
+        "github.com/mateusmacedo/antecipa-market/apps/backend/partner/app/rpc",
+        "github.com/mateusmacedo/antecipa-market/apps/backend/partner/cmd"
+      ]
+    },
+    {
+      "id": "partner-management/appkit",
+      "block": "app",
+      "bounded_context": "partner-management",
+      "public_integration_surface": false,
+      "include": ["github.com/mateusmacedo/antecipa-market/apps/backend/partner/appkit"]
+    },
+    {
+      "id": "partner-management/distkit",
+      "block": "app",
+      "bounded_context": "partner-management",
+      "public_integration_surface": false,
+      "include": ["github.com/mateusmacedo/antecipa-market/apps/backend/partner/distkit"]
+    }
+  ],
+  "external": [
+    {
+      "package": "github.com/jackc/pgx/v5",
+      "versions": ">=5.10 <6",
+      "entrypoints": [".", "github.com/jackc/pgx/v5/pgxpool", "github.com/jackc/pgx/v5/pgconn"],
+      "capability": "io.storage"
+    },
+    {
+      "package": "google.golang.org/protobuf",
+      "versions": ">=1.36.12 <2",
+      "entrypoints": ["google.golang.org/protobuf/proto"],
+      "capability": "wire.codec"
+    }
+  ],
+  "exceptions": []
+}

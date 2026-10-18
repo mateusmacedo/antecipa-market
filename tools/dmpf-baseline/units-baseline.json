@@ -1,6 +1,6 @@
 {
   "schema": "dmpf/units-baseline@1",
-  "digest": "sha256:d1f93af19f3b0e02b152fb41b2163fab0c5d228ac00c8e62b172533d34bf0876",
+  "digest": "sha256:f3613b92bff0e3c737cbed58600b8b4e76d98cae4e98006fb651d985c33348a9",
   "entries": [
     {
       "unit": "bff/app",
@@ -88,6 +88,82 @@
         "github.com/mateusmacedo/antecipa-market/apps/backend/identity/contract",
         "github.com/mateusmacedo/antecipa-market/apps/backend/identity/contract/gen/go/company/identity/event/v1",
         "github.com/mateusmacedo/antecipa-market/apps/backend/identity/contract/gen/go/company/identity/service/v1"
+      ]
+    },
+    {
+      "unit": "partner-management/app",
+      "module": "github.com/mateusmacedo/antecipa-market/apps/backend/partner",
+      "block": "app",
+      "bounded_context": "partner-management",
+      "membership": [
+        "github.com/mateusmacedo/antecipa-market/apps/backend/partner/app",
+        "github.com/mateusmacedo/antecipa-market/apps/backend/partner/app/rpc",
+        "github.com/mateusmacedo/antecipa-market/apps/backend/partner/cmd"
+      ]
+    },
+    {
+      "unit": "partner-management/appkit",
+      "module": "github.com/mateusmacedo/antecipa-market/apps/backend/partner",
+      "block": "app",
+      "bounded_context": "partner-management",
+      "membership": [
+        "github.com/mateusmacedo/antecipa-market/apps/backend/partner/appkit"
+      ]
+    },
+    {
+      "unit": "partner-management/application",
+      "module": "github.com/mateusmacedo/antecipa-market/apps/backend/partner",
+      "block": "application",
+      "bounded_context": "partner-management",
+      "membership": [
+        "github.com/mateusmacedo/antecipa-market/apps/backend/partner/application"
+      ]
+    },
+    {
+      "unit": "partner-management/distkit",
+      "module": "github.com/mateusmacedo/antecipa-market/apps/backend/partner",
+      "block": "app",
+      "bounded_context": "partner-management",
+      "membership": [
+        "github.com/mateusmacedo/antecipa-market/apps/backend/partner/distkit"
+      ]
+    },
+    {
+      "unit": "partner-management/domain",
+      "module": "github.com/mateusmacedo/antecipa-market/apps/backend/partner",
+      "block": "domain",
+      "bounded_context": "partner-management",
+      "membership": [
+        "github.com/mateusmacedo/antecipa-market/apps/backend/partner/domain"
+      ]
+    },
+    {
+      "unit": "partner-management/ports",
+      "module": "github.com/mateusmacedo/antecipa-market/apps/backend/partner",
+      "block": "port",
+      "bounded_context": "partner-management",
+      "membership": [
+        "github.com/mateusmacedo/antecipa-market/apps/backend/partner/ports"
+      ]
+    },
+    {
+      "unit": "partner-management/provider-postgres",
+      "module": "github.com/mateusmacedo/antecipa-market/apps/backend/partner",
+      "block": "provider",
+      "bounded_context": "partner-management",
+      "membership": [
+        "github.com/mateusmacedo/antecipa-market/apps/backend/partner/provider"
+      ]
+    },
+    {
+      "unit": "partner-management/contract",
+      "module": "github.com/mateusmacedo/antecipa-market/apps/backend/partner/contract",
+      "block": "contract",
+      "bounded_context": "partner-management",
+      "membership": [
+        "github.com/mateusmacedo/antecipa-market/apps/backend/partner/contract",
+        "github.com/mateusmacedo/antecipa-market/apps/backend/partner/contract/gen/go/company/partner/event/v1",
+        "github.com/mateusmacedo/antecipa-market/apps/backend/partner/contract/gen/go/company/partner/service/v1"
       ]
     }
   ],

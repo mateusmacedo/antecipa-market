@@ -1,0 +1,53 @@
+# Processos do partner na topologia local (ADR-044): api gRPC, que aplica o
+# schema (MIGRATE=true), e relay da própria outbox.
+x-image: &image
+  build:
+    context: ../../../..
+    dockerfile: apps/backend/partner/Dockerfile
+  image: ${PARTNER_IMAGE:-partner:local}
+
+x-env: &env
+  OTEL_SERVICE_NAME: partner
+  PG_DSN: postgres://partner:${PARTNER_PG_PASSWORD:-partner-local}@postgres:5432/partner?sslmode=disable
+
+services:
+  dmpf-partner-api:
+    <<: *image
+    extends:
+      file: ../../../../infra/local/compose/app-base.yml
+      service: dmpf-grpc-api
+    stop_grace_period: 30s
+    environment:
+      <<: *env
+      OTEL_RESOURCE_ATTRIBUTES: ${OTEL_RESOURCE_ATTRIBUTES:-service.version=local,deployment.environment.name=local},service.instance.id=partner-api,dmpf.process.role=api
+      PG_MIGRATE_DSN: postgres://partner_migrator:${PARTNER_PG_MIGRATOR_PASSWORD:-partner-migrator-local}@postgres:5432/partner?sslmode=disable
+      GRPC_TLS_CERT_FILE: /pki/dmpf-partner-api.crt
+      GRPC_TLS_KEY_FILE: /pki/dmpf-partner-api.key
+    depends_on:
+      pki-init:
+        condition: service_completed_successfully
+      postgres-init:
+        condition: service_completed_successfully
+      otel-collector:
+        condition: service_started
+
+  dmpf-partner-relay:
+    <<: *image
+    extends:
+      file: ../../../../infra/local/compose/app-base.yml
+      service: dmpf-kafka-worker
+    stop_grace_period: 30s
+    command: ['--role', 'relay']
+    environment:
+      <<: *env
+      OTEL_RESOURCE_ATTRIBUTES: ${OTEL_RESOURCE_ATTRIBUTES:-service.version=local,deployment.environment.name=local},service.instance.id=partner-relay,dmpf.process.role=relay
+      KAFKA_SASL_USERNAME: partner
+      KAFKA_SASL_PASSWORD: ${KAFKA_PARTNER_PASSWORD:-partner-local}
+      KAFKA_GROUP: partner
+      KAFKA_PARTNER_TOPIC: ${KAFKA_PARTNER_TOPIC:-partner.events}
+      KAFKA_PARTNER_DLQ: ${KAFKA_PARTNER_DLQ:-partner.events.dlq}
+    depends_on:
+      redpanda-init:
+        condition: service_completed_successfully
+      dmpf-partner-api:
+        condition: service_started

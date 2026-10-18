@@ -1,0 +1,55 @@
+package domain
+
+import kernel "github.com/mateusmacedo/dmpf/libs/backend/go/domain"
+
+const (
+	CodePartnerOrganizationNotFound     kernel.Code = "partner-management/partner/organization-not-found"
+	CodePartnerOrganizationKindMismatch kernel.Code = "partner-management/partner/organization-kind-mismatch"
+	CodePartnerAlreadyRegistered        kernel.Code = "partner-management/partner/already-registered"
+	CodePartnerInvalidStageTransition   kernel.Code = "partner-management/partner/invalid-stage-transition"
+	CodePartnerReasonEmpty              kernel.Code = "partner-management/partner/reason-empty"
+	CodePartnerAgreementNotActive       kernel.Code = "partner-management/partner/agreement-not-active"
+	CodePartnerNoEnabledCapability      kernel.Code = "partner-management/partner/no-enabled-capability"
+
+	CodePartnerAgreementValidityInvalid               kernel.Code = "partner-management/partner-agreement/validity-invalid"
+	CodePartnerAgreementSupersedesInvalid             kernel.Code = "partner-management/partner-agreement/supersedes-invalid"
+	CodePartnerAgreementNotDraft                      kernel.Code = "partner-management/partner-agreement/not-draft"
+	CodePartnerAgreementContractEvidenceMissing       kernel.Code = "partner-management/partner-agreement/contract-evidence-missing"
+	CodePartnerAgreementContractualCriteriaIncomplete kernel.Code = "partner-management/partner-agreement/contractual-criteria-incomplete"
+
+	CodeIntegrationProfileEndpointEmpty            kernel.Code = "partner-management/integration-profile/endpoint-empty"
+	CodeIntegrationProfileSecretRefMissing         kernel.Code = "partner-management/integration-profile/secret-ref-missing"
+	CodeIntegrationProfileCertificateExpiryInvalid kernel.Code = "partner-management/integration-profile/certificate-expiry-invalid"
+	CodeIntegrationProfileSupersedesInvalid        kernel.Code = "partner-management/integration-profile/supersedes-invalid"
+	CodeIntegrationProfileInvalidAlertThreshold    kernel.Code = "partner-management/integration-profile/invalid-alert-threshold"
+	CodeIntegrationProfileThresholdNotReached      kernel.Code = "partner-management/integration-profile/threshold-not-reached"
+	CodeIntegrationProfileAlreadyAlerted           kernel.Code = "partner-management/integration-profile/already-alerted"
+
+	CodeOperationalPolicyRateLimitInvalid  kernel.Code = "partner-management/operational-policy/rate-limit-invalid"
+	CodeOperationalPolicyContactsMissing   kernel.Code = "partner-management/operational-policy/contacts-missing"
+	CodeOperationalPolicySupersedesInvalid kernel.Code = "partner-management/operational-policy/supersedes-invalid"
+
+	CodeCapabilityOperationEmpty                  kernel.Code = "partner-management/capability/operation-empty"
+	CodeCapabilityAssetTypeEmpty                  kernel.Code = "partner-management/capability/asset-type-empty"
+	CodeCapabilityStateQueryRestrictionUndeclared kernel.Code = "partner-management/capability/state-query-restriction-undeclared"
+	CodeCapabilitySupersedesInvalid               kernel.Code = "partner-management/capability/supersedes-invalid"
+	CodeCapabilityCriteriaEmpty                   kernel.Code = "partner-management/capability/criteria-empty"
+	CodeCapabilityUnknownCriterion                kernel.Code = "partner-management/capability/unknown-criterion"
+	CodeCapabilityHomologationClosed              kernel.Code = "partner-management/capability/homologation-closed"
+	CodeCapabilityNotHomologated                  kernel.Code = "partner-management/capability/not-homologated"
+	CodeCapabilityRehomologationRequired          kernel.Code = "partner-management/capability/rehomologation-required"
+	CodeCapabilityAgreementNotActive              kernel.Code = "partner-management/capability/agreement-not-active"
+	CodeCapabilityIntegrationProfileMissing       kernel.Code = "partner-management/capability/integration-profile-missing"
+	CodeCapabilityNotEnabled                      kernel.Code = "partner-management/capability/not-enabled"
+	CodeCapabilityReasonEmpty                     kernel.Code = "partner-management/capability/reason-empty"
+	CodeCapabilityPercentageOutOfRange            kernel.Code = "partner-management/capability/percentage-out-of-range"
+	CodeCapabilityAllowlistEmpty                  kernel.Code = "partner-management/capability/allowlist-empty"
+
+	CodeFinancialProductAssetTypesEmpty    kernel.Code = "partner-management/financial-product/asset-types-empty"
+	CodeFinancialProductRangeInvalid       kernel.Code = "partner-management/financial-product/range-invalid"
+	CodeFinancialProductValidityInvalid    kernel.Code = "partner-management/financial-product/validity-invalid"
+	CodeFinancialProductAgreementNotActive kernel.Code = "partner-management/financial-product/agreement-not-active"
+	CodeFinancialProductSupersedesInvalid  kernel.Code = "partner-management/financial-product/supersedes-invalid"
+	CodeFinancialProductNotActive          kernel.Code = "partner-management/financial-product/not-active"
+	CodeFinancialProductNotYetExpired      kernel.Code = "partner-management/financial-product/not-yet-expired"
+)

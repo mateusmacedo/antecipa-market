@@ -1,0 +1,18 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+resources:
+  - ../../base
+
+images:
+  - name: ghcr.io/mateusmacedo/partner
+    newTag: hmg
+
+replicas:
+  - name: partner-api
+    count: 2
+
+patches:
+  - path: configmap-partner-patch.yaml
+  - path: deployment-partner-api-patch.yaml
+  - path: deployment-partner-relay-patch.yaml

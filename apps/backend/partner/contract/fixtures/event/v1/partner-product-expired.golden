@@ -1,0 +1,131 @@
+{
+  "format_version": "1",
+  "identity": {
+    "fixture": "partner/event/v1/partner-product-expired",
+    "contract": {
+      "package": "company.partner.event.v1",
+      "message": "PartnerProductExpired"
+    },
+    "type": "com.company.partner.partner-product-expired.v1",
+    "dataschema": "type.googleapis.com/company.partner.event.v1.PartnerProductExpired"
+  },
+  "covers": {
+    "profile_major": "1",
+    "contract_major": "v1"
+  },
+  "cases": [
+    {
+      "name": "all-conditionals-present",
+      "doc": "Caminho típico com os três atributos condicionais presentes (aggregateversion, tenantid, tracestate).",
+      "envelope": {
+        "aggregateversion": "7",
+        "causationid": "evt-0001",
+        "correlationid": "corr-0001",
+        "datacontenttype": "application/protobuf",
+        "dataschema": "type.googleapis.com/company.partner.event.v1.PartnerProductExpired",
+        "id": "evt-0001",
+        "partitionkey": "c-42",
+        "source": "urn:dmpf:reference-partner",
+        "specversion": "1.0",
+        "subject": "prd-1001",
+        "tenantid": "tenant-a",
+        "time": "2026-09-02T12:00:00Z",
+        "traceparent": "00-0af7651916cd43dd8448eb211c80319c-b7ad6b7169203331-01",
+        "tracestate": "vendor=1",
+        "type": "com.company.partner.partner-product-expired.v1"
+      },
+      "payload": {
+        "at": "2026-09-02T12:00:00Z",
+        "partner_id": "prt-1001",
+        "product_id": "prd-1001",
+        "valid_until": "2026-09-01T00:00:00Z",
+        "version": "1"
+      },
+      "payload_bytes_hex": "0a087072642d3130303112087072742d31303031180122060880abd8d4062a0608c09fe0d406",
+      "payload_hash": "9b2aae80b4187ddce9495eff055381fa33529382f0652d95d2cfe491c40c4a44"
+    },
+    {
+      "name": "all-conditionals-absent",
+      "doc": "Os três condicionais ausentes: nenhum entra no mapa de atributos (ENV-12, sem valor de preenchimento).",
+      "envelope": {
+        "causationid": "evt-0001",
+        "correlationid": "corr-0001",
+        "datacontenttype": "application/protobuf",
+        "dataschema": "type.googleapis.com/company.partner.event.v1.PartnerProductExpired",
+        "id": "evt-0002",
+        "partitionkey": "c-42",
+        "source": "urn:dmpf:reference-partner",
+        "specversion": "1.0",
+        "subject": "prd-1001",
+        "time": "2026-09-02T12:00:00Z",
+        "traceparent": "00-0af7651916cd43dd8448eb211c80319c-b7ad6b7169203331-01",
+        "type": "com.company.partner.partner-product-expired.v1"
+      },
+      "payload": {
+        "at": "2026-09-02T12:00:01Z",
+        "partner_id": "prt-1001",
+        "product_id": "prd-1002",
+        "valid_until": "2026-08-31T23:59:59Z",
+        "version": "2"
+      },
+      "payload_bytes_hex": "0a087072642d3130303212087072742d313030311802220608ffaad8d4062a0608c19fe0d406",
+      "payload_hash": "69312df5aefe2c140cbffa99ab65ef65097d5824b289f66d4d2d620b17e22201"
+    }
+  ],
+  "discriminators": [
+    {
+      "name": "unknown-field",
+      "doc": "Bytes canônicos mais um campo de número 99 (varint 42) que o contrato não conhece: a desserialização o preserva (PTB-10) e o hash o cobre (ENV-17).",
+      "envelope": {
+        "causationid": "evt-0001",
+        "correlationid": "corr-0001",
+        "datacontenttype": "application/protobuf",
+        "dataschema": "type.googleapis.com/company.partner.event.v1.PartnerProductExpired",
+        "id": "evt-2001",
+        "partitionkey": "c-42",
+        "source": "urn:dmpf:reference-partner",
+        "specversion": "1.0",
+        "subject": "prd-1001",
+        "time": "2026-09-02T12:00:00Z",
+        "traceparent": "00-0af7651916cd43dd8448eb211c80319c-b7ad6b7169203331-01",
+        "type": "com.company.partner.partner-product-expired.v1"
+      },
+      "payload": {
+        "at": "2026-09-02T12:00:02Z",
+        "partner_id": "prt-2001",
+        "product_id": "prd-2001",
+        "valid_until": "2026-09-02T00:00:00Z",
+        "version": "1"
+      },
+      "payload_bytes_hex": "0a087072642d3230303112087072742d32303031180122060880ceddd4062a0608c29fe0d40698062a",
+      "payload_hash": "d24c2b4bb7129197e5d9c0f01e9a8162c03d22b8f599ced0ca9f05e52745f2cc"
+    },
+    {
+      "name": "non-canonical-field-order",
+      "doc": "Campos em ordem decrescente de número, o instante como sub-mensagem: decodifica no mesmo valor, mas o hash é o dos bytes transportados e difere do hash de uma reserialização (ENV-18). Campo repetido fica vazio e booleano fica falso, porque o codificador não canônico do kit cobre só strings, inteiros, enums e mensagens.",
+      "envelope": {
+        "causationid": "evt-0001",
+        "correlationid": "corr-0001",
+        "datacontenttype": "application/protobuf",
+        "dataschema": "type.googleapis.com/company.partner.event.v1.PartnerProductExpired",
+        "id": "evt-2002",
+        "partitionkey": "c-42",
+        "source": "urn:dmpf:reference-partner",
+        "specversion": "1.0",
+        "subject": "prd-1001",
+        "time": "2026-09-02T12:00:00Z",
+        "traceparent": "00-0af7651916cd43dd8448eb211c80319c-b7ad6b7169203331-01",
+        "type": "com.company.partner.partner-product-expired.v1"
+      },
+      "payload": {
+        "at": "2026-09-02T12:00:03.123456789Z",
+        "partner_id": "prt-2001",
+        "product_id": "prd-2002",
+        "valid_until": "2026-09-02T12:00:00Z",
+        "version": "3"
+      },
+      "payload_bytes_hex": "2a0b08c39fe0d40610959aef3a220608c09fe0d406180312087072742d323030310a087072642d32303032",
+      "payload_hash": "77a801c918032685bc7bdc6ba3a7c85198f442b537a7afe7fcfa8a95db3e3406"
+    }
+  ]
+}

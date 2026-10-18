@@ -1,0 +1,24 @@
+syntax = "proto3";
+
+package company.partner.event.v1;
+
+import "google/protobuf/timestamp.proto";
+
+message PartnerProductChanged {
+  string product_id = 1;
+  string partner_id = 2;
+  string agreement_id = 3;
+  string code = 4;
+  int32 version = 5;
+  string supersedes_id = 6;
+  google.protobuf.Timestamp valid_from = 7;
+  google.protobuf.Timestamp valid_until = 8;
+  repeated string asset_types = 9;
+  repeated string regions = 10;
+  string currency = 11;
+  int64 min_amount_minor = 12;
+  int64 max_amount_minor = 13;
+  int32 min_term_days = 14;
+  int32 max_term_days = 15;
+  google.protobuf.Timestamp at = 16;
+}

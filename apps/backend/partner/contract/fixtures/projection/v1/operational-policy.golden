@@ -1,0 +1,264 @@
+{
+  "format_version": "1",
+  "identity": {
+    "context": "partner",
+    "aggregate": "operational-policy"
+  },
+  "cases": [
+    {
+      "name": "define-first-version",
+      "doc": "Ramo Accepted de Define: a série vazia do parceiro recebe a version 1, sem evento.",
+      "state_before": {
+        "policy": "pol-1",
+        "partner": "",
+        "version": "0",
+        "supersedes": "",
+        "effective_from": "0",
+        "rate_limit_per_minute": "0",
+        "business_days": "",
+        "cutoff_time": "",
+        "processing_window": "",
+        "sla": "",
+        "fallback": "",
+        "support_contact": "",
+        "incident_contact": ""
+      },
+      "command": {
+        "upr": "define",
+        "partner": "prt-1",
+        "effective_from": "1755432000000000000",
+        "rate_limit_per_minute": "100",
+        "business_days": "mon,tue,wed,thu,fri",
+        "cutoff_time": "17:00",
+        "processing_window": "08:00-18:00",
+        "sla": "sla-gold",
+        "fallback": "manual queue",
+        "support_contact": "support@partner.example",
+        "incident_contact": "+55 11 99999-0000",
+        "supersedes": "",
+        "head": "",
+        "head_version": "0",
+        "at": "1755432000000000000"
+      },
+      "expected": {
+        "branch": "accepted",
+        "response": {
+          "policy": "pol-1"
+        },
+        "events": [],
+        "state_after": {
+          "policy": "pol-1",
+          "partner": "prt-1",
+          "version": "1",
+          "supersedes": "",
+          "effective_from": "1755432000000000000",
+          "rate_limit_per_minute": "100",
+          "business_days": "mon,tue,wed,thu,fri",
+          "cutoff_time": "17:00",
+          "processing_window": "08:00-18:00",
+          "sla": "sla-gold",
+          "fallback": "manual queue",
+          "support_contact": "support@partner.example",
+          "incident_contact": "+55 11 99999-0000"
+        }
+      }
+    },
+    {
+      "name": "define-successor",
+      "doc": "Ramo Accepted de Define: supersedes aponta a última versão da série do parceiro.",
+      "state_before": {
+        "policy": "pol-2",
+        "partner": "",
+        "version": "0",
+        "supersedes": "",
+        "effective_from": "0",
+        "rate_limit_per_minute": "0",
+        "business_days": "",
+        "cutoff_time": "",
+        "processing_window": "",
+        "sla": "",
+        "fallback": "",
+        "support_contact": "",
+        "incident_contact": ""
+      },
+      "command": {
+        "upr": "define",
+        "partner": "prt-1",
+        "effective_from": "1755432000000000000",
+        "rate_limit_per_minute": "100",
+        "business_days": "mon,tue,wed,thu,fri",
+        "cutoff_time": "17:00",
+        "processing_window": "08:00-18:00",
+        "sla": "sla-gold",
+        "fallback": "manual queue",
+        "support_contact": "support@partner.example",
+        "incident_contact": "+55 11 99999-0000",
+        "supersedes": "pol-1",
+        "head": "pol-1",
+        "head_version": "1",
+        "at": "1755432000000000000"
+      },
+      "expected": {
+        "branch": "accepted",
+        "response": {
+          "policy": "pol-2"
+        },
+        "events": [],
+        "state_after": {
+          "policy": "pol-2",
+          "partner": "prt-1",
+          "version": "2",
+          "supersedes": "pol-1",
+          "effective_from": "1755432000000000000",
+          "rate_limit_per_minute": "100",
+          "business_days": "mon,tue,wed,thu,fri",
+          "cutoff_time": "17:00",
+          "processing_window": "08:00-18:00",
+          "sla": "sla-gold",
+          "fallback": "manual queue",
+          "support_contact": "support@partner.example",
+          "incident_contact": "+55 11 99999-0000"
+        }
+      }
+    },
+    {
+      "name": "define-rate-limit-invalid",
+      "doc": "Ramo Rejected de Define: limite de taxa zero.",
+      "state_before": {
+        "policy": "pol-1",
+        "partner": "",
+        "version": "0",
+        "supersedes": "",
+        "effective_from": "0",
+        "rate_limit_per_minute": "0",
+        "business_days": "",
+        "cutoff_time": "",
+        "processing_window": "",
+        "sla": "",
+        "fallback": "",
+        "support_contact": "",
+        "incident_contact": ""
+      },
+      "command": {
+        "upr": "define",
+        "partner": "prt-1",
+        "effective_from": "1755432000000000000",
+        "rate_limit_per_minute": "0",
+        "business_days": "mon,tue,wed,thu,fri",
+        "cutoff_time": "17:00",
+        "processing_window": "08:00-18:00",
+        "sla": "sla-gold",
+        "fallback": "manual queue",
+        "support_contact": "support@partner.example",
+        "incident_contact": "+55 11 99999-0000",
+        "supersedes": "",
+        "head": "",
+        "head_version": "0",
+        "at": "1755432000000000000"
+      },
+      "expected": {
+        "branch": "rejected",
+        "rejection": {
+          "code": "partner-management/operational-policy/rate-limit-invalid",
+          "message": "the rate limit per minute must be positive",
+          "details": {}
+        },
+        "events": []
+      }
+    },
+    {
+      "name": "define-contacts-missing",
+      "doc": "Ramo Rejected de Define: sem o contato de incidente; a rejeição nomeia o campo, nunca o valor.",
+      "state_before": {
+        "policy": "pol-1",
+        "partner": "",
+        "version": "0",
+        "supersedes": "",
+        "effective_from": "0",
+        "rate_limit_per_minute": "0",
+        "business_days": "",
+        "cutoff_time": "",
+        "processing_window": "",
+        "sla": "",
+        "fallback": "",
+        "support_contact": "",
+        "incident_contact": ""
+      },
+      "command": {
+        "upr": "define",
+        "partner": "prt-1",
+        "effective_from": "1755432000000000000",
+        "rate_limit_per_minute": "100",
+        "business_days": "mon,tue,wed,thu,fri",
+        "cutoff_time": "17:00",
+        "processing_window": "08:00-18:00",
+        "sla": "sla-gold",
+        "fallback": "manual queue",
+        "support_contact": "support@partner.example",
+        "incident_contact": "",
+        "supersedes": "",
+        "head": "",
+        "head_version": "0",
+        "at": "1755432000000000000"
+      },
+      "expected": {
+        "branch": "rejected",
+        "rejection": {
+          "code": "partner-management/operational-policy/contacts-missing",
+          "message": "the support and the incident contacts are required",
+          "details": {
+            "missing": "incidentContact"
+          }
+        },
+        "events": []
+      }
+    },
+    {
+      "name": "define-supersedes-invalid",
+      "doc": "Ramo Rejected de Define: a série do parceiro já tem a version 1 e o comando não informa supersedes.",
+      "state_before": {
+        "policy": "pol-2",
+        "partner": "",
+        "version": "0",
+        "supersedes": "",
+        "effective_from": "0",
+        "rate_limit_per_minute": "0",
+        "business_days": "",
+        "cutoff_time": "",
+        "processing_window": "",
+        "sla": "",
+        "fallback": "",
+        "support_contact": "",
+        "incident_contact": ""
+      },
+      "command": {
+        "upr": "define",
+        "partner": "prt-1",
+        "effective_from": "1755432000000000000",
+        "rate_limit_per_minute": "100",
+        "business_days": "mon,tue,wed,thu,fri",
+        "cutoff_time": "17:00",
+        "processing_window": "08:00-18:00",
+        "sla": "sla-gold",
+        "fallback": "manual queue",
+        "support_contact": "support@partner.example",
+        "incident_contact": "+55 11 99999-0000",
+        "supersedes": "",
+        "head": "pol-1",
+        "head_version": "1",
+        "at": "1755432000000000000"
+      },
+      "expected": {
+        "branch": "rejected",
+        "rejection": {
+          "code": "partner-management/operational-policy/supersedes-invalid",
+          "message": "supersedes must name the last version of the series of the partner, and a series holds one first version",
+          "details": {
+            "supersedes": ""
+          }
+        },
+        "events": []
+      }
+    }
+  ]
+}

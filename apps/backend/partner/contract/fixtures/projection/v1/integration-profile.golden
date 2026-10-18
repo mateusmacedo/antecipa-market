@@ -1,0 +1,479 @@
+{
+  "format_version": "1",
+  "identity": {
+    "context": "partner",
+    "aggregate": "integration-profile"
+  },
+  "cases": [
+    {
+      "name": "register-first-version",
+      "doc": "Ramo Accepted de Register: a série vazia do ambiente recebe a version 1, com a referência do segredo e sem evento.",
+      "state_before": {
+        "profile": "ipf-1",
+        "partner": "",
+        "environment": "",
+        "version": "0",
+        "supersedes": "",
+        "change_kind": "",
+        "protocols": "",
+        "endpoint": "",
+        "schema_version": "",
+        "secret_ref": "",
+        "certificate_ref": "",
+        "certificate_expires_at": "0",
+        "effective_from": "0",
+        "last_alerted_threshold_days": "0"
+      },
+      "command": {
+        "upr": "register",
+        "partner": "prt-1",
+        "environment": "production",
+        "change_kind": "initial",
+        "protocols": "https,mtls",
+        "endpoint": "https://partner.example/api",
+        "schema_version": "v3",
+        "secret_ref": "vault://partners/prt-1/api-key",
+        "certificate_ref": "cert-1",
+        "certificate_expires_at": "1763208000000000000",
+        "effective_from": "1755432000000000000",
+        "supersedes": "",
+        "head": "",
+        "head_version": "0",
+        "at": "1755432000000000000"
+      },
+      "expected": {
+        "branch": "accepted",
+        "response": {
+          "profile": "ipf-1"
+        },
+        "events": [],
+        "state_after": {
+          "profile": "ipf-1",
+          "partner": "prt-1",
+          "environment": "production",
+          "version": "1",
+          "supersedes": "",
+          "change_kind": "initial",
+          "protocols": "https,mtls",
+          "endpoint": "https://partner.example/api",
+          "schema_version": "v3",
+          "secret_ref": "vault://partners/prt-1/api-key",
+          "certificate_ref": "cert-1",
+          "certificate_expires_at": "1763208000000000000",
+          "effective_from": "1755432000000000000",
+          "last_alerted_threshold_days": "0"
+        }
+      }
+    },
+    {
+      "name": "register-successor",
+      "doc": "Ramo Accepted de Register: supersedes aponta a última versão da série do ambiente e a mudança anunciada nasce na version seguinte.",
+      "state_before": {
+        "profile": "ipf-2",
+        "partner": "",
+        "environment": "",
+        "version": "0",
+        "supersedes": "",
+        "change_kind": "",
+        "protocols": "",
+        "endpoint": "",
+        "schema_version": "",
+        "secret_ref": "",
+        "certificate_ref": "",
+        "certificate_expires_at": "0",
+        "effective_from": "0",
+        "last_alerted_threshold_days": "0"
+      },
+      "command": {
+        "upr": "register",
+        "partner": "prt-1",
+        "environment": "production",
+        "change_kind": "announced",
+        "protocols": "https,mtls",
+        "endpoint": "https://partner.example/api",
+        "schema_version": "v3",
+        "secret_ref": "vault://partners/prt-1/api-key",
+        "certificate_ref": "cert-1",
+        "certificate_expires_at": "1763208000000000000",
+        "effective_from": "1755432000000000000",
+        "supersedes": "ipf-1",
+        "head": "ipf-1",
+        "head_version": "1",
+        "at": "1755432000000000000"
+      },
+      "expected": {
+        "branch": "accepted",
+        "response": {
+          "profile": "ipf-2"
+        },
+        "events": [],
+        "state_after": {
+          "profile": "ipf-2",
+          "partner": "prt-1",
+          "environment": "production",
+          "version": "2",
+          "supersedes": "ipf-1",
+          "change_kind": "announced",
+          "protocols": "https,mtls",
+          "endpoint": "https://partner.example/api",
+          "schema_version": "v3",
+          "secret_ref": "vault://partners/prt-1/api-key",
+          "certificate_ref": "cert-1",
+          "certificate_expires_at": "1763208000000000000",
+          "effective_from": "1755432000000000000",
+          "last_alerted_threshold_days": "0"
+        }
+      }
+    },
+    {
+      "name": "register-endpoint-empty",
+      "doc": "Ramo Rejected de Register: endpoint vazio.",
+      "state_before": {
+        "profile": "ipf-1",
+        "partner": "",
+        "environment": "",
+        "version": "0",
+        "supersedes": "",
+        "change_kind": "",
+        "protocols": "",
+        "endpoint": "",
+        "schema_version": "",
+        "secret_ref": "",
+        "certificate_ref": "",
+        "certificate_expires_at": "0",
+        "effective_from": "0",
+        "last_alerted_threshold_days": "0"
+      },
+      "command": {
+        "upr": "register",
+        "partner": "prt-1",
+        "environment": "production",
+        "change_kind": "initial",
+        "protocols": "https,mtls",
+        "endpoint": "",
+        "schema_version": "v3",
+        "secret_ref": "vault://partners/prt-1/api-key",
+        "certificate_ref": "cert-1",
+        "certificate_expires_at": "1763208000000000000",
+        "effective_from": "1755432000000000000",
+        "supersedes": "",
+        "head": "",
+        "head_version": "0",
+        "at": "1755432000000000000"
+      },
+      "expected": {
+        "branch": "rejected",
+        "rejection": {
+          "code": "partner-management/integration-profile/endpoint-empty",
+          "message": "the endpoint is required",
+          "details": {}
+        },
+        "events": []
+      }
+    },
+    {
+      "name": "register-secret-ref-missing",
+      "doc": "Ramo Rejected de Register: sem a referência do segredo.",
+      "state_before": {
+        "profile": "ipf-1",
+        "partner": "",
+        "environment": "",
+        "version": "0",
+        "supersedes": "",
+        "change_kind": "",
+        "protocols": "",
+        "endpoint": "",
+        "schema_version": "",
+        "secret_ref": "",
+        "certificate_ref": "",
+        "certificate_expires_at": "0",
+        "effective_from": "0",
+        "last_alerted_threshold_days": "0"
+      },
+      "command": {
+        "upr": "register",
+        "partner": "prt-1",
+        "environment": "production",
+        "change_kind": "initial",
+        "protocols": "https,mtls",
+        "endpoint": "https://partner.example/api",
+        "schema_version": "v3",
+        "secret_ref": "",
+        "certificate_ref": "cert-1",
+        "certificate_expires_at": "1763208000000000000",
+        "effective_from": "1755432000000000000",
+        "supersedes": "",
+        "head": "",
+        "head_version": "0",
+        "at": "1755432000000000000"
+      },
+      "expected": {
+        "branch": "rejected",
+        "rejection": {
+          "code": "partner-management/integration-profile/secret-ref-missing",
+          "message": "the reference to the secret is required",
+          "details": {}
+        },
+        "events": []
+      }
+    },
+    {
+      "name": "register-certificate-expiry-invalid",
+      "doc": "Ramo Rejected de Register: o certificado vence antes do instante do registro.",
+      "state_before": {
+        "profile": "ipf-1",
+        "partner": "",
+        "environment": "",
+        "version": "0",
+        "supersedes": "",
+        "change_kind": "",
+        "protocols": "",
+        "endpoint": "",
+        "schema_version": "",
+        "secret_ref": "",
+        "certificate_ref": "",
+        "certificate_expires_at": "0",
+        "effective_from": "0",
+        "last_alerted_threshold_days": "0"
+      },
+      "command": {
+        "upr": "register",
+        "partner": "prt-1",
+        "environment": "production",
+        "change_kind": "initial",
+        "protocols": "https,mtls",
+        "endpoint": "https://partner.example/api",
+        "schema_version": "v3",
+        "secret_ref": "vault://partners/prt-1/api-key",
+        "certificate_ref": "cert-1",
+        "certificate_expires_at": "1755345600000000000",
+        "effective_from": "1755432000000000000",
+        "supersedes": "",
+        "head": "",
+        "head_version": "0",
+        "at": "1755432000000000000"
+      },
+      "expected": {
+        "branch": "rejected",
+        "rejection": {
+          "code": "partner-management/integration-profile/certificate-expiry-invalid",
+          "message": "the certificate must expire after the registration",
+          "details": {}
+        },
+        "events": []
+      }
+    },
+    {
+      "name": "register-supersedes-invalid",
+      "doc": "Ramo Rejected de Register: a série do ambiente já tem a version 1 e o comando não informa supersedes.",
+      "state_before": {
+        "profile": "ipf-2",
+        "partner": "",
+        "environment": "",
+        "version": "0",
+        "supersedes": "",
+        "change_kind": "",
+        "protocols": "",
+        "endpoint": "",
+        "schema_version": "",
+        "secret_ref": "",
+        "certificate_ref": "",
+        "certificate_expires_at": "0",
+        "effective_from": "0",
+        "last_alerted_threshold_days": "0"
+      },
+      "command": {
+        "upr": "register",
+        "partner": "prt-1",
+        "environment": "production",
+        "change_kind": "initial",
+        "protocols": "https,mtls",
+        "endpoint": "https://partner.example/api",
+        "schema_version": "v3",
+        "secret_ref": "vault://partners/prt-1/api-key",
+        "certificate_ref": "cert-1",
+        "certificate_expires_at": "1763208000000000000",
+        "effective_from": "1755432000000000000",
+        "supersedes": "",
+        "head": "ipf-1",
+        "head_version": "1",
+        "at": "1755432000000000000"
+      },
+      "expected": {
+        "branch": "rejected",
+        "rejection": {
+          "code": "partner-management/integration-profile/supersedes-invalid",
+          "message": "supersedes must name the last version of the series of the partner and environment, and a series holds one first version",
+          "details": {
+            "supersedes": ""
+          }
+        },
+        "events": []
+      }
+    },
+    {
+      "name": "raise-expiry-alert-accepted",
+      "doc": "Ramo Accepted de RaiseExpiryAlert: o certificado vence em 25 dias, o limiar de 30 é registrado e PartnerCertificateExpiring é emitido.",
+      "state_before": {
+        "profile": "ipf-1",
+        "partner": "prt-1",
+        "environment": "production",
+        "version": "1",
+        "supersedes": "",
+        "change_kind": "initial",
+        "protocols": "https,mtls",
+        "endpoint": "https://partner.example/api",
+        "schema_version": "v3",
+        "secret_ref": "vault://partners/prt-1/api-key",
+        "certificate_ref": "cert-1",
+        "certificate_expires_at": "1757592000000000000",
+        "effective_from": "1755432000000000000",
+        "last_alerted_threshold_days": "0"
+      },
+      "command": {
+        "upr": "raise-expiry-alert",
+        "threshold_days": "30",
+        "at": "1755432000000000000"
+      },
+      "expected": {
+        "branch": "accepted",
+        "response": {
+          "profile": "ipf-1"
+        },
+        "events": [
+          {
+            "name": "partner-management.integration-profile.certificate-expiring",
+            "fields": {
+              "profile": "ipf-1",
+              "partner": "prt-1",
+              "environment": "production",
+              "certificate_expires_at": "1757592000000000000",
+              "threshold_days": "30",
+              "at": "1755432000000000000"
+            }
+          }
+        ],
+        "state_after": {
+          "profile": "ipf-1",
+          "partner": "prt-1",
+          "environment": "production",
+          "version": "1",
+          "supersedes": "",
+          "change_kind": "initial",
+          "protocols": "https,mtls",
+          "endpoint": "https://partner.example/api",
+          "schema_version": "v3",
+          "secret_ref": "vault://partners/prt-1/api-key",
+          "certificate_ref": "cert-1",
+          "certificate_expires_at": "1757592000000000000",
+          "effective_from": "1755432000000000000",
+          "last_alerted_threshold_days": "30"
+        }
+      }
+    },
+    {
+      "name": "raise-expiry-alert-invalid-threshold",
+      "doc": "Ramo Rejected de RaiseExpiryAlert: 45 dias não é limiar.",
+      "state_before": {
+        "profile": "ipf-1",
+        "partner": "prt-1",
+        "environment": "production",
+        "version": "1",
+        "supersedes": "",
+        "change_kind": "initial",
+        "protocols": "https,mtls",
+        "endpoint": "https://partner.example/api",
+        "schema_version": "v3",
+        "secret_ref": "vault://partners/prt-1/api-key",
+        "certificate_ref": "cert-1",
+        "certificate_expires_at": "1757592000000000000",
+        "effective_from": "1755432000000000000",
+        "last_alerted_threshold_days": "0"
+      },
+      "command": {
+        "upr": "raise-expiry-alert",
+        "threshold_days": "45",
+        "at": "1755432000000000000"
+      },
+      "expected": {
+        "branch": "rejected",
+        "rejection": {
+          "code": "partner-management/integration-profile/invalid-alert-threshold",
+          "message": "the alert threshold is 60, 30 or 7 days",
+          "details": {
+            "thresholdDays": "45"
+          }
+        },
+        "events": []
+      }
+    },
+    {
+      "name": "raise-expiry-alert-threshold-not-reached",
+      "doc": "Ramo Rejected de RaiseExpiryAlert: o certificado vence em 90 dias e o limiar é 60.",
+      "state_before": {
+        "profile": "ipf-1",
+        "partner": "prt-1",
+        "environment": "production",
+        "version": "1",
+        "supersedes": "",
+        "change_kind": "initial",
+        "protocols": "https,mtls",
+        "endpoint": "https://partner.example/api",
+        "schema_version": "v3",
+        "secret_ref": "vault://partners/prt-1/api-key",
+        "certificate_ref": "cert-1",
+        "certificate_expires_at": "1763208000000000000",
+        "effective_from": "1755432000000000000",
+        "last_alerted_threshold_days": "0"
+      },
+      "command": {
+        "upr": "raise-expiry-alert",
+        "threshold_days": "60",
+        "at": "1755432000000000000"
+      },
+      "expected": {
+        "branch": "rejected",
+        "rejection": {
+          "code": "partner-management/integration-profile/threshold-not-reached",
+          "message": "the certificate is not yet within the alert threshold",
+          "details": {}
+        },
+        "events": []
+      }
+    },
+    {
+      "name": "raise-expiry-alert-already-alerted",
+      "doc": "Ramo Rejected de RaiseExpiryAlert: o limiar de 30 já foi alertado e o de 60 chega depois.",
+      "state_before": {
+        "profile": "ipf-1",
+        "partner": "prt-1",
+        "environment": "production",
+        "version": "1",
+        "supersedes": "",
+        "change_kind": "initial",
+        "protocols": "https,mtls",
+        "endpoint": "https://partner.example/api",
+        "schema_version": "v3",
+        "secret_ref": "vault://partners/prt-1/api-key",
+        "certificate_ref": "cert-1",
+        "certificate_expires_at": "1757592000000000000",
+        "effective_from": "1755432000000000000",
+        "last_alerted_threshold_days": "30"
+      },
+      "command": {
+        "upr": "raise-expiry-alert",
+        "threshold_days": "60",
+        "at": "1755432000000000000"
+      },
+      "expected": {
+        "branch": "rejected",
+        "rejection": {
+          "code": "partner-management/integration-profile/already-alerted",
+          "message": "this threshold or a smaller one was already alerted",
+          "details": {}
+        },
+        "events": []
+      }
+    }
+  ]
+}

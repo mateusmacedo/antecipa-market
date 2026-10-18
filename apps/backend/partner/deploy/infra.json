@@ -1,0 +1,42 @@
+{
+  "schema": "dmpf/infra@1",
+  "app": "partner",
+  "image": {
+    "env": "PARTNER_IMAGE",
+    "local": "partner:local"
+  },
+  "database": {
+    "passwordEnv": "PARTNER_PG_PASSWORD",
+    "local": "partner-local",
+    "dev": "partner-dev",
+    "migrator": {
+      "passwordEnv": "PARTNER_PG_MIGRATOR_PASSWORD",
+      "local": "partner-migrator-local",
+      "dev": "partner-migrator-dev"
+    }
+  },
+  "kafka": {
+    "passwordEnv": "KAFKA_PARTNER_PASSWORD",
+    "local": "partner-local",
+    "topics": [
+      {
+        "name": "partner.events",
+        "env": "KAFKA_PARTNER_TOPIC"
+      },
+      {
+        "name": "partner.events.dlq",
+        "env": "KAFKA_PARTNER_DLQ"
+      }
+    ],
+    "acls": [
+      {
+        "operations": ["write", "describe"],
+        "topics": ["partner.events", "partner.events.dlq"]
+      }
+    ]
+  },
+  "grpc": {
+    "server": "dmpf-partner-api"
+  },
+  "openapi": true
+}
