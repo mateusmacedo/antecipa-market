@@ -6,3 +6,4 @@ kind: Kustomization
 
 resources:
   - ../../../../../apps/backend/identity/deploy/k8s/overlays/hmg
+  - ../../../../../apps/backend/partner/deploy/k8s/overlays/hmg

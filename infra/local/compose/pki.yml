@@ -35,6 +35,7 @@ services:
           sign "$$1-client"
         }
         server dmpf-identity-api
+        server dmpf-partner-api
         chmod 0644 ./*.key ./*.crt
     volumes:
       - pki:/pki

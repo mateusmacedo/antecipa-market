@@ -3,8 +3,11 @@ go 1.26.9
 use (
 	./apps/backend/identity
 	./apps/backend/identity/contract
+	./apps/backend/partner
+	./apps/backend/partner/contract
 )
 
 replace (
 	github.com/mateusmacedo/antecipa-market/apps/backend/identity/contract v0.1.0 => ./apps/backend/identity/contract
+	github.com/mateusmacedo/antecipa-market/apps/backend/partner/contract v0.1.0 => ./apps/backend/partner/contract
 )

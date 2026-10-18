@@ -17,7 +17,7 @@ discovery.relabel "pods" {
 
   rule {
     source_labels = ["__meta_kubernetes_pod_label_app_kubernetes_io_name"]
-    regex         = "identity"
+    regex         = "identity|partner"
     action        = "drop"
   }
 

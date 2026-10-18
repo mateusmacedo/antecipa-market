@@ -95,6 +95,12 @@
       }
     },
     "groups": {
+      "go-contract-partner": {
+        "projects": ["partner-contract"],
+        "releaseTag": {
+          "pattern": "apps/backend/partner/contract/v{version}"
+        }
+      },
       "go-contract-identity": {
         "projects": ["identity-contract"],
         "releaseTag": {
