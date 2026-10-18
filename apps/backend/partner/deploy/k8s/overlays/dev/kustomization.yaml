@@ -1,0 +1,26 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+resources:
+  - ../../base
+
+images:
+  - name: ghcr.io/mateusmacedo/partner
+    newTag: dev
+
+secretGenerator:
+  - name: partner
+    literals:
+      - PG_DSN=postgres://partner:partner-dev@postgres-0.postgres:5432/partner?sslmode=disable
+      - KAFKA_BROKERS=redpanda-0.redpanda:9092
+    options:
+      disableNameSuffixHash: true
+  - name: partner-migrator
+    literals:
+      - PG_MIGRATE_DSN=postgres://partner_migrator:partner-migrator-dev@postgres-0.postgres:5432/partner?sslmode=disable
+    options:
+      disableNameSuffixHash: true
+
+patches:
+  - path: configmap-partner-patch.yaml
+  - path: deployment-partner-api-patch.yaml

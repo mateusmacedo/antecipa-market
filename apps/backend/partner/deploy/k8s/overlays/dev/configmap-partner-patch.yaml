@@ -1,0 +1,9 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: partner
+data:
+  # O Redpanda da base roda sem TLS em dev, e o gRPC interno também.
+  KAFKA_INSECURE: 'true'
+  GRPC_INSECURE: 'true'
+  OTEL_RESOURCE_ATTRIBUTES: service.version=dev,deployment.environment.name=dev

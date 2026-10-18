@@ -1,0 +1,21 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+# Contexto partner: api gRPC e relay como Deployments de uma mesma imagem. Os
+# Secrets `partner` (PG_DSN, KAFKA_BROKERS) e `partner-migrator` (PG_MIGRATE_DSN,
+# só do api) vêm do overlay — a base não conhece credencial nenhuma.
+
+labels:
+  - includeSelectors: true
+    pairs:
+      app.kubernetes.io/name: partner
+      app.kubernetes.io/part-of: dmpf
+
+resources:
+  - serviceaccount.yaml
+  - configmap.yaml
+  - deployment-api.yaml
+  - deployment-relay.yaml
+  - service-api.yaml
+  - pdb-api.yaml
+  - networkpolicy.yaml

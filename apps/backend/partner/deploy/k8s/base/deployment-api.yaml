@@ -1,0 +1,66 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: partner-api
+  labels:
+    app.kubernetes.io/component: api
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/component: api
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/component: api
+    spec:
+      serviceAccountName: partner
+      securityContext:
+        runAsNonRoot: true
+        seccompProfile:
+          type: RuntimeDefault
+      containers:
+        - name: api
+          image: ghcr.io/mateusmacedo/partner:latest
+          args: ['--role', 'api']
+          ports:
+            - name: grpc
+              containerPort: 9090
+          envFrom:
+            - configMapRef:
+                name: partner
+            - secretRef:
+                name: partner
+            - secretRef:
+                name: partner-migrator
+          env:
+            - name: K8S_POD_NAME
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.name
+            - name: OTEL_RESOURCE_ATTRIBUTES
+              value: $(OTEL_RESOURCE_ATTRIBUTES),service.instance.id=$(K8S_POD_NAME),dmpf.process.role=api
+          # Prontidão pelo health do serviço, que só vira SERVING com o banco
+          # alcançado; vivacidade pelo status geral, que não depende do banco.
+          readinessProbe:
+            grpc:
+              port: 9090
+              service: company.partner.service.v1.PartnerService
+            periodSeconds: 5
+          livenessProbe:
+            grpc:
+              port: 9090
+            initialDelaySeconds: 10
+            periodSeconds: 20
+          resources:
+            requests:
+              cpu: 50m
+              memory: 64Mi
+            limits:
+              memory: 256Mi
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop: [ALL]
+      terminationGracePeriodSeconds: 30
