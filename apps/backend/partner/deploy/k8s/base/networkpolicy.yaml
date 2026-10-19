@@ -10,7 +10,16 @@ spec:
     matchLabels:
       app.kubernetes.io/component: api
   policyTypes: [Ingress]
-  ingress: []
+  ingress:
+    - from:
+        - podSelector:
+            matchExpressions:
+              - key: app.kubernetes.io/name
+                operator: In
+                values: [bff]
+      ports:
+        - port: 9090
+          protocol: TCP
 ---
 apiVersion: networking.k8s.io/v1
 kind: NetworkPolicy
