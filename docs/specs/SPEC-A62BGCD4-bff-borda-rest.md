@@ -44,6 +44,53 @@ created: 2026-10-15
 > os agregados `infra/k8s/overlays/{dev,hmg}/apps` referenciam overlays do
 > `bff` que ainda não existem; nenhum gate renderiza kustomize.
 
+> **Addendum (2026-10-18, planejamento da DEVS-112)** — quatro decisões ajustam
+> o texto abaixo sem mudar o requisito.
+> (1) **503/504 com o `identity` fora.** O `ResolveIdentity` do kernel
+> (`libs/backend/go/http/identity.go:37-40`, igual no rc.5) converte qualquer
+> erro de `Authenticate` em 401. O decorador sozinho, portanto, não produz o
+> 503/504 que as Decisões atribuem a ele. O middleware envolve o decorador num
+> `Authenticator` que só guarda o erro devolvido: quando o kernel responde 401
+> e o erro guardado é a indisponibilidade das permissões, a borda responde 503
+> ou 504 pela tradução de erros. Token ausente, inválido ou revogado segue 401,
+> e o kernel continua decidindo 401 e 403 e chamando o decorador uma vez, sem
+> extensão do kernel.
+> (2) **Chamada única.** `FindEffectivePermissions` é chamada uma vez **pelo
+> decorador** por requisição autenticada com tenant resolvido, e nunca sem
+> token nem com tenant nulo. A rota `GET /identity/users/{userId}/permissions`
+> faz uma segunda chamada, que é o RPC da própria rota, para o `userId` do
+> path; reaproveitar a primeira seria errado quando `userId` difere do `sub` e
+> equivaleria a cache (CTX-16).
+> (3) **`AUTH_DEV_MOCK` decorado.** O mock só substitui a verificação do
+> token; as permissões vêm sempre do `identity`, também em dev e testes.
+> (4) **Readiness.** O `/readyz` lê o estado da conexão gRPC, com o health
+> check declarado no service config (GRP-13). Chamar `Health/Check` direto
+> esbarraria na política por método, que recusa método sem política (GRP-16).
+> O texto original foi preservado.
+
+> **Addendum (2026-10-19, code review da DEVS-112)** — a admissão por rota e
+> tenant passa a rodar **antes** do salto de permissões. Na ordem anterior, uma
+> requisição que receberia 429 já tinha chamado `FindEffectivePermissions`, e um
+> tenant abusivo saturava o breaker e o bulkhead compartilhados do `identity`,
+> derrubando os demais (RES-16). Ordem por rota: recuperação de pânico → prazo da
+> rota → verificação do token (uma vez) → admissão pelo tenant verificado, só
+> com token válido e tenant resolvido → `FindEffectivePermissions` e
+> `ResolveIdentity` → `RefuseAssertedIdentity` → contexto de execução →
+> `Idempotency-Key` → handler. Sem token, com token inválido ou com tenant nulo
+> a requisição não consome admissão e responde 401 ou 403 como antes. A
+> admissão segue a do kernel, sem extensão. Cliente que desiste durante o salto
+> de permissões recebe 499 `client-closed-request`, sem contar como erro.
+> Pelo checklist de qualidade da mesma task, o salto de permissões ganhou
+> conexão gRPC própria ao mesmo `IDENTITY_GRPC_TARGET` (dependência
+> `identity-permissions`, só `FindEffectivePermissions`, limite de 500 ms,
+> orçamento de retry próprio), com breaker e bulkhead separados dos da conexão
+> das rotas: uma rota que falha ou satura o pool não derruba mais a
+> autenticação de todos os tenants. As duas conexões reconectam com intervalo
+> máximo de 5 s, são exigidas pelo `/readyz` e fecham no shutdown. A recusa de
+> admissão do `identity` nesse salto (`ResourceExhausted`) responde 503
+> `unavailable` com `Retry-After: 1`. Dimensionamento de bulkhead e de
+> admissão, paginação, keepalive e os demais achados ficam na DEVS-134.
+
 ## Resumo
 
 O workspace não tem borda pública. O `identity` serve só gRPC, e o contrato REST
