@@ -29,6 +29,7 @@ import (
 	"go.opentelemetry.io/otel/sdk/trace/tracetest"
 
 	"github.com/mateusmacedo/antecipa-market/apps/backend/bff/app/api"
+	"github.com/mateusmacedo/antecipa-market/apps/backend/bff/app/rpc"
 )
 
 var routeBudget = deadline.Budget{Dependency: "edge", Method: "route", Limit: 2 * time.Second, Slack: 200 * time.Millisecond, EstimatedDuration: 100 * time.Millisecond}
@@ -156,6 +157,7 @@ type setup struct {
 	draining         func() bool
 	clock            obsclock.Clock
 	bindings         func(*probe) []api.Binding
+	identity         *rpc.Identity
 }
 
 type option func(*setup)
@@ -180,6 +182,17 @@ func withClock(c obsclock.Clock) option { return func(s *setup) { s.clock = c } 
 
 func withBindings(bindings func(*probe) []api.Binding) option {
 	return func(s *setup) { s.bindings = bindings }
+}
+
+func withIdentity(identity rpc.Identity) option {
+	return func(s *setup) { s.identity = &identity }
+}
+
+func stagesOf(authenticator ports.Authenticator) api.Authenticator {
+	if staged, ok := authenticator.(api.Authenticator); ok {
+		return staged
+	}
+	return api.VerifyOnly(authenticator)
 }
 
 func withoutRoutes() option { return withBindings(func(*probe) []api.Binding { return nil }) }
@@ -221,11 +234,16 @@ func newFixture(t *testing.T, options ...option) fixture {
 	))
 
 	p := &probe{}
-	bound := cfg.bindings(p)
-	for i, b := range bound {
-		route := api.RouteOf(b)
-		route.Budget = cfg.budget
-		bound[i] = api.NewBinding(api.KindOf(b), route, p.handle)
+	var bound []api.Binding
+	if cfg.identity != nil {
+		bound = api.Bindings(cfg.budget)
+	} else {
+		bound = cfg.bindings(p)
+		for i, b := range bound {
+			route := api.RouteOf(b)
+			route.Budget = cfg.budget
+			bound[i] = api.NewBinding(api.KindOf(b), route, p.handle)
+		}
 	}
 
 	var ctrl *admission.Controller
@@ -242,7 +260,7 @@ func newFixture(t *testing.T, options ...option) fixture {
 
 	handlerOptions := api.Options{
 		Budget:           cfg.budget,
-		Authenticator:    cfg.authenticator,
+		Authenticator:    stagesOf(cfg.authenticator),
 		IdentityContract: cfg.identityContract,
 		CORSOrigins:      cfg.cors,
 		Logger:           logger,
@@ -252,9 +270,15 @@ func newFixture(t *testing.T, options ...option) fixture {
 		Draining:         cfg.draining,
 		Clock:            cfg.clock,
 	}
-	handler, err := api.NewHandlerOf(bound, ctrl, nil, handlerOptions)
+	var handler http.Handler
+	var err error
+	if cfg.identity != nil {
+		handler, err = api.NewHandler(*cfg.identity, ctrl, nil, handlerOptions)
+	} else {
+		handler, err = api.NewHandlerOf(bound, ctrl, nil, handlerOptions)
+	}
 	if err != nil {
-		t.Fatalf("NewHandlerOf() = %v", err)
+		t.Fatalf("NewHandler() = %v", err)
 	}
 	return fixture{probe: p, handler: handler, admin: api.NewAdminHandler(handlerOptions), spans: spans, logs: logs, records: records, logProvider: logProvider, metrics: reader}
 }

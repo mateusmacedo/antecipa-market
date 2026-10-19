@@ -6,6 +6,7 @@ import (
 	"context"
 	"crypto/sha256"
 	"encoding/hex"
+	"errors"
 	"log/slog"
 	"net/http"
 	"slices"
@@ -24,16 +25,18 @@ import (
 	"go.opentelemetry.io/otel/attribute"
 	semconv "go.opentelemetry.io/otel/semconv/v1.43.0"
 	"go.opentelemetry.io/otel/trace"
+
+	"github.com/mateusmacedo/antecipa-market/apps/backend/bff/app/rpc"
 )
 
 // categoryUnexpected is the kernel's category for a failure no classifier
 // recognizes; kernelgrpc does not export it.
 const categoryUnexpected = "Unexpected"
 
-// withExecutionContext authenticates and mounts the nine-field context. It runs
-// inside withRouteDeadline, never outside: deadline is mandatory in CTX-01, and
-// mounting before the timeout existed would leave the field unresolvable.
-func withExecutionContext(logger *slog.Logger, authenticator ports.Authenticator, route kernelhttp.Route, next http.Handler) http.Handler {
+// withExecutionContext verifies the token once, admits by the verified tenant,
+// resolves the effective permissions through ResolveIdentity, then mounts the
+// nine-field context; inside withRouteDeadline, since CTX-01 makes deadline mandatory.
+func withExecutionContext(logger *slog.Logger, authenticator Authenticator, route kernelhttp.Route, admit func(http.Handler) http.Handler, next http.Handler) http.Handler {
 	return http.HandlerFunc(func(rw http.ResponseWriter, r *http.Request) {
 		markSelfLogged(rw)
 		ctx := r.Context()
@@ -61,37 +64,89 @@ func withExecutionContext(logger *slog.Logger, authenticator ports.Authenticator
 			return
 		}
 
-		identity, status, code := kernelhttp.ResolveIdentity(ctx, authenticator, route, authn.CredentialFrom(r))
-		if status == 0 {
-			status, code = kernelhttp.RefuseAssertedIdentity(r, identity)
+		locale := localeOf(r)
+		call := rpc.Call{CorrelationID: correlation, RequestID: requestID, Locale: locale}
+		ctx = rpc.WithCall(ctx, call)
+		credential := authn.CredentialFrom(r)
+		staged := &stagedIdentity{authenticator: authenticator}
+		if credential.Presented() {
+			staged.verified, staged.verifyErr = authenticator.Verify(ctx, credential)
 		}
-		if status != 0 {
-			writeRejection(r, w, status, code, rejectionMessage(status))
+
+		proceed := func() {
+			identity, status, code := kernelhttp.ResolveIdentity(ctx, staged, route, credential)
+			var unavailable *rpc.PermissionsUnavailable
+			if status == http.StatusUnauthorized && errors.As(staged.err, &unavailable) {
+				if unavailable.Failure.Status >= http.StatusInternalServerError {
+					tracing.RecordError(span, rpc.Category(unavailable.Cause))
+				}
+				writeFailure(r, w, unavailable.Failure)
+				return
+			}
+			if status == 0 {
+				status, code = kernelhttp.RefuseAssertedIdentity(r, identity)
+			}
+			if status != 0 {
+				writeRejection(r, w, status, code, rejectionMessage(status))
+				return
+			}
+
+			execution, err := ports.NewExecutionContext(ports.ExecutionContextSpec{
+				RequestID:     requestID,
+				CorrelationID: correlation,
+				TraceContext:  span.SpanContext().TraceID().String(),
+				Subject:       identity.Subject,
+				Tenant:        identity.Tenant,
+				Permissions:   identity.Permissions,
+				Deadline:      ports.Instant(deadline.UnixNano()),
+				Locale:        locale,
+			})
+			if err != nil {
+				tracing.RecordError(span, categoryUnexpected)
+				writeInternal(w, r)
+				return
+			}
+
+			derivedKey = deriveIdempotencyKey(identity.Subject, clientKey)
+			span.SetAttributes(tracing.ExecutionAttributes(execution).KeyValues()...)
+
+			if tenant, ok := execution.Tenant(); ok {
+				call.TenantID = string(tenant)
+			}
+			ctx = tracing.WithExecutionBaggage(kernelhttp.WithExecutionContext(rpc.WithCall(ctx, call), execution), execution)
+			next.ServeHTTP(w, r.WithContext(ctx))
+		}
+
+		if !staged.admissible() {
+			proceed()
 			return
 		}
-
-		execution, err := ports.NewExecutionContext(ports.ExecutionContextSpec{
-			RequestID:     requestID,
-			CorrelationID: correlation,
-			TraceContext:  span.SpanContext().TraceID().String(),
-			Subject:       identity.Subject,
-			Tenant:        identity.Tenant,
-			Permissions:   identity.Permissions,
-			Deadline:      ports.Instant(deadline.UnixNano()),
-			Locale:        localeOf(r),
-		})
-		if err != nil {
-			tracing.RecordError(span, categoryUnexpected)
-			writeInternal(w, r)
-			return
-		}
-
-		derivedKey = deriveIdempotencyKey(identity.Subject, clientKey)
-		span.SetAttributes(tracing.ExecutionAttributes(execution).KeyValues()...)
-
-		ctx = tracing.WithExecutionBaggage(kernelhttp.WithExecutionContext(ctx, execution), execution)
-		next.ServeHTTP(w, r.WithContext(ctx))
+		admitted := http.HandlerFunc(func(http.ResponseWriter, *http.Request) { proceed() })
+		admit(admitted).ServeHTTP(w, r.WithContext(context.WithValue(ctx, verifiedTenantKey{}, *staged.verified.Tenant)))
 	})
+}
+
+type verifiedTenantKey struct{}
+
+type stagedIdentity struct {
+	authenticator Authenticator
+	verified      ports.Identity
+	verifyErr     error
+	err           error
+}
+
+func (s *stagedIdentity) admissible() bool {
+	return s.verifyErr == nil && s.verified.Tenant != nil
+}
+
+func (s *stagedIdentity) Authenticate(ctx context.Context, _ ports.Credential) (ports.Identity, error) {
+	if s.verifyErr != nil {
+		s.err = s.verifyErr
+		return ports.Identity{}, s.verifyErr
+	}
+	identity, err := s.authenticator.Resolve(ctx, s.verified)
+	s.err = err
+	return identity, err
 }
 
 func allowedHeaders(r *http.Request) []attribute.KeyValue {

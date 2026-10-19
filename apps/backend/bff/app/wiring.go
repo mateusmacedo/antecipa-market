@@ -21,7 +21,6 @@ import (
 	obsclock "github.com/mateusmacedo/dmpf/libs/backend/go/observability/clock"
 	"github.com/mateusmacedo/dmpf/libs/backend/go/observability/otelboot"
 	"github.com/mateusmacedo/dmpf/libs/backend/go/observability/redact"
-	"github.com/mateusmacedo/dmpf/libs/backend/go/ports"
 	"github.com/mateusmacedo/dmpf/libs/backend/go/redis"
 	"github.com/mateusmacedo/dmpf/libs/backend/go/transport/admission"
 	semconv "go.opentelemetry.io/otel/semconv/v1.43.0"
@@ -38,6 +37,9 @@ const (
 	maxHeaderBytes    = 1 << 16
 
 	keyDrainDelay = "dmpf.drain.delay"
+
+	identityContext    = "identity"
+	permissionsContext = "identity-permissions"
 )
 
 func Run(ctx context.Context, cfg Config) error {
@@ -68,20 +70,35 @@ func WithRevocations(cfg Config) (Config, func() error, error) {
 // Authenticator resolves how this process verifies identity. The development
 // mock is only reachable through the opt-out the config already refused to
 // combine with an issuer, so one start never has two ways of resolving it.
-func Authenticator(ctx context.Context, cfg Config) (ports.Authenticator, error) {
+func Authenticator(ctx context.Context, cfg Config, identity rpc.Identity) (api.Authenticator, error) {
 	if cfg.Auth.DevMock {
-		return authn.DevAuthenticator{}, nil
+		return NewPermissions(authn.DevAuthenticator{}, identity), nil
 	}
-	return authn.NewVerifier(ctx, cfg.Auth)
+	verifier, err := authn.NewVerifier(ctx, cfg.Auth)
+	if err != nil {
+		return nil, err
+	}
+	return NewPermissions(verifier, identity), nil
 }
 
 func RunWith(ctx context.Context, cfg Config, rt *otelboot.Runtime) error {
 	logger := rt.LoggerFor(reflect.TypeFor[Config]().PkgPath())
-	if cfg.CAFile != "" {
-		if _, err := rpc.ClientTLS(cfg.CAFile, cfg.ServerName, cfg.ClientCertFile, cfg.ClientKeyFile); err != nil {
-			return err
-		}
+	opts, err := ClientOptions(cfg)
+	if err != nil {
+		return err
 	}
+	opts.Tracer, opts.MeterProvider = rt.Tracer(), rt.MeterProvider()
+	opts.Instruments, opts.LoggerProvider = rt.Instruments(), rt.LoggerProvider()
+	conn, err := rpc.Dial(cfg.IdentityTarget, rpc.IdentityConfig(opts))
+	if err != nil {
+		return err
+	}
+	defer func() { _ = conn.Close() }()
+	permissionsConn, err := rpc.Dial(cfg.IdentityTarget, rpc.PermissionsConfig(opts))
+	if err != nil {
+		return err
+	}
+	defer func() { _ = permissionsConn.Close() }()
 
 	ctrl, err := admissionFor(cfg)
 	if err != nil {
@@ -94,7 +111,8 @@ func RunWith(ctx context.Context, cfg Config, rt *otelboot.Runtime) error {
 	defer func() { _ = closeRevocations() }()
 	cfg.Auth.LoggerProvider = rt.LoggerProvider()
 	cfg.Auth.MeterProvider = rt.MeterProvider()
-	authenticator, err := Authenticator(ctx, cfg)
+	identity := rpc.NewIdentity(conn)
+	authenticator, err := Authenticator(ctx, cfg, rpc.NewIdentity(permissionsConn))
 	if err != nil {
 		if ctx.Err() != nil {
 			return nil
@@ -107,13 +125,13 @@ func RunWith(ctx context.Context, cfg Config, rt *otelboot.Runtime) error {
 		Authenticator: authenticator,
 		CORSOrigins:   cfg.CORSOrigins,
 		Logger:        rt.LoggerFor(reflect.TypeFor[api.Options]().PkgPath()),
-		Ready:         func(context.Context) error { return nil },
+		Ready:         rpc.Readiness{identityContext: conn, permissionsContext: permissionsConn}.Check,
 		Draining:      draining.Load,
 	}
 	if options.IdentityContract, err = readContract(cfg.IdentityContractPath); err != nil {
 		return err
 	}
-	handler, err := api.NewHandler(ctrl, rt.Instruments(), options)
+	handler, err := api.NewHandler(identity, ctrl, rt.Instruments(), options)
 	if err != nil {
 		return err
 	}
@@ -162,6 +180,23 @@ func admissionFor(cfg Config) (*admission.Controller, error) {
 		return nil, nil
 	}
 	return admission.NewController(limits, cfg.MetricTenants, admission.DefaultMaxKeys)
+}
+
+func ClientOptions(cfg Config) (rpc.Options, error) {
+	opts := rpc.Options{Clock: obsclock.System()}
+	if cfg.CAFile == "" {
+		if !cfg.GRPCInsecure {
+			return rpc.Options{}, ErrInsecureNotDeclared
+		}
+		opts.Insecure = true
+		return opts, nil
+	}
+	clientTLS, err := rpc.ClientTLS(cfg.CAFile, cfg.ServerName, cfg.ClientCertFile, cfg.ClientKeyFile)
+	if err != nil {
+		return rpc.Options{}, err
+	}
+	opts.TLS = clientTLS
+	return opts, nil
 }
 
 func newServer(handler http.Handler, rt *otelboot.Runtime) *http.Server {

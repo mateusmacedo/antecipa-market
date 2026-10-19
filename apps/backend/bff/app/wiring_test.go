@@ -9,6 +9,7 @@ import (
 	"crypto/x509/pkix"
 	"encoding/json"
 	"encoding/pem"
+	"errors"
 	"io"
 	"math/big"
 	"net"
@@ -23,8 +24,10 @@ import (
 	"testing"
 	"time"
 
+	kernelhttp "github.com/mateusmacedo/dmpf/libs/backend/go/http"
 	"github.com/mateusmacedo/dmpf/libs/backend/go/observability/otelboot"
 	"github.com/mateusmacedo/dmpf/libs/backend/go/observability/tracing"
+	"github.com/mateusmacedo/dmpf/libs/backend/go/ports"
 	"github.com/mateusmacedo/dmpf/libs/backend/go/testkit/obstest"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/propagation"
@@ -56,7 +59,8 @@ type edge struct {
 
 func edgeConfig(t *testing.T, env ...string) app.Config {
 	t.Helper()
-	base := append(slices.Clone(targets), "GRPC_INSECURE", "true", "HTTP_ADDR", "127.0.0.1:0", "ADMIN_ADDR", "127.0.0.1:0")
+	base := append(slices.Clone(targets), "IDENTITY_GRPC_TARGET", serveIdentity(t).addr,
+		"GRPC_INSECURE", "true", "HTTP_ADDR", "127.0.0.1:0", "ADMIN_ADDR", "127.0.0.1:0")
 	cfg, err := app.FromEnv(lookup(append(base, env...)...))
 	if err != nil {
 		t.Fatalf("FromEnv() = %v", err)
@@ -253,6 +257,7 @@ func clientMaterial(t *testing.T) (caFile, certFile, keyFile string) {
 	template := &x509.Certificate{
 		SerialNumber:          big.NewInt(1),
 		Subject:               pkix.Name{CommonName: "bff"},
+		DNSNames:              []string{"identity.internal"},
 		NotBefore:             time.Now().Add(-time.Minute),
 		NotAfter:              time.Now().Add(time.Hour),
 		IsCA:                  true,
@@ -469,13 +474,74 @@ func TestTheEdgeStartsWithTheVerifierOfARealm(t *testing.T) {
 
 func TestTheEdgeLoadsTheClientCertificateAtTheStart(t *testing.T) {
 	caFile, certFile, keyFile := clientMaterial(t)
-	e := startEdge(t, devMock, "true", "GRPC_CA_FILE", caFile, "GRPC_SERVER_NAME", "identity.internal",
+	identity := serveIdentityOverTLS(t, caFile, certFile, keyFile)
+	e := startEdge(t, devMock, "true", "IDENTITY_GRPC_TARGET", identity.addr, "GRPC_CA_FILE", caFile, "GRPC_SERVER_NAME", "identity.internal",
 		"GRPC_CLIENT_CERT_FILE", certFile, "GRPC_CLIENT_KEY_FILE", keyFile)
 
 	if status := e.probe(t, http.MethodGet, api.ReadinessPath); status != http.StatusNoContent {
-		t.Fatalf("%s with readable client material = %d, want 204", api.ReadinessPath, status)
+		t.Fatalf("%s with readable client material = %d, want 204 over the mutual TLS the identity demands", api.ReadinessPath, status)
 	}
 	e.stop(t)
+}
+
+func TestReadinessFollowsTheIdentityConnection(t *testing.T) {
+	t.Run("without the identity", func(t *testing.T) {
+		e := startEdge(t, devMock, "true", "IDENTITY_GRPC_TARGET", obstest.UnusedLoopbackAddr(t))
+		if status := e.probe(t, http.MethodGet, api.ReadinessPath); status != http.StatusServiceUnavailable {
+			t.Fatalf("%s without the identity = %d, want 503", api.ReadinessPath, status)
+		}
+		e.stop(t)
+	})
+	t.Run("with the identity serving, then gone", func(t *testing.T) {
+		identity := serveIdentity(t)
+		e := startEdge(t, devMock, "true", "IDENTITY_GRPC_TARGET", identity.addr)
+		if status := e.probe(t, http.MethodGet, api.ReadinessPath); status != http.StatusNoContent {
+			t.Fatalf("%s with the identity serving = %d, want 204", api.ReadinessPath, status)
+		}
+		identity.server.Stop()
+		if !eventually(func() bool { return e.probe(t, http.MethodGet, api.ReadinessPath) == http.StatusServiceUnavailable }) {
+			t.Fatalf("%s never answered 503 after the identity went away", api.ReadinessPath)
+		}
+		e.stop(t)
+	})
+}
+
+func TestTheEdgeClosesItsIdentityConnectionOnShutdown(t *testing.T) {
+	identity := serveIdentity(t)
+	e := startEdge(t, devMock, "true", "IDENTITY_GRPC_TARGET", identity.addr)
+	if status := e.probe(t, http.MethodGet, api.ReadinessPath); status != http.StatusNoContent || identity.open.Load() == 0 {
+		t.Fatalf("%s = %d with %d connections, want 204 over an open connection", api.ReadinessPath, status, identity.open.Load())
+	}
+
+	e.stop(t)
+
+	if !eventually(func() bool { return identity.open.Load() == 0 }) {
+		t.Fatalf("%d connections to the identity still open after the shutdown, want none", identity.open.Load())
+	}
+}
+
+func TestTheEdgeRefusesToStartWithoutADeclaredTransport(t *testing.T) {
+	cfg := edgeConfig(t, devMock, "true")
+	cfg.GRPCInsecure = false
+	e := bootEdge(t, cfg)
+
+	select {
+	case err := <-e.done:
+		if !errors.Is(err, app.ErrInsecureNotDeclared) {
+			t.Fatalf("RunWith() = %v, want ErrInsecureNotDeclared (GRP-15)", err)
+		}
+	case <-time.After(5 * time.Second):
+		t.Fatal("RunWith() kept running with neither an authority nor the development opt-out")
+	}
+}
+
+func eventually(condition func() bool) bool {
+	for deadline := time.Now().Add(5 * time.Second); time.Now().Before(deadline); time.Sleep(10 * time.Millisecond) {
+		if condition() {
+			return true
+		}
+	}
+	return false
 }
 
 func TestTheEdgeRefusesToStartWithAnUnreadableAuthority(t *testing.T) {
@@ -627,4 +693,51 @@ func durationPoints(t *testing.T, reader *sdkmetric.ManualReader) uint64 {
 		}
 	}
 	return count
+}
+
+func TestTheDevelopmentMockAuthorizesOnlyTheEffectivePermissions(t *testing.T) {
+	identity := serveIdentity(t)
+	identity.grant(effectivePermission)
+	cfg := edgeConfig(t, devMock, "true", "IDENTITY_GRPC_TARGET", identity.addr)
+	authenticator, err := app.Authenticator(context.Background(), cfg, dialIdentity(t, identity))
+	if err != nil {
+		t.Fatalf("Authenticator() = %v", err)
+	}
+
+	cases := []struct {
+		permission string
+		status     int
+		code       string
+	}{
+		{permission: effectivePermission},
+		{permission: claimedPermission, status: http.StatusForbidden, code: "permission-denied"},
+	}
+	for _, tc := range cases {
+		t.Run(tc.permission, func(t *testing.T) {
+			route := kernelhttp.Route{Requires: kernelhttp.RequireSubjectAndTenant, Permission: ports.Permission(tc.permission)}
+
+			_, status, code := kernelhttp.ResolveIdentity(requestContext(t, 2*time.Second), authenticator, route, bearer(claimingCredential))
+
+			if status != tc.status || code != tc.code {
+				t.Fatalf("ResolveIdentity() = %d %q, want %d %q: only the effective permissions authorize", status, code, tc.status, tc.code)
+			}
+		})
+	}
+	if n := len(identity.questions()); n != len(cases) {
+		t.Fatalf("FindEffectivePermissions calls = %d, want %d: the mock is decorated", n, len(cases))
+	}
+}
+
+func TestTheVerifierOfARealmIsDecoratedToo(t *testing.T) {
+	identity := serveIdentity(t)
+	cfg := edgeConfig(t, "OIDC_ISSUER", discoveryOnlyIssuer(t), "OIDC_AUDIENCE", realmAudience, "OIDC_TENANT_CLAIM", realmTenantClaim)
+
+	authenticator, err := app.Authenticator(context.Background(), cfg, dialIdentity(t, identity))
+	if err != nil {
+		t.Fatalf("Authenticator() = %v", err)
+	}
+
+	if _, decorated := authenticator.(app.Permissions); !decorated {
+		t.Fatalf("Authenticator() = %T, want app.Permissions around the verifier", authenticator)
+	}
 }

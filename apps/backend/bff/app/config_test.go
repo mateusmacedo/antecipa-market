@@ -11,6 +11,7 @@ import (
 	"github.com/mateusmacedo/dmpf/libs/backend/go/redis"
 
 	"github.com/mateusmacedo/antecipa-market/apps/backend/bff/app"
+	"github.com/mateusmacedo/antecipa-market/apps/backend/bff/app/rpc"
 )
 
 func lookup(pairs ...string) func(string) string {
@@ -322,5 +323,40 @@ func TestTheIdentityOfTheProcessIsLeftToTheEnvironment(t *testing.T) {
 
 	if telemetry := app.TelemetryOf(cfg); telemetry.Version != "" || telemetry.Instance != "" {
 		t.Fatalf("TelemetryOf() declares version %q and instance %q, want neither: both come from OTEL_RESOURCE_ATTRIBUTES (RF-E3)", telemetry.Version, telemetry.Instance)
+	}
+}
+
+func TestClientOptionsDialsInTheClearOnlyWhenDeclared(t *testing.T) {
+	cfg := app.Config{GRPCInsecure: true}
+
+	opts, err := app.ClientOptions(cfg)
+
+	if err != nil || !opts.Insecure || opts.TLS != nil {
+		t.Fatalf("ClientOptions() = %+v, %v, want the development opt-out and no TLS", opts, err)
+	}
+	if err := rpc.IdentityConfig(opts).Validate(); err != nil {
+		t.Fatalf("IdentityConfig(ClientOptions()).Validate() = %v, want a dialable configuration", err)
+	}
+}
+
+func TestClientOptionsRefusesAConfigThatDeclaresNoTransport(t *testing.T) {
+	_, err := app.ClientOptions(app.Config{})
+
+	if !errors.Is(err, app.ErrInsecureNotDeclared) || !errors.Is(err, app.ErrMissingVariable) {
+		t.Fatalf("ClientOptions() = %v, want ErrInsecureNotDeclared, a missing variable (GRP-15)", err)
+	}
+}
+
+func TestClientOptionsTrustsTheDeclaredAuthority(t *testing.T) {
+	caFile, certFile, keyFile := clientMaterial(t)
+	cfg := app.Config{CAFile: caFile, ServerName: "identity.internal", ClientCertFile: certFile, ClientKeyFile: keyFile}
+
+	opts, err := app.ClientOptions(cfg)
+
+	if err != nil || opts.Insecure || opts.TLS == nil || opts.TLS.ServerName != "identity.internal" || len(opts.TLS.Certificates) != 1 {
+		t.Fatalf("ClientOptions() = %+v, %v, want TLS with the authority and the client pair", opts, err)
+	}
+	if err := rpc.IdentityConfig(opts).Validate(); err != nil {
+		t.Fatalf("IdentityConfig(ClientOptions()).Validate() = %v, want a dialable configuration", err)
 	}
 }

@@ -1,12 +1,16 @@
 package api
 
 import (
+	"context"
 	"net/http"
 
 	kernelhttp "github.com/mateusmacedo/dmpf/libs/backend/go/http"
 	"github.com/mateusmacedo/dmpf/libs/backend/go/observability/metrics"
+	"github.com/mateusmacedo/dmpf/libs/backend/go/ports"
 	"github.com/mateusmacedo/dmpf/libs/backend/go/transport/admission"
 	"github.com/mateusmacedo/dmpf/libs/backend/go/transport/deadline"
+
+	"github.com/mateusmacedo/antecipa-market/apps/backend/bff/app/rpc"
 )
 
 type (
@@ -25,6 +29,27 @@ func NewBinding(kind RouteKind, route kernelhttp.Route, handler http.HandlerFunc
 	return binding{kind: kind, route: route, build: func(handlers) http.HandlerFunc { return handler }}
 }
 
+func newHandler(bound []binding, ctrl *admission.Controller, instruments *metrics.Instruments, opts Options) (http.Handler, error) {
+	return mount(bound, handlers{}, ctrl, instruments, opts)
+}
+
+type verifyOnly struct{ ports.Authenticator }
+
+func (v verifyOnly) Verify(ctx context.Context, credential ports.Credential) (ports.Identity, error) {
+	return v.Authenticate(ctx, credential)
+}
+
+func (verifyOnly) Resolve(_ context.Context, identity ports.Identity) (ports.Identity, error) {
+	return identity, nil
+}
+
+func VerifyOnly(authenticator ports.Authenticator) Authenticator {
+	if authenticator == nil {
+		return nil
+	}
+	return verifyOnly{authenticator}
+}
+
 func NewHandlerOf(bound []Binding, ctrl *admission.Controller, instruments *metrics.Instruments, opts Options) (http.Handler, error) {
 	return newHandler(bound, ctrl, instruments, opts)
 }
@@ -38,3 +63,7 @@ func Bindings(budget deadline.Budget) []Binding { return bindings(budget) }
 func KindOf(b Binding) RouteKind { return b.kind }
 
 func RouteOf(b Binding) kernelhttp.Route { return b.route }
+
+func WriteFailure(r *http.Request, w http.ResponseWriter, failure rpc.Failure) {
+	writeFailure(r, w, failure)
+}

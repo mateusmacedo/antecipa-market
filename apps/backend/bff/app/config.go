@@ -15,8 +15,9 @@ import (
 )
 
 var (
-	ErrMissingVariable = errors.New("bff: required variable is not set")
-	ErrInvalidVariable = envconfig.ErrInvalidVariable
+	ErrMissingVariable     = errors.New("bff: required variable is not set")
+	ErrInvalidVariable     = envconfig.ErrInvalidVariable
+	ErrInsecureNotDeclared = fmt.Errorf("%w: %s=true or %s", ErrMissingVariable, envGRPCInsecure, envGRPCCAFile)
 )
 
 const (
@@ -140,7 +141,7 @@ func (c Config) Validate() error {
 	case c.IdentityTarget == "":
 		return fmt.Errorf("%w: %s", ErrMissingVariable, envIdentityTarget)
 	case !c.GRPCInsecure && c.CAFile == "":
-		return fmt.Errorf("%w: %s=true or %s", ErrMissingVariable, envGRPCInsecure, envGRPCCAFile)
+		return ErrInsecureNotDeclared
 	case c.CAFile != "" && (c.ClientCertFile == "" || c.ClientKeyFile == ""):
 		return fmt.Errorf("%w: %s and %s", ErrMissingVariable, envGRPCClientCertFile, envGRPCClientKeyFile)
 	}

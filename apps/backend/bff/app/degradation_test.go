@@ -33,6 +33,7 @@ func startEdgeExportingTo(t *testing.T, collector string) app.Config {
 		"HTTP_ADDR":                   obstest.UnusedLoopbackAddr(t),
 		"ADMIN_ADDR":                  obstest.UnusedLoopbackAddr(t),
 		"OPENAPI_IDENTITY_PATH":       writeContract(t),
+		"IDENTITY_GRPC_TARGET":        serveIdentity(t).addr,
 	})
 	obstest.UseOnlyTheOTelEnvironmentOf(t, env)
 	cfg, err := app.FromEnv(func(key string) string { return env[key] })

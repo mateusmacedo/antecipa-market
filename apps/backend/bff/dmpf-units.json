@@ -38,6 +38,25 @@
       "versions": ">=1.46.0 <2",
       "entrypoints": ["go.opentelemetry.io/otel/sdk/metric"],
       "capability": "observability"
+    },
+    {
+      "package": "google.golang.org/grpc",
+      "versions": ">=1.83.1 <2",
+      "entrypoints": [
+        ".",
+        "google.golang.org/grpc/backoff",
+        "google.golang.org/grpc/codes",
+        "google.golang.org/grpc/connectivity",
+        "google.golang.org/grpc/metadata",
+        "google.golang.org/grpc/status"
+      ],
+      "capability": "io.network"
+    },
+    {
+      "package": "google.golang.org/protobuf",
+      "versions": ">=1.36.12 <2",
+      "entrypoints": ["google.golang.org/protobuf/reflect/protoreflect"],
+      "capability": "wire.codec"
     }
   ],
   "exceptions": []

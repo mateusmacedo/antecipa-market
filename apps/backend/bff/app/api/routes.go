@@ -8,6 +8,7 @@ import (
 	"log/slog"
 	"net/http"
 	"strings"
+	"unicode"
 
 	kernelhttp "github.com/mateusmacedo/dmpf/libs/backend/go/http"
 	obsclock "github.com/mateusmacedo/dmpf/libs/backend/go/observability/clock"
@@ -19,6 +20,8 @@ import (
 	"go.opentelemetry.io/otel/metric"
 	semconv "go.opentelemetry.io/otel/semconv/v1.43.0"
 	"go.opentelemetry.io/otel/trace"
+
+	"github.com/mateusmacedo/antecipa-market/apps/backend/bff/app/rpc"
 )
 
 const (
@@ -27,11 +30,19 @@ const (
 	CorrelationHeader = "X-Correlation-ID"
 
 	IdentityContractPath = "/openapi/identity/v1/openapi.yaml"
+
+	identityContract = "apps/backend/identity/contract/openapi/v1/openapi.yaml#/paths/"
 )
+
+type Authenticator interface {
+	ports.Authenticator
+	Verify(context.Context, ports.Credential) (ports.Identity, error)
+	Resolve(context.Context, ports.Identity) (ports.Identity, error)
+}
 
 type Options struct {
 	Budget           deadline.Budget
-	Authenticator    ports.Authenticator
+	Authenticator    Authenticator
 	IdentityContract []byte
 	CORSOrigins      []string
 	Logger           *slog.Logger
@@ -57,7 +68,59 @@ type binding struct {
 	build func(handlers) http.HandlerFunc
 }
 
-func bindings(deadline.Budget) []binding { return nil }
+type surface struct {
+	context  string
+	contract string
+	budget   deadline.Budget
+}
+
+func (s surface) query(name, path string, build func(handlers) http.HandlerFunc) binding {
+	return binding{kind: routeQuery, route: s.read(name, path), build: build}
+}
+
+func (s surface) listing(name, path string, build func(handlers) http.HandlerFunc) binding {
+	return binding{kind: routeListing, route: s.read(name, path), build: build}
+}
+
+func (s surface) read(name, path string) kernelhttp.Route {
+	return kernelhttp.Route{
+		Name:        name,
+		Method:      http.MethodGet,
+		Path:        path,
+		ContractRef: s.contract + strings.ReplaceAll(path, "/", "~1") + "/get",
+		Budget:      s.budget,
+		Requires:    kernelhttp.RequireSubjectAndTenant,
+		Permission:  ports.Permission(s.context + ":" + kebab(name)),
+	}
+}
+
+func kebab(operationID string) string {
+	var b strings.Builder
+	for _, r := range operationID {
+		if unicode.IsUpper(r) {
+			b.WriteByte('-')
+			r = unicode.ToLower(r)
+		}
+		b.WriteRune(r)
+	}
+	return b.String()
+}
+
+func bindings(budget deadline.Budget) []binding {
+	identity := surface{"identity", identityContract, budget}
+	return []binding{
+		identity.query("findOrganization", "/identity/organizations/{organizationId}", handlers.findOrganization),
+		identity.query("findPerson", "/identity/persons/{personId}", handlers.findPerson),
+		identity.query("findRepresentation", "/identity/representations/{representationId}", handlers.findRepresentation),
+		identity.query("findBankAccountChange", "/identity/bank-account-changes/{bankAccountChangeId}", handlers.findBankAccountChange),
+		identity.listing("findEstablishmentsByOrganization", "/identity/organizations/{organizationId}/establishments", handlers.findEstablishmentsByOrganization),
+		identity.listing("findRepresentationsByOrganization", "/identity/organizations/{organizationId}/representations", handlers.findRepresentationsByOrganization),
+		identity.listing("findMembershipsByOrganization", "/identity/organizations/{organizationId}/memberships", handlers.findMembershipsByOrganization),
+		identity.listing("findBankAccountChangesByOrganization", "/identity/organizations/{organizationId}/bank-account-changes", handlers.findBankAccountChangesByOrganization),
+		identity.listing("findMembershipsByUser", "/identity/users/{userId}/memberships", handlers.findMembershipsByUser),
+		identity.listing("findEffectivePermissions", "/identity/users/{userId}/permissions", handlers.findEffectivePermissions),
+	}
+}
 
 func Routes(budget deadline.Budget) []kernelhttp.Route {
 	bound := bindings(budget)
@@ -91,14 +154,14 @@ var (
 	errAdmissionRequired = errors.New("api: routes declared without an admission controller")
 )
 
-func NewHandler(ctrl *admission.Controller, instruments *metrics.Instruments, opts Options) (http.Handler, error) {
-	return newHandler(bindings(opts.Budget), ctrl, instruments, opts)
+func NewHandler(identity rpc.Identity, ctrl *admission.Controller, instruments *metrics.Instruments, opts Options) (http.Handler, error) {
+	return mount(bindings(opts.Budget), handlers{identity: identity}, ctrl, instruments, opts)
 }
 
 // WHY: the deadline wraps the execution context, not the reverse, because
 // CTX-01 makes deadline mandatory and the context cannot resolve what the
 // timeout has not yet set. Admission stays inside, still ahead of the body.
-func newHandler(bound []binding, ctrl *admission.Controller, instruments *metrics.Instruments, opts Options) (http.Handler, error) {
+func mount(bound []binding, h handlers, ctrl *admission.Controller, instruments *metrics.Instruments, opts Options) (http.Handler, error) {
 	if opts.Authenticator == nil {
 		return nil, ErrAuthenticatorRequired
 	}
@@ -108,8 +171,6 @@ func newHandler(bound []binding, ctrl *admission.Controller, instruments *metric
 
 	logger := loggerOf(opts)
 
-	var h handlers
-
 	admit := kernelhttp.Admission(ctrl, routeOf, tenantOf, instruments, refuseAsRejection)
 	mux := http.NewServeMux()
 	for _, b := range bound {
@@ -118,7 +179,7 @@ func newHandler(bound []binding, ctrl *admission.Controller, instruments *metric
 			return nil, err
 		}
 		handler := requireIdempotencyKey(route, b.build(h))
-		mounted := withExecutionContext(logger, opts.Authenticator, route, admit(handler))
+		mounted := withExecutionContext(logger, opts.Authenticator, route, admit, handler)
 		mux.Handle(pattern(route), withRecover(withRouteDeadline(route.Budget, mounted)))
 	}
 	if len(opts.IdentityContract) > 0 {
@@ -160,13 +221,9 @@ func withRoute(next http.Handler) http.Handler {
 
 func routeOf(r *http.Request) string { return r.Pattern }
 
-// tenantOf keys the admission bucket by the tenant the edge authenticated
-// (RES-16); admission runs inside withExecutionContext, so the context is there.
+// tenantOf keys the admission bucket by the tenant the edge verified (RES-16);
+// admission runs inside withExecutionContext, ahead of the permissions hop.
 func tenantOf(r *http.Request) string {
-	execution, ok := ports.ExecutionContextFrom(r.Context())
-	if !ok {
-		return ""
-	}
-	tenant, _ := execution.Tenant()
+	tenant, _ := r.Context().Value(verifiedTenantKey{}).(ports.TenantID)
 	return string(tenant)
 }

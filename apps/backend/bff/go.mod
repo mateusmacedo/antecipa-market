@@ -3,6 +3,7 @@ module github.com/mateusmacedo/antecipa-market/apps/backend/bff
 go 1.26.9
 
 require (
+	github.com/mateusmacedo/antecipa-market/apps/backend/identity/contract v0.1.0
 	github.com/mateusmacedo/dmpf/libs/backend/go/authn v1.0.0-rc.5
 	github.com/mateusmacedo/dmpf/libs/backend/go/grpc v1.0.0-rc.5
 	github.com/mateusmacedo/dmpf/libs/backend/go/http v1.0.0-rc.5
@@ -19,6 +20,8 @@ require (
 	go.opentelemetry.io/otel/sdk/log v1.47.0
 	go.opentelemetry.io/otel/sdk/metric v1.47.0
 	go.opentelemetry.io/otel/trace v1.47.0
+	google.golang.org/grpc v1.85.0-dev.0.20260825072537-93e31b48545e
+	google.golang.org/protobuf v1.36.12
 	gopkg.in/yaml.v3 v3.0.1
 )
 
@@ -39,6 +42,7 @@ require (
 	github.com/jackc/puddle/v2 v2.2.2 // indirect
 	github.com/kr/text v0.2.0 // indirect
 	github.com/mateusmacedo/dmpf/libs/backend/go/application v1.0.0-rc.5 // indirect
+	github.com/mateusmacedo/dmpf/libs/backend/go/contracts v1.0.0-rc.5 // indirect
 	github.com/mateusmacedo/dmpf/libs/backend/go/domain v1.0.0-rc.5 // indirect
 	github.com/munnerz/goautoneg v0.0.0-20191010083416-a7dc8b61c822 // indirect
 	github.com/prometheus/client_golang v1.24.1 // indirect
@@ -74,6 +78,4 @@ require (
 	golang.org/x/text v0.42.0 // indirect
 	google.golang.org/genproto/googleapis/api v0.0.0-20260928230214-8a89bd6388cc // indirect
 	google.golang.org/genproto/googleapis/rpc v0.0.0-20260928230214-8a89bd6388cc // indirect
-	google.golang.org/grpc v1.85.0-dev.0.20260825072537-93e31b48545e // indirect
-	google.golang.org/protobuf v1.36.12 // indirect
 )
