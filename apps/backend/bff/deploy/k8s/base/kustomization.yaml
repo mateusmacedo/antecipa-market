@@ -1,0 +1,22 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+# O transporte gRPC para o identity fica no overlay (opt-out em dev, CA em hmg); a URL
+# do Redis vem do Secret redis, lido pela API e pelo papel session-events.
+
+labels:
+  - includeSelectors: true
+    pairs:
+      app.kubernetes.io/name: bff
+      app.kubernetes.io/part-of: dmpf
+
+resources:
+  - serviceaccount.yaml
+  - configmap.yaml
+  - deployment.yaml
+  - deployment-session-events.yaml
+  - service.yaml
+  - service-session-events.yaml
+  - pdb.yaml
+  - networkpolicy.yaml
+  - networkpolicy-session-events.yaml

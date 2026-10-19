@@ -36,9 +36,9 @@ const (
 	envRedisURL             = "REDIS_URL"
 )
 
-// WHY: terminationGracePeriodSeconds 30 (identity/deploy/k8s/base/deployment-api.yaml:71)
-// covers the drain plus two observability.ShutdownGrace windows in sequence:
-// the HTTP Shutdown and the telemetry flush deferred by boot.Boot.
+// WHY: terminationGracePeriodSeconds 30 (bff deploy/k8s/base/deployment.yaml:72 and
+// deployment-session-events.yaml:85) covers the drain plus two ShutdownGrace windows
+// in sequence: the HTTP Shutdown and the telemetry flush deferred by boot.Boot.
 const maxDrainDelay = 10 * time.Second
 
 type Config struct {
@@ -131,7 +131,7 @@ func FromEnv(lookup func(string) string) (Config, error) {
 }
 
 func (c Config) Validate() error {
-	if err := validateListeners(c.HTTPAddr, c.AdminAddr); err != nil {
+	if err := validateListeners(envHTTPAddr, c.HTTPAddr, envAdminAddr, c.AdminAddr); err != nil {
 		return err
 	}
 	if c.DrainDelay > maxDrainDelay {
@@ -197,17 +197,17 @@ func (l listener) sameHost(other listener) bool {
 	return l.host == other.host
 }
 
-func validateListeners(httpAddr, adminAddr string) error {
-	public, err := listenerOf(envHTTPAddr, httpAddr)
+func validateListeners(publicName, publicAddr, adminName, adminAddr string) error {
+	public, err := listenerOf(publicName, publicAddr)
 	if err != nil {
 		return err
 	}
-	admin, err := listenerOf(envAdminAddr, adminAddr)
+	admin, err := listenerOf(adminName, adminAddr)
 	if err != nil {
 		return err
 	}
 	if public.port != 0 && public.port == admin.port && (public.sameHost(admin) || public.wildcard() || admin.wildcard()) {
-		return fmt.Errorf("%w: %s=%q and %s=%q share a listener", ErrInvalidVariable, envHTTPAddr, httpAddr, envAdminAddr, adminAddr)
+		return fmt.Errorf("%w: %s=%q and %s=%q share a listener", ErrInvalidVariable, publicName, publicAddr, adminName, adminAddr)
 	}
 	return nil
 }

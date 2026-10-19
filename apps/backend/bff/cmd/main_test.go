@@ -110,7 +110,7 @@ func TestSignalHelperProcess(t *testing.T) {
 	if os.Getenv(signalHelper) != "1" {
 		t.Skip("runs only as the child of TestASecondSignalEndsADrainThatNeverFinishes")
 	}
-	os.Exit(serve(os.Stderr, func(ctx context.Context) error {
+	os.Exit(serve(os.Stderr, "bff", func(ctx context.Context) error {
 		fmt.Println("serving")
 		<-ctx.Done()
 		fmt.Println("draining")
@@ -178,5 +178,82 @@ func TestASecondSignalEndsADrainThatNeverFinishes(t *testing.T) {
 			t.Fatal("the child kept draining after a second SIGTERM")
 		case <-time.After(100 * time.Millisecond):
 		}
+	}
+}
+
+func TestTheSessionEventsRoleReadsOnlyItsOwnConfiguration(t *testing.T) {
+	var errOut bytes.Buffer
+
+	code := run(options{lookup: lookup(), args: []string{"session-events"}}, &errOut)
+
+	if code != exitUsage {
+		t.Fatalf("run(session-events) = %d, want %d (usage)", code, exitUsage)
+	}
+	if !strings.Contains(errOut.String(), "OIDC_ISSUER") || strings.Contains(errOut.String(), "GRPC_TARGET") {
+		t.Fatalf("stderr = %q, want the role's own OIDC_ISSUER named and no variable of the API", errOut.String())
+	}
+}
+
+func TestTheSessionEventsHealthcheckNeedsOnlyTheAdministrationAddress(t *testing.T) {
+	admin := func(code int) string {
+		srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) { w.WriteHeader(code) }))
+		t.Cleanup(srv.Close)
+		return srv.Listener.Addr().String()
+	}
+	cases := []struct {
+		name string
+		env  func(string) string
+		want int
+	}{
+		{"role ready", lookup("ADMIN_ADDR", admin(http.StatusNoContent)), exitOK},
+		{"role not ready", lookup("ADMIN_ADDR", admin(http.StatusServiceUnavailable)), exitFailure},
+		{"invalid address", lookup("ADMIN_ADDR", "8092"), exitFailure},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			var errOut bytes.Buffer
+
+			if code := run(options{lookup: tc.env, args: []string{"session-events", "healthcheck"}}, &errOut); code != tc.want {
+				t.Fatalf("run(session-events healthcheck) = %d, want %d (stderr %q)", code, tc.want, errOut.String())
+			}
+		})
+	}
+}
+
+func TestServeNamesTheRoleThatFailed(t *testing.T) {
+	for _, name := range []string{"bff", "bff session-events"} {
+		var errOut bytes.Buffer
+
+		code := serve(&errOut, name, func(context.Context) error { return errors.New("refused") })
+
+		if code != exitFailure || errOut.String() != name+": refused\n" {
+			t.Fatalf("serve(%q) = %d with stderr %q, want %d and %q", name, code, errOut.String(), exitFailure, name+": refused\n")
+		}
+	}
+}
+
+func TestTheSessionEventsRoleFailsToStartOutsideAKeycloakRealm(t *testing.T) {
+	server := httptest.NewServer(nil)
+	t.Cleanup(server.Close)
+	issuer := server.URL + "/auth/dmpf"
+	mux := http.NewServeMux()
+	mux.HandleFunc("GET /auth/dmpf/.well-known/openid-configuration", func(w http.ResponseWriter, _ *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		_, _ = fmt.Fprintf(w, `{"issuer":%q,"jwks_uri":%q,"authorization_endpoint":%q,"token_endpoint":%q}`,
+			issuer, issuer+"/certs", issuer+"/auth", issuer+"/token")
+	})
+	server.Config.Handler = mux
+	t.Setenv("OTEL_RESOURCE_ATTRIBUTES", "service.version=test,service.instance.id=bff-session-events-1")
+	var errOut bytes.Buffer
+
+	code := run(options{args: []string{"session-events"}, lookup: lookup(
+		"OIDC_ISSUER", issuer, "OIDC_REVOCATION_TTL_SECONDS", "300",
+		"OIDC_BACKCHANNEL_CLIENT_ID", "dmpf-portal", "OIDC_SESSION_EVENTS_CLIENT_ID", "dmpf-session-events",
+		"OIDC_SESSION_EVENTS_CLIENT_SECRET", "secret", "REDIS_URL", "redis://revocation:secret@127.0.0.1:1/0",
+		"SESSION_EVENTS_ADDR", "127.0.0.1:0", "ADMIN_ADDR", "127.0.0.1:0",
+		"OTEL_TRACES_EXPORTER", "none", "OTEL_METRICS_EXPORTER", "none", "OTEL_LOGS_EXPORTER", "none")}, &errOut)
+
+	if code != exitFailure || !strings.HasPrefix(errOut.String(), "bff session-events: ") || !strings.Contains(errOut.String(), "not a Keycloak realm") {
+		t.Fatalf("run(session-events) = %d with stderr %q, want %d naming the role and the issuer outside a realm", code, errOut.String(), exitFailure)
 	}
 }

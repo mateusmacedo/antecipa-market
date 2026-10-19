@@ -2,7 +2,7 @@
 
 Borda REST/JSON pública do workspace, portada do `bff` de referência do kernel DMPF `1.0.0-rc.5` (ADR-044 do kernel). Sem banco, outbox nem consumer: autentica o sujeito, recusa o token de uma sessão revogada consultando a deny-list guardada no Redis de `REDIS_URL`, autoriza por permissão e traduz cada rota do contrato OpenAPI em uma chamada gRPC a um bounded context (`RST-01`, `GRP-01`, `IDN-16`). Especificado pela `docs/specs/SPEC-A62BGCD4-bff-borda-rest.md`.
 
-Nesta versão (DEVS-113) a borda serve 21 rotas do `identity`: as 10 de consulta (DEVS-112), 10 de comando e a consulta por CNPJ em `POST`. As permissões efetivas são resolvidas no próprio `identity` a cada requisição. `POST /identity/memberships/{membershipId}/grant` fica fora desta versão.
+Nesta versão (DEVS-113) a borda serve 21 rotas do `identity`: as 10 de consulta (DEVS-112), 10 de comando e a consulta por CNPJ em `POST`. As permissões efetivas são resolvidas no próprio `identity` a cada requisição. `POST /identity/memberships/{membershipId}/grant` fica fora desta versão. A mesma imagem tem o papel `session-events`, que alimenta a deny-list (DEVS-114).
 
 ## Saúde
 
@@ -108,6 +108,22 @@ Com o realm de referência, o tenant vem da claim nativa `organization`, sem map
 
 Variável obrigatória ausente, ou nenhuma política de transporte gRPC ou de autenticação, encerra a partida com exit 2 nomeando o que falta.
 
+## Papel `session-events`
+
+Subcomando da mesma imagem (`bff session-events`), com uma réplica, que alimenta a deny-list de sessão consultada pela API. Serve `POST /backchannel-logout` para o back-channel logout do Keycloak e faz polling da Admin REST (eventos `LOGOUT` e admin events). Grava pelo `authn` do kernel no mesmo Redis de `REDIS_URL`, sem extensão do kernel nem do Keycloak (ADR-064 e ADR-065 do kernel). A configuração é própria: o papel não exige nenhuma variável da API, e só ele recebe o client secret.
+
+| Variável | Obrigatória | Efeito |
+| --- | --- | --- |
+| `OIDC_ISSUER` | sim | Realm no formato `<base>/realms/<realm>`; issuer fora dessa forma ou sem descoberta faz a partida sair com 1 |
+| `OIDC_REVOCATION_TTL_SECONDS` | sim | Igual ao `accessTokenLifespan` do realm (300) |
+| `OIDC_BACKCHANNEL_CLIENT_ID`, `OIDC_SESSION_EVENTS_CLIENT_ID`, `OIDC_SESSION_EVENTS_CLIENT_SECRET` | sim | `dmpf-portal`, `dmpf-session-events` e o secret deste último |
+| `REDIS_URL` | sim | O mesmo Redis da API |
+| `SESSION_EVENTS_ADDR`, `ADMIN_ADDR` | não | Defaults `:8091` (receptor) e `:8092` (administração, com `/livez` e `/readyz`); validados como na API |
+| `OIDC_SESSION_EVENTS_INTERVAL_SECONDS`, `OIDC_DISCOVERY_TIMEOUT_SECONDS`, `OIDC_REVOCATION_SKEW_SECONDS` | não | Defaults 5, 10 e 60 |
+| `DRAIN_DELAY`, `REDIS_*`, `OTEL_*` | não | Como na API, com o mesmo teto de `10s` para o `DRAIN_DELAY` |
+
+Variável obrigatória ausente ou inválida faz a partida sair com 2, nomeando-a. O registro de configuração não contém o client secret nem a senha do Redis. O `bff session-events healthcheck` consulta o `/readyz` em `ADMIN_ADDR` e sai com `0` ou `1`. O back-channel do realm aponta para `http://dmpf-bff-session-events:8091/backchannel-logout` no Compose e para `http://bff-session-events:8091/backchannel-logout` no k8s dev. Os nomes vêm do `edge: bff` do `dmpf.json` e são obrigatórios.
+
 ## Rodar localmente
 
 ```bash
@@ -116,20 +132,40 @@ set -a; . apps/backend/bff/deploy/.env; set +a
 pnpm nx run bff:serve
 ```
 
-O `deploy-env` copia o `deploy/.env.example` para `deploy/.env` quando a cópia não existe. O `serve` depende do `redis-up`, que sobe só o Redis do profile `redis` do Compose local, e roda o binário no host com HTTP em 8080 e administração em 8090. O `identity` precisa estar no ar em `IDENTITY_GRPC_TARGET`; sem ele, o `/readyz` responde 503 e as rotas também. Para conferir:
+O `deploy-env` copia `deploy/.env.example` e `deploy/.env.session-events.example` para `deploy/.env` e `deploy/.env.session-events` quando as cópias não existem. O `serve` depende do `redis-up`, que sobe só o Redis do profile `redis` do Compose local, e do `serve-session-events`. Este último sobe o Keycloak (`keycloak-up`) e roda o papel no host, com receptor em 8091 e administração em 8092. A API roda no host com HTTP em 8080 e administração em 8090. O `identity` precisa estar no ar em `IDENTITY_GRPC_TARGET`; sem ele, o `/readyz` responde 503, e as rotas também. Para conferir:
 
 ```bash
 curl -i localhost:8080/openapi/identity/v1/openapi.yaml
 curl -i localhost:8090/readyz
 ```
 
+Em container, a imagem é construída a partir da raiz (`apps/backend/bff/Dockerfile`). O `deploy/compose.yml` entra no Compose local: o `dmpf-bff` sobe no profile `dmpf` e o `dmpf-bff-session-events` no profile `keycloak`. O Swagger UI fica em `http://localhost:8082`.
+
+```bash
+docker compose -f infra/local/docker-compose.yml --profile dmpf --profile keycloak up -d --build --wait
+```
+
+Os manifestos ficam em `deploy/k8s`: a base tem a API e o papel, e os overlays `dev` e `hmg` são compostos pelos agregados `infra/k8s/overlays/{dev,hmg}`. No hmg, os Secrets `redis` (chave `url`), `keycloak-session-events` e `bff-oidc` são pré-condição operacional.
+
 ## Targets Nx
 
-`tidy`, `fmt-check`, `vet`, `build`, `test-race`, `govulncheck`, `serve`, `redis-up`, `test-infra-up`, `test-infra-down` e `deploy-env`; `lint` e `test` são inferidos pelo plugin.
+`tidy`, `fmt-check`, `vet`, `build`, `test-race`, `govulncheck`, `serve`, `serve-session-events`, `redis-up`, `keycloak-up`, `test-infra-up`, `test-infra-down`, `deploy-env`, `docker:run` e `k8s-render`. Este último renderiza os overlays dev e hmg e confere o isolamento do papel (`deploy/k8s/check-render.sh`). `lint`, `test` e `docker:build` são inferidos pelos plugins.
 
 ## Testes
 
 Unitários sobre a cadeia real, com rotas sintéticas montadas por uma costura de teste (`app/api/export_test.go`) e com as 21 rotas de produção sobre um `identity` falso por `bufconn`: ordem da cadeia, `ValidateEdge`, CORS, 401, 403, 429, pânico, prazo, access log, span, idempotência, saúde, configuração, telemetria e partida do binário. Por rota, o JSON completo, 404, 403 sem chamar o RPC e `validAt`; no decorador, chamada única, tenant nulo sem chamada, claims descartadas, 503/504/500 e o orçamento de dois saltos (`GRP-17`). Por comando, o request gRPC completo (path, corpo, enums e ator igual ao `sub`), o status de sucesso, o 422 da rejeição, os limites de cada campo do schema (ausente 400, vazio admitido segue ao RPC), o replay abaixo de 500 e a chave derivada na metadata só nas rotas de comando, nunca no salto de permissões nem na consulta por CNPJ. Uma tabela sobre as 11 rotas `POST` prova chave ausente ou inválida, 403 sem RPC de negócio, campo de ator no corpo recusado, nenhum valor do corpo no log e o `grant` fora da borda, e o teste de contrato compara os nomes e os campos obrigatórios de cada corpo com o `requestBody` do OpenAPI. O cliente gRPC tem política para todo método do descriptor e um cliente para cada um, menos `GrantMembership`; o retry em `UNAVAILABLE` reenvia a mesma chave. Os testes de fiação sobem um `identity` falso em TCP, inclusive com TLS mútuo. Com a tag `integration`, `app/revocation_integration_test.go` passa pelo verificador OIDC real com issuer falso e a claim `organization.*.tenant_id`: token revogado depois de aceito (cenário 7) e tenant não resolvido sem chamar `FindEffectivePermissions` (cenário 8). O teste estrutural do OpenAPI compara os status por tipo de rota e confere o inventário das rotas de produção.
+
+O papel `session-events` é testado contra um realm falso:
+- **Receptor:** 400 a logout token não verificável e 405 com `Allow: POST` a `GET`.
+- **Polling:** as duas fontes são lidas na mesma janela de cada ciclo.
+- **Saúde:** responde só na porta de administração.
+- **Desligamento e partida:** o polling para no desligamento, e o issuer sem descoberta falha a partida.
+
+Com a tag `integration`, `app/sessionevents_integration_test.go` prova que um `LOGOUT` do polling e um logout token válido revogam a sessão no Redis que a API consulta. O e2e (`app/e2e_test.go`) sobe o `identity` real e o `bff` como processos, com mTLS, e percorre `api.Routes`:
+- usuário sem vínculo recebe 403 com a mensagem da borda em toda rota;
+- `POST` sem `Idempotency-Key` recebe 400 `missing-idempotency-key` antes do salto de permissões;
+- anônimo recebe 401;
+- o contrato servido é idêntico ao arquivo.
 
 ```bash
 pnpm nx run bff:test-race
@@ -137,9 +173,11 @@ pnpm nx run bff:test-race
 
 ## O que fica para as próximas tasks
 
-- DEVS-114: papel `session-events`, Dockerfile, `deploy/compose.yml`, `deploy/k8s`, `edge: bff` no `dmpf.json` e o e2e em container, que também prova o replay contra o `identity` real (mesmo status e corpo).
+- DEVS-133: as rotas do `partner`. O Swagger UI local já lista o contrato do `partner`, que o `bff` só serve a partir dela.
+- DEVS-134: dimensionamento de bulkhead e de admissão.
 
-## Limitações até a DEVS-114
+## Limitações
 
-- Os agregados `infra/k8s/overlays/{dev,hmg}/apps`, gerados pelo `infrasync`, já referenciam `apps/backend/bff/deploy/k8s/overlays/{dev,hmg}`, que só nascem na DEVS-114; até lá esses agregados não renderizam.
 - O certificado de cliente `bff-client` é emitido pelo serviço `pki` do Compose local; num ambiente em que o volume `pki` já existia antes, é preciso recriá-lo para que o certificado seja gerado.
+- A medição ponta a ponta dos 60 s da revogação contra o Keycloak de referência não roda no workspace; vale a garantia do kernel `1.0.0-rc.5`.
+- O replay de idempotência não tem prova ponta a ponta contra o `identity` real: o e2e não tem caminho feliz, porque nenhum usuário obtém permissão pela API, e toda chamada para no 403. O replay fica provado nos testes com o `identity` falso.

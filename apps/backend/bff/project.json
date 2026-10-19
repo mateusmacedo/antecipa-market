@@ -4,7 +4,7 @@
   "projectType": "application",
   "sourceRoot": "apps/backend/bff",
   "tags": ["type:app", "scope:backend", "stack:go", "layer:apps"],
-  "implicitDependencies": ["identity-contract"],
+  "implicitDependencies": ["identity-contract", "identity"],
   "targets": {
     "nx-release-publish": {
       "executor": "nx:noop"
@@ -86,8 +86,59 @@
         "envFile": "{projectRoot}/deploy/.env.example"
       },
       "continuous": true,
-      "dependsOn": ["redis-up"]
+      "dependsOn": ["redis-up", "serve-session-events"]
     },
-    "deploy-env": {}
+    "deploy-env": {
+      "options": {
+        "command": "[ -f deploy/.env ] || cp deploy/.env.example deploy/.env; [ -f deploy/.env.session-events ] || cp deploy/.env.session-events.example deploy/.env.session-events"
+      }
+    },
+    "serve-session-events": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "set -a; [ ! -f deploy/.env ] || . deploy/.env; . deploy/.env.session-events.example; [ ! -f deploy/.env.session-events ] || . deploy/.env.session-events; OTEL_RESOURCE_ATTRIBUTES=\"${OTEL_RESOURCE_ATTRIBUTES:+$OTEL_RESOURCE_ATTRIBUTES,}service.instance.id=bff-local-session-events,dmpf.process.role=session-events\"; set +a; exec go run ./cmd session-events",
+        "cwd": "{projectRoot}",
+        "envFile": "{projectRoot}/deploy/.env.example"
+      },
+      "continuous": true,
+      "dependsOn": ["redis-up", "keycloak-up"]
+    },
+    "keycloak-up": {
+      "executor": "nx:run-commands",
+      "cache": false,
+      "options": {
+        "command": "docker compose -f infra/local/docker-compose.yml --profile keycloak up -d --wait keycloak",
+        "cwd": "{workspaceRoot}"
+      }
+    },
+    "docker:run": {
+      "options": {
+        "args": [
+          "--rm",
+          "--name bff",
+          "--network host",
+          "--env-file deploy/.env",
+          "-e OPENAPI_IDENTITY_PATH=/contracts/openapi/identity/v1/openapi.yaml"
+        ]
+      },
+      "continuous": true,
+      "dependsOn": [
+        "deploy-env",
+        "docker:build",
+        "redis-up",
+        {
+          "projects": ["identity"],
+          "target": "docker:run"
+        }
+      ]
+    },
+    "k8s-render": {
+      "executor": "nx:run-commands",
+      "cache": false,
+      "options": {
+        "command": "bash apps/backend/bff/deploy/k8s/check-render.sh",
+        "cwd": "{workspaceRoot}"
+      }
+    }
   }
 }

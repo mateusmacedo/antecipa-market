@@ -21,8 +21,9 @@ const (
 )
 
 const (
-	healthcheckCommand = "healthcheck"
-	probeTimeout       = 3 * time.Second
+	healthcheckCommand   = "healthcheck"
+	sessionEventsCommand = "session-events"
+	probeTimeout         = 3 * time.Second
 )
 
 func main() {
@@ -35,7 +36,12 @@ type options struct {
 }
 
 func run(o options, errOut io.Writer) int {
-	if len(o.args) > 0 && o.args[0] == healthcheckCommand {
+	switch {
+	case len(o.args) > 1 && o.args[0] == sessionEventsCommand && o.args[1] == healthcheckCommand:
+		return sessionEventsHealthcheck(o.lookup, errOut)
+	case len(o.args) > 0 && o.args[0] == sessionEventsCommand:
+		return runSessionEvents(o.lookup, errOut)
+	case len(o.args) > 0 && o.args[0] == healthcheckCommand:
 		return healthcheck(o.lookup, errOut)
 	}
 	cfg, err := app.FromEnv(o.lookup)
@@ -43,10 +49,19 @@ func run(o options, errOut io.Writer) int {
 		_, _ = fmt.Fprintf(errOut, "bff: %v\n", err)
 		return exitUsage
 	}
-	return serve(errOut, func(ctx context.Context) error { return app.Run(ctx, cfg) })
+	return serve(errOut, "bff", func(ctx context.Context) error { return app.Run(ctx, cfg) })
 }
 
-func serve(errOut io.Writer, start func(context.Context) error) int {
+func runSessionEvents(lookup func(string) string, errOut io.Writer) int {
+	cfg, err := app.SessionEventsFromEnv(lookup)
+	if err != nil {
+		_, _ = fmt.Fprintf(errOut, "bff session-events: %v\n", err)
+		return exitUsage
+	}
+	return serve(errOut, "bff session-events", func(ctx context.Context) error { return app.RunSessionEvents(ctx, cfg) })
+}
+
+func serve(errOut io.Writer, name string, start func(context.Context) error) int {
 	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGTERM, syscall.SIGINT)
 	defer stop()
 	// WHY: stop restores the default disposition (os/signal.NotifyContext), so a
@@ -54,7 +69,7 @@ func serve(errOut io.Writer, start func(context.Context) error) int {
 	context.AfterFunc(ctx, stop)
 
 	if err := start(ctx); err != nil {
-		_, _ = fmt.Fprintf(errOut, "bff: %v\n", err)
+		_, _ = fmt.Fprintf(errOut, "%s: %v\n", name, err)
 		return exitFailure
 	}
 	return exitOK
@@ -69,6 +84,10 @@ func healthcheck(lookup func(string) string, errOut io.Writer) int {
 		return exitFailure
 	}
 	return probe(cfg.AdminAddr, errOut)
+}
+
+func sessionEventsHealthcheck(lookup func(string) string, errOut io.Writer) int {
+	return probe(app.SessionEventsAdminAddr(lookup), errOut)
 }
 
 func probe(adminAddr string, errOut io.Writer) int {
