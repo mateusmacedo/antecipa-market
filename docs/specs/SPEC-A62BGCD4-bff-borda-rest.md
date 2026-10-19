@@ -2,7 +2,7 @@
 id: SPEC-A62BGCD4
 slug: bff-borda-rest
 title: bff - borda REST pública sobre os contextos gRPC (fundação e identity)
-stage: building
+stage: done
 priority: P0
 depends_on: [SPEC-GXGASP24, SPEC-7KW0HHF6, SPEC-SBW7HT6Y, SPEC-STEJG347]
 ticket_url: https://linear.app/mmda/issue/DEVS-110
@@ -169,6 +169,97 @@ created: 2026-10-15
 > cliente ausente ou inválida, o log não registra a derivada.
 > O `Content-Type` não é exigido: o contrato não declara 415, e o
 > `Idempotency-Key` já força o preflight de CORS.
+
+> **Addendum (2026-10-19, DEVS-114)** — decisões da integração de plataforma
+> que resolvem os pontos a verificar desta task:
+> (1) **e2e real (cenário 6).** Roda como o da referência: processos no host,
+> com mTLS real (`tb.NewPKI`), dentro do `bff:test-race` com a tag
+> `integration`. O `identity` sobe com `--role api` e um `PG_DSN` capaz de
+> migrar, com `MIGRATE=true` e sem `PG_MIGRATE_DSN`, porque o `identity` ainda
+> não adota a ADR-063. O teste percorre `api.Routes`, sem lista fixa, e exige
+> o 403 com a mensagem da borda, para distinguir a recusa da borda da do
+> `identity`. As rotas POST também são chamadas sem `Idempotency-Key` e recebem
+> 400 `missing-idempotency-key` da borda, porque a chave é validada antes do
+> salto de permissões (addendum do code review da DEVS-113, item 1). A
+> cobertura das 21 rotas só se declara depois de um `bff:test-race` verde numa
+> base que já contenha a DEVS-113. A prova em container é a subida do Compose
+> local com os profiles `dmpf` e `keycloak`, verificada à mão e registrada no PR.
+> O replay contra o `identity` real, que o addendum da DEVS-113 deixou para este
+> e2e, não tem prova ponta a ponta. Sem caminho feliz, toda chamada para no 403
+> antes do comando, e o replay fica provado só com o `identity` falso.
+> (2) **Overlay de plataforma.** O overlay da referência foi portado para dev e
+> hmg (`infra/k8s/overlays/{dev,hmg}/kustomization.yaml`, com o Secret `redis`
+> e o Component `infra/keycloak/dev` no dev). No hmg, o overlay acrescenta ao
+> ConfigMap `keycloak` a mesma URL de back-channel, que a referência deixa
+> vazia; sem ela, o hmg revogaria só pelo polling. O `k8s-render` renderiza os dois
+> overlays e confere o isolamento do papel: o Secret `keycloak-session-events`
+> só no container do papel, o Service só com a 8091 e a NetworkPolicy só a
+> partir de pods `keycloak`.
+> (3) **Regeneração com `edge: bff`.** O `init --edge=bff` regravou os
+> arquivos gerenciados sem `--force`. O `identity` e o `partner` foram
+> regenerados num workspace descartável com os parâmetros originais: o render
+> com `edge` vazio reproduz os arquivos atuais byte a byte, e o diff para
+> `edge: bff` muda só a NetworkPolicy, o patch hmg e o README de cada contexto.
+> O `partner` entra porque o `edge` vale para o workspace inteiro.
+> (4) **Papel `session-events`.** O papel herda da API o teto de 10 s do
+> `DRAIN_DELAY`, porque o Deployment dele também tem
+> `terminationGracePeriodSeconds: 30`. Herda também a validação de
+> `SESSION_EVENTS_ADDR` e `ADMIN_ADDR` com porta e IP normalizados, o encerramento
+> sem erro quando o sinal chega durante a descoberta OIDC e o segundo sinal que
+> encerra na hora. A gravação na deny-list tem prova determinística contra o
+> Redis de testes, pelo polling e pelo back-channel.
+> (5) **Medição dos 60 s (cenário 11).** Fica fora: vale a garantia do kernel
+> `1.0.0-rc.5` (`revocation_keycloak_integration_test.go:184`) somada à prova
+> de fiação do item 4, sem helper PKCE próprio.
+> (6) **`docker:build` e `docker:run`.** O plugin `@nx/docker` passa a
+> construir a partir da raiz (`cwd: "."`, `-f {projectRoot}/Dockerfile`), como
+> na referência. Antes, o `docker:build` inferido falhava com o `COPY go.work`
+> fora do contexto.
+> (7) **Riscos residuais registrados no code review.** Ficam como estão:
+> - O `k8s-render`, com as asserções de isolamento do papel, não roda no CI;
+>   pô-lo lá exige mudar o workflow.
+> - O PDB do `bff` tem `minAvailable: 1` e o dev roda uma réplica, então a
+>   evicção voluntária fica bloqueada (igual à referência).
+> - O `/readyz` do papel não depende do Redis (igual à referência). Com o Redis
+>   fora, o papel segue pronto, e o receptor e o polling falham.
+> - A NetworkPolicy gerada do `identity` seleciona `app.kubernetes.io/name In
+>   [bff]`, que também casa os pods do `bff-session-events`. No hmg, o mTLS
+>   barra o papel, que não tem certificado de cliente. O ajuste do seletor é do
+>   plugin.
+> - O `serve-session-events` acrescenta `service.instance.id` e
+>   `dmpf.process.role` ao `OTEL_RESOURCE_ATTRIBUTES` do `deploy/.env`, e o
+>   último valor de cada chave vence, como no `docker:run-relay` do `identity`
+>   e na referência.
+> (8) **Checklist de qualidade.** Foram corrigidos:
+> - o prazo de 3 s por requisição do polling, com teto na espera pelo fim do
+>   polling no desligamento, para caber nos 30 s;
+> - a recusa de intervalo de polling maior que metade da janela (TTL + skew);
+> - o cache de módulos no Dockerfile do `bff`;
+> - `GOMEMLIMIT` nos Deployments;
+> - `https://` no issuer de exemplo do hmg.
+>
+> Ficam registrados, todos iguais à referência, salvo onde indicado:
+> - O polling do kernel repete a cada ciclo sem backoff e sem métrica de falha,
+>   e o papel segue pronto. A rotação de `keycloak-session-events` exige
+>   rollout do papel.
+> - A API e o papel usam a mesma credencial do Redis, com escrita. Separar
+>   leitor e escritor exige dois usuários ACL e dois Secrets.
+> - O back-channel do hmg vai em HTTP dentro do cluster. Isto difere da
+>   referência e vem do item 2. O token é assinado, e só os metadados ficam
+>   expostos.
+> - A NetworkPolicy do receptor confia no rótulo `keycloak`. O papel e a API
+>   compartilham o ServiceAccount `bff`. As imagens base não são fixadas por
+>   digest.
+> - A partida do papel depende da descoberta OIDC e entra em backoff de
+>   reinício enquanto o Keycloak não responde.
+> - O default vazio de `KEYCLOAK_BACKCHANNEL_LOGOUT_URL` no Compose local é de
+>   arquivo gerado.
+> - Em escala, o polling relê a janela inteira a cada ciclo, com um `EVALSHA`
+>   por evento. O `PageSize` não é exposto, e não há alerta sobre
+>   `dmpf.auth.revocation.apply_delay` (cursor ou pipeline são do kernel;
+>   dimensionamento na DEVS-134).
+> - `adminEventsDetailsEnabled: true` no realm aumenta o volume relido pelo
+>   polling.
 
 ## Resumo
 
