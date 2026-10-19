@@ -31,6 +31,17 @@ const (
 	methodMembershipsByOrganization        = "FindMembershipsByOrganization"
 	methodBankAccountChangesByOrganization = "FindBankAccountChangesByOrganization"
 	methodMembershipsByUser                = "FindMembershipsByUser"
+	methodRequestBankAccountChange         = "RequestBankAccountChange"
+	methodRegisterOrganization             = "RegisterOrganization"
+	methodAddEstablishment                 = "AddEstablishment"
+	methodRegisterPerson                   = "RegisterPerson"
+	methodProvisionUserAccount             = "ProvisionUserAccount"
+	methodRegisterRepresentation           = "RegisterRepresentation"
+	methodInviteUser                       = "InviteUser"
+	methodSuspendUser                      = "SuspendUser"
+	methodRevokeMembership                 = "RevokeMembership"
+	methodApproveBankAccountChange         = "ApproveBankAccountChange"
+	methodOrganizationByTaxID              = "FindOrganizationByTaxId"
 )
 
 type hop struct {
@@ -48,6 +59,7 @@ type fakeIdentity struct {
 	answer  permissionsAnswer
 	byUser  map[string][]string
 	replies map[string]reply
+	headers map[string]metadata.MD
 	hops    map[string][]hop
 }
 
@@ -68,6 +80,16 @@ func (f *fakeIdentity) replying(method string, answer reply) *fakeIdentity {
 		f.replies = map[string]reply{}
 	}
 	f.replies[method] = answer
+	return f
+}
+
+func (f *fakeIdentity) sendingHeader(method string, header metadata.MD) *fakeIdentity {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	if f.headers == nil {
+		f.headers = map[string]metadata.MD{}
+	}
+	f.headers[method] = header
 	return f
 }
 
@@ -127,8 +149,11 @@ func serving[Req, Resp any, PReq interface {
 		func(_ any, ctx context.Context, req PReq) (PResp, error) {
 			f.record(ctx, method, req)
 			f.mu.Lock()
-			answer := f.replies[method]
+			answer, header := f.replies[method], f.headers[method]
 			f.mu.Unlock()
+			if header != nil {
+				_ = grpc.SetHeader(ctx, header)
+			}
 			if answer == nil {
 				return PResp(new(Resp)), nil
 			}
@@ -160,6 +185,17 @@ func (f *fakeIdentity) dial(t *testing.T, clock obsclock.Clock) rpc.Identity {
 			serving[servicev1.FindMembershipsByOrganizationRequest, servicev1.FindMembershipsByOrganizationResponse](f, service, methodMembershipsByOrganization),
 			serving[servicev1.FindBankAccountChangesByOrganizationRequest, servicev1.FindBankAccountChangesByOrganizationResponse](f, service, methodBankAccountChangesByOrganization),
 			serving[servicev1.FindMembershipsByUserRequest, servicev1.FindMembershipsByUserResponse](f, service, methodMembershipsByUser),
+			serving[servicev1.RequestBankAccountChangeRequest, servicev1.RequestBankAccountChangeResponse](f, service, methodRequestBankAccountChange),
+			serving[servicev1.RegisterOrganizationRequest, servicev1.RegisterOrganizationResponse](f, service, methodRegisterOrganization),
+			serving[servicev1.AddEstablishmentRequest, servicev1.AddEstablishmentResponse](f, service, methodAddEstablishment),
+			serving[servicev1.RegisterPersonRequest, servicev1.RegisterPersonResponse](f, service, methodRegisterPerson),
+			serving[servicev1.ProvisionUserAccountRequest, servicev1.ProvisionUserAccountResponse](f, service, methodProvisionUserAccount),
+			serving[servicev1.RegisterRepresentationRequest, servicev1.RegisterRepresentationResponse](f, service, methodRegisterRepresentation),
+			serving[servicev1.InviteUserRequest, servicev1.InviteUserResponse](f, service, methodInviteUser),
+			serving[servicev1.SuspendUserRequest, servicev1.SuspendUserResponse](f, service, methodSuspendUser),
+			serving[servicev1.RevokeMembershipRequest, servicev1.RevokeMembershipResponse](f, service, methodRevokeMembership),
+			serving[servicev1.ApproveBankAccountChangeRequest, servicev1.ApproveBankAccountChangeResponse](f, service, methodApproveBankAccountChange),
+			serving[servicev1.FindOrganizationByTaxIdRequest, servicev1.FindOrganizationByTaxIdResponse](f, service, methodOrganizationByTaxID),
 		},
 	}, f)
 	go func() { _ = srv.Serve(listener) }()
@@ -178,12 +214,17 @@ func identityDown(t *testing.T) rpc.Identity {
 
 func dialIdentity(t *testing.T, target string, clock obsclock.Clock, extra ...grpc.DialOption) rpc.Identity {
 	t.Helper()
-	conn, err := rpc.Dial(target, rpc.IdentityConfig(rpc.Options{Insecure: true, Clock: clock}), extra...)
-	if err != nil {
-		t.Fatalf("Dial(%s) = %v", target, err)
+	opts := rpc.Options{Insecure: true, Clock: clock}
+	conns := make([]*grpc.ClientConn, 0, 2)
+	for _, cfg := range []kernelgrpc.Config{rpc.IdentityConfig(opts), rpc.CommandsConfig(opts)} {
+		conn, err := rpc.Dial(target, cfg, extra...)
+		if err != nil {
+			t.Fatalf("Dial(%s) = %v", target, err)
+		}
+		t.Cleanup(func() { _ = conn.Close() })
+		conns = append(conns, conn)
 	}
-	t.Cleanup(func() { _ = conn.Close() })
-	return rpc.NewIdentity(conn)
+	return rpc.NewIdentity(conns[0], conns[1])
 }
 
 // The deadline interceptor derives the outgoing deadline from Now alone

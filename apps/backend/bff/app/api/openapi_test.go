@@ -1,9 +1,12 @@
 package api_test
 
 import (
+	"encoding/json"
 	"fmt"
+	"maps"
 	"net/http"
 	"os"
+	"reflect"
 	"slices"
 	"strings"
 	"testing"
@@ -20,7 +23,30 @@ type document struct {
 	Components struct {
 		Parameters map[string]parameter `yaml:"parameters"`
 		Responses  map[string]response  `yaml:"responses"`
+		Schemas    map[string]schema    `yaml:"schemas"`
 	} `yaml:"components"`
+}
+
+type schema struct {
+	Ref         string            `yaml:"$ref"`
+	Type        string            `yaml:"type"`
+	Properties  map[string]schema `yaml:"properties"`
+	Required    []string          `yaml:"required"`
+	Items       *schema           `yaml:"items"`
+	MaxItems    int               `yaml:"maxItems"`
+	UniqueItems bool              `yaml:"uniqueItems"`
+	MaxLength   int               `yaml:"maxLength"`
+	Pattern     string            `yaml:"pattern"`
+	Enum        []string          `yaml:"enum"`
+}
+
+type requestBody struct {
+	Required bool                 `yaml:"required"`
+	Content  map[string]mediaType `yaml:"content"`
+}
+
+type mediaType struct {
+	Schema schema `yaml:"schema"`
 }
 
 type response struct {
@@ -29,8 +55,9 @@ type response struct {
 }
 
 type operation struct {
-	Parameters []parameter          `yaml:"parameters"`
-	Responses  map[string]yaml.Node `yaml:"responses"`
+	Parameters  []parameter          `yaml:"parameters"`
+	RequestBody *requestBody         `yaml:"requestBody"`
+	Responses   map[string]yaml.Node `yaml:"responses"`
 }
 
 type parameter struct {
@@ -60,6 +87,13 @@ func (d document) resolve(p parameter) parameter {
 		return d.Components.Parameters[name]
 	}
 	return p
+}
+
+func (d document) schema(s schema) schema {
+	if name, ok := strings.CutPrefix(s.Ref, "#/components/schemas/"); ok {
+		return d.schema(d.Components.Schemas[name])
+	}
+	return s
 }
 
 func loadDocument(t *testing.T, file string) document {
@@ -102,6 +136,17 @@ var productionRoutes = map[string]expectation{
 	"findBankAccountChangesByOrganization": {api.RouteListing, "200"},
 	"findMembershipsByUser":                {api.RouteListing, "200"},
 	"findEffectivePermissions":             {api.RouteListing, "200"},
+	"requestBankAccountChange":             {api.RouteCommand, "201"},
+	"registerOrganization":                 {api.RouteCommand, "201"},
+	"addEstablishment":                     {api.RouteCommand, "201"},
+	"registerPerson":                       {api.RouteCommand, "201"},
+	"provisionUserAccount":                 {api.RouteCommand, "201"},
+	"registerRepresentation":               {api.RouteCommand, "201"},
+	"inviteUser":                           {api.RouteCommand, "201"},
+	"suspendUser":                          {api.RouteCommand, "200"},
+	"revokeMembership":                     {api.RouteCommand, "200"},
+	"approveBankAccountChange":             {api.RouteCommand, "200"},
+	"findOrganizationByTaxId":              {api.RouteLookup, "200"},
 }
 
 func contractProblems(t *testing.T, route kernelhttp.Route, want expectation) []string {
@@ -222,6 +267,28 @@ func TestTheOpenAPIVerifierAcceptsEveryRouteKindAsTheContractDeclaresIt(t *testi
 	}
 }
 
+func TestEveryKeyedIdentityRouteIsAPostUnderItsOwnPermission(t *testing.T) {
+	permissions := map[string]ports.Permission{}
+	for _, keyed := range append(identityCommands(), organizationLookup()) {
+		permissions[keyed.name] = ports.Permission(keyed.permission)
+	}
+	for _, b := range api.Bindings(routeBudget) {
+		route := api.RouteOf(b)
+		if kind := api.KindOf(b); kind != api.RouteCommand && kind != api.RouteLookup {
+			continue
+		}
+		t.Run(route.Name, func(t *testing.T) {
+			if route.Method != http.MethodPost || route.IdempotencyKey != api.IdempotencyHeader || route.Permission != permissions[route.Name] ||
+				route.Requires != kernelhttp.RequireSubjectAndTenant || route.Budget != routeBudget {
+				t.Fatalf("route = %+v, want a POST keyed by %s under %q for a subject and a tenant", route, api.IdempotencyHeader, permissions[route.Name])
+			}
+			if err := route.ValidateEdge(); err != nil {
+				t.Fatalf("ValidateEdge() = %v", err)
+			}
+		})
+	}
+}
+
 func TestTheOpenAPIVerifierRefusesARouteOfTheWrongKind(t *testing.T) {
 	for _, c := range []struct {
 		route string
@@ -259,4 +326,146 @@ func TestTheEdgeMountsEveryRouteKindTheContractDeclares(t *testing.T) {
 	rec := f.do(t, http.MethodGet, "/identity/organizations/org-1", nil, "Authorization", "")
 
 	requireRejection(t, rec, http.StatusUnauthorized, "unauthenticated")
+}
+
+func indirect(typ reflect.Type) reflect.Type {
+	for typ.Kind() == reflect.Pointer {
+		typ = typ.Elem()
+	}
+	return typ
+}
+
+func jsonFields(typ reflect.Type) map[string]reflect.Type {
+	typ = indirect(typ)
+	fields := make(map[string]reflect.Type, typ.NumField())
+	for i := range typ.NumField() {
+		field := typ.Field(i)
+		name, _, _ := strings.Cut(field.Tag.Get("json"), ",")
+		fields[name] = field.Type
+	}
+	return fields
+}
+
+func shapeProblems(doc document, declared schema, typ reflect.Type, at string) []string {
+	fields := jsonFields(typ)
+	names := slices.Sorted(maps.Keys(fields))
+	if properties := slices.Sorted(maps.Keys(declared.Properties)); !slices.Equal(names, properties) {
+		return []string{fmt.Sprintf("%sproperties: bff %v, contract %v", at, names, properties)}
+	}
+	var problems []string
+	for _, name := range names {
+		nested, property, label := indirect(fields[name]), doc.schema(declared.Properties[name]), at+name+"."
+		if nested.Kind() == reflect.Slice {
+			nested, label = indirect(nested.Elem()), at+name+"[]."
+			if property.Items != nil {
+				property = doc.schema(*property.Items)
+			}
+		}
+		if nested.Kind() == reflect.Struct {
+			problems = append(problems, shapeProblems(doc, property, nested, label)...)
+		}
+	}
+	return problems
+}
+
+func objectAt(body map[string]any, path []any) map[string]any {
+	var node any = body
+	for _, step := range path {
+		switch step := step.(type) {
+		case string:
+			node = node.(map[string]any)[step]
+		case int:
+			node = node.([]any)[step]
+		}
+	}
+	return node.(map[string]any)
+}
+
+func (c identityCommand) acceptsWithout(t *testing.T, probe map[string]any, path []any, field string) bool {
+	t.Helper()
+	body := cloned(t, probe)
+	delete(objectAt(body, path), field)
+	raw, err := json.Marshal(body)
+	if err != nil {
+		t.Fatalf("Marshal = %v", err)
+	}
+	f, fake := c.edge(t, c.reply, nil)
+
+	rec := c.send(t, f, c.path, string(raw))
+
+	switch rec.Code {
+	case c.status:
+		return true
+	case http.StatusBadRequest:
+		requireRejection(t, rec, http.StatusBadRequest, "invalid-request")
+		requireHops(t, fake, c.method, 0)
+		return false
+	default:
+		t.Fatalf("without %s: status = %d, want %d or 400 (body %s)", field, rec.Code, c.status, rec.Body.String())
+		return false
+	}
+}
+
+func requiredProblems(t *testing.T, doc document, declared schema, c identityCommand, probe map[string]any, path []any, at string) []string {
+	t.Helper()
+	object := objectAt(probe, path)
+	names := slices.Sorted(maps.Keys(object))
+	if properties := slices.Sorted(maps.Keys(declared.Properties)); !slices.Equal(names, properties) {
+		return []string{fmt.Sprintf("%sthe probe body names %v, the contract %v", at, names, properties)}
+	}
+	var problems, required []string
+	for _, name := range names {
+		if !c.acceptsWithout(t, probe, path, name) {
+			required = append(required, name)
+		}
+		items, listed := object[name].([]any)
+		property := doc.schema(declared.Properties[name])
+		if !listed || len(items) == 0 || property.Items == nil {
+			continue
+		}
+		if _, nested := items[0].(map[string]any); nested {
+			problems = append(problems, requiredProblems(t, doc, doc.schema(*property.Items), c, probe, append(slices.Clone(path), name, 0), at+name+"[].")...)
+		}
+	}
+	if contract := slices.Sorted(slices.Values(declared.Required)); !slices.Equal(required, contract) {
+		problems = append(problems, fmt.Sprintf("%srequired: the edge refuses a body without %v, the contract requires %v", at, required, contract))
+	}
+	return problems
+}
+
+func TestTheBodyOfEveryKeyedRouteIsTheRequestBodyOfTheContract(t *testing.T) {
+	bodies := api.RequestBodies()
+	for _, b := range api.Bindings(routeBudget) {
+		if kind := api.KindOf(b); kind != api.RouteCommand && kind != api.RouteLookup {
+			continue
+		}
+		route := api.RouteOf(b)
+		t.Run(route.Name, func(t *testing.T) {
+			typ, listed := bodies[route.Name]
+			if !listed {
+				t.Fatalf("api.RequestBodies() does not name %s", route.Name)
+			}
+			file, _, _ := strings.Cut(route.ContractRef, "#")
+			doc := loadDocument(t, file)
+			declared := doc.Paths[route.Path][strings.ToLower(route.Method)].RequestBody
+			probe := keyedRoute(t, route.Name)
+			if typ == nil || declared == nil || probe.body == nil {
+				if typ != nil || declared != nil || probe.body != nil {
+					t.Fatalf("body in the bff %t, in the contract %t, in the probe %t: want none or one in all three", typ != nil, declared != nil, probe.body != nil)
+				}
+				return
+			}
+			media, isJSON := declared.Content["application/json"]
+			if !declared.Required || !isJSON || len(declared.Content) != 1 {
+				t.Fatalf("requestBody = %+v, want a required application/json body only", declared)
+			}
+			body := doc.schema(media.Schema)
+			if problems := shapeProblems(doc, body, typ, ""); len(problems) > 0 {
+				t.Fatalf("%s: %v", typ, problems)
+			}
+			if problems := requiredProblems(t, doc, body, probe, cloned(t, probe.body), nil, ""); len(problems) > 0 {
+				t.Fatalf("%s: %v", typ, problems)
+			}
+		})
+	}
 }

@@ -91,6 +91,85 @@ created: 2026-10-15
 > `unavailable` com `Retry-After: 1`. Dimensionamento de bulkhead e de
 > admissão, paginação, keepalive e os demais achados ficam na DEVS-134.
 
+> **Addendum (2026-10-19, planejamento da DEVS-113)** — quatro decisões ajustam
+> o texto abaixo sem mudar o requisito.
+> (1) **Lookup sem encaminhar a chave.** `POST /identity/organization-lookups`
+> exige a `Idempotency-Key` (400 sem ela, e a rota declara a chave, o que
+> satisfaz o `ValidateEdge`). Só as rotas de comando enviam ao contexto a chave
+> derivada e leem o header de replay; o lookup não envia `idempotency-key` nem
+> devolve `Idempotent-Replayed`. "Nada é armazenado nem repetido" passa a ser
+> garantido na borda, sem depender de o `identity` ignorar a chave (a
+> operação não está em `Commands()` do contexto).
+> (2) **Forma na borda, conteúdo no domínio.** O handler valida o corpo só nos
+> limites do schema publicado: presença dos campos obrigatórios, `maxLength`,
+> `minLength` onde declarado, `pattern`, enums, `maxItems`, `uniqueItems` e
+> campos desconhecidos, com 400 `invalid-request`. Um valor vazio que o schema
+> admite segue ao `identity`, que o recusa com 422, como o contrato declara
+> (`info.description` do OpenAPI do `identity`). A aprovação de troca de conta
+> não tem corpo e recusa qualquer conteúdo.
+> (3) **Replay.** `Idempotent-Replayed: true` sai em toda resposta de comando
+> abaixo de 500 cujo RPC devolveu o header, inclusive a rejeição 422 repetida.
+> A borda reflete só a tentativa final do retry em `UNAVAILABLE`, que reenvia a
+> mesma chave. Nesta task a prova usa servidor gRPC falso; a prova contra o
+> `identity` real, com o mesmo status e corpo, fica no e2e em container da
+> DEVS-114.
+> (4) **Status de sucesso.** `suspendUser`, `revokeMembership`,
+> `approveBankAccountChange` e o lookup respondem 200; os demais comandos
+> respondem 201, como declara o OpenAPI do `identity`.
+
+> **Addendum (2026-10-19, code review da DEVS-113)** — três ajustes.
+> (1) **Chave antes do salto de permissões.** O contrato recusa o `POST` sem
+> chave ou com chave fora do formato "before any call to the context"
+> (parâmetro `IdempotencyKey` do OpenAPI do `identity`), e
+> `FindEffectivePermissions` é uma chamada ao contexto. A ordem por rota do
+> addendum da DEVS-112 passa a ser: recuperação de pânico → prazo da rota →
+> verificação do token → admissão → `Idempotency-Key` → `FindEffectivePermissions`
+> e `ResolveIdentity` → `RefuseAssertedIdentity` → contexto de execução →
+> handler. Sem token, com token inválido ou com tenant nulo, a resposta segue
+> 401 ou 403, como antes.
+> (2) **Corpo estrito.** O nome de cada campo precisa ser igual ao do schema,
+> inclusive em maiúsculas e minúsculas; chave repetida, `null` em qualquer
+> campo e corpo fora de UTF-8 respondem 400 `invalid-request`. Resposta de
+> sucesso do contexto sem identificador válido, ou rejeição sem código,
+> responde 500, como já acontece nas consultas.
+> (3) **Limite de 64 KiB.** O limite de corpo da borda segue em 64 KiB. Um
+> `addEstablishment` no limite máximo do schema, com 32 referências externas e
+> textos de 256 caracteres de 4 bytes, passa desse tamanho e recebe 400; com
+> valores ASCII, o mesmo corpo fica em torno de 25 KiB. O dimensionamento fica
+> na DEVS-134.
+
+> **Addendum (2026-10-19, checklist de qualidade da DEVS-113)** — os achados de
+> segurança, robustez e performance foram tratados nesta task, sem extensão do
+> kernel.
+> (1) **Comandos em conexão própria.** Uma terceira conexão gRPC ao mesmo
+> `IDENTITY_GRPC_TARGET`, dependência `identity-commands`, atende só os 10
+> comandos, com breaker e bulkhead próprios; a `identity` fica com as consultas
+> e a consulta por CNPJ. Comandos que saturam o pool não derrubam as consultas
+> de outros tenants. As três conexões são exigidas pelo `/readyz`. Cada método
+> do `IdentityService` tem política em exatamente uma conexão, e
+> `GrantMembership`, fora da borda, em nenhuma.
+> (2) **Retry dos comandos.** O orçamento de retry dos comandos é declarado
+> (1,5 s, abaixo do prazo da rota, GRP-17); sem ele a segunda tentativa recebia
+> cerca de 0,35 s e virava 504 evitável. A mesma chave segue em todas as
+> tentativas. `Idempotent-Replayed: true` pode sair na primeira resposta que o
+> cliente vê, quando a tentativa anterior falhou depois de o `identity` executar
+> o comando: a resposta é, de fato, a guardada.
+> (3) **`Retry-After`.** Toda resposta 429 ou 503 vinda do contexto, inclusive
+> no salto de permissões, sai com `Retry-After: 1`, a mesma estratégia da
+> admissão do kernel.
+> (4) **Corpo.** A leitura do corpo respeita o prazo da rota, e o corpo que não
+> chega a tempo responde 400 `invalid-request`, sem chamar o contexto. O teto de
+> cada `POST` sai do maior corpo válido pelo schema, arredondado em KiB e
+> limitado a 64 KiB; acima dele, 400 com mensagem de tamanho. A validação
+> estrita roda numa só passada com a forma em cache por tipo e recusa o array
+> acima de `maxItems` durante a leitura, com custo igual ou menor que o do
+> decode anterior.
+> (5) **Chave derivada.** Segue do sujeito, sem o tenant, como declara o
+> contrato ("scopes the key to the authenticated subject"); com a chave do
+> cliente ausente ou inválida, o log não registra a derivada.
+> O `Content-Type` não é exigido: o contrato não declara 415, e o
+> `Idempotency-Key` já força o preflight de CORS.
+
 ## Resumo
 
 O workspace não tem borda pública. O `identity` serve só gRPC, e o contrato REST
@@ -546,8 +625,11 @@ apps/backend/bff/
   app/telemetry.go, probe.go — otelboot e prontidão
   app/api/routes.go          — bindings das 21 rotas do identity
   app/api/handlers_identity.go — tradução JSON <-> mensagens do IdentityService
+  app/api/requests_identity.go — corpos dos comandos e da consulta por CNPJ, validação de forma pelo schema (DEVS-113)
+  app/api/strict_body.go     — corpo estrito: nomes exatos, sem repetição nem `null`, UTF-8 e `maxItems` na leitura (DEVS-113)
+  app/api/views_identity.go, views_identity_commands.go — respostas das consultas e dos comandos
   app/api/middleware.go, handlers.go, health.go, traceparent.go — porte da referência
-  app/rpc/clients.go, errors.go, metadata.go, replay.go, ready.go, tls.go — porte da referência (tls.go na DEVS-111; os demais na DEVS-112)
+  app/rpc/clients.go, errors.go, metadata.go, replay.go, ready.go, tls.go — porte da referência (tls.go na DEVS-111; replay.go e a chave na metadata na DEVS-113; os demais na DEVS-112)
   deploy/                    — compose.yml, .env.example, .env.session-events.example (DEVS-114), infra.json, k8s/base (com `*-session-events.yaml`), overlays dev e hmg (com `deployment-session-events-patch.yaml`)
   dmpf-units.json, project.json, go.mod (com `libs/backend/go/redis v1.0.0-rc.5`), Dockerfile, README.md
 ```

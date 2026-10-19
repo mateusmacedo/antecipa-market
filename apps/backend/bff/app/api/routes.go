@@ -63,9 +63,19 @@ const (
 )
 
 type binding struct {
-	kind  routeKind
-	route kernelhttp.Route
-	build func(handlers) http.HandlerFunc
+	kind      routeKind
+	route     kernelhttp.Route
+	bodyLimit int64
+	build     func(handlers) http.HandlerFunc
+}
+
+func (b binding) forwardsKey() bool { return b.kind == routeCommand }
+
+func (b binding) handler(h handlers) http.Handler {
+	if b.kind != routeCommand && b.kind != routeLookup {
+		return b.build(h)
+	}
+	return withBody(b.bodyLimit, b.build(h))
 }
 
 type surface struct {
@@ -74,20 +84,34 @@ type surface struct {
 	budget   deadline.Budget
 }
 
+func (s surface) command(name, path string, bodyLimit int64, build func(handlers) http.HandlerFunc) binding {
+	return binding{kind: routeCommand, route: s.keyed(name, path), bodyLimit: bodyLimit, build: build}
+}
+
+func (s surface) lookup(name, path string, bodyLimit int64, build func(handlers) http.HandlerFunc) binding {
+	return binding{kind: routeLookup, route: s.keyed(name, path), bodyLimit: bodyLimit, build: build}
+}
+
 func (s surface) query(name, path string, build func(handlers) http.HandlerFunc) binding {
-	return binding{kind: routeQuery, route: s.read(name, path), build: build}
+	return binding{kind: routeQuery, route: s.route(name, http.MethodGet, path), build: build}
 }
 
 func (s surface) listing(name, path string, build func(handlers) http.HandlerFunc) binding {
-	return binding{kind: routeListing, route: s.read(name, path), build: build}
+	return binding{kind: routeListing, route: s.route(name, http.MethodGet, path), build: build}
 }
 
-func (s surface) read(name, path string) kernelhttp.Route {
+func (s surface) keyed(name, path string) kernelhttp.Route {
+	route := s.route(name, http.MethodPost, path)
+	route.IdempotencyKey = IdempotencyHeader
+	return route
+}
+
+func (s surface) route(name, method, path string) kernelhttp.Route {
 	return kernelhttp.Route{
 		Name:        name,
-		Method:      http.MethodGet,
+		Method:      method,
 		Path:        path,
-		ContractRef: s.contract + strings.ReplaceAll(path, "/", "~1") + "/get",
+		ContractRef: s.contract + strings.ReplaceAll(path, "/", "~1") + "/" + strings.ToLower(method),
 		Budget:      s.budget,
 		Requires:    kernelhttp.RequireSubjectAndTenant,
 		Permission:  ports.Permission(s.context + ":" + kebab(name)),
@@ -109,14 +133,25 @@ func kebab(operationID string) string {
 func bindings(budget deadline.Budget) []binding {
 	identity := surface{"identity", identityContract, budget}
 	return []binding{
+		identity.command("registerOrganization", "/identity/organizations", 8<<10, handlers.registerOrganization),
+		identity.lookup("findOrganizationByTaxId", "/identity/organization-lookups", 1<<10, handlers.findOrganizationByTaxID),
 		identity.query("findOrganization", "/identity/organizations/{organizationId}", handlers.findOrganization),
+		identity.command("addEstablishment", "/identity/organizations/{organizationId}/establishments", maxBodyBytes, handlers.addEstablishment),
+		identity.command("registerPerson", "/identity/persons", 4<<10, handlers.registerPerson),
 		identity.query("findPerson", "/identity/persons/{personId}", handlers.findPerson),
+		identity.command("provisionUserAccount", "/identity/users", 2<<10, handlers.provisionUserAccount),
 		identity.query("findRepresentation", "/identity/representations/{representationId}", handlers.findRepresentation),
 		identity.query("findBankAccountChange", "/identity/bank-account-changes/{bankAccountChangeId}", handlers.findBankAccountChange),
+		identity.command("requestBankAccountChange", "/identity/organizations/{organizationId}/bank-account-changes", 4<<10, handlers.requestBankAccountChange),
 		identity.listing("findEstablishmentsByOrganization", "/identity/organizations/{organizationId}/establishments", handlers.findEstablishmentsByOrganization),
+		identity.command("registerRepresentation", "/identity/organizations/{organizationId}/representations", 18<<10, handlers.registerRepresentation),
+		identity.command("inviteUser", "/identity/organizations/{organizationId}/memberships", 4<<10, handlers.inviteUser),
 		identity.listing("findRepresentationsByOrganization", "/identity/organizations/{organizationId}/representations", handlers.findRepresentationsByOrganization),
 		identity.listing("findMembershipsByOrganization", "/identity/organizations/{organizationId}/memberships", handlers.findMembershipsByOrganization),
 		identity.listing("findBankAccountChangesByOrganization", "/identity/organizations/{organizationId}/bank-account-changes", handlers.findBankAccountChangesByOrganization),
+		identity.command("suspendUser", "/identity/users/{userId}/suspend", 7<<10, handlers.suspendUser),
+		identity.command("revokeMembership", "/identity/memberships/{membershipId}/revoke", 7<<10, handlers.revokeMembership),
+		identity.command("approveBankAccountChange", "/identity/bank-account-changes/{bankAccountChangeId}/approve", 0, handlers.approveBankAccountChange),
 		identity.listing("findMembershipsByUser", "/identity/users/{userId}/memberships", handlers.findMembershipsByUser),
 		identity.listing("findEffectivePermissions", "/identity/users/{userId}/permissions", handlers.findEffectivePermissions),
 	}
@@ -178,8 +213,7 @@ func mount(bound []binding, h handlers, ctrl *admission.Controller, instruments 
 		if err := route.ValidateEdge(); err != nil {
 			return nil, err
 		}
-		handler := requireIdempotencyKey(route, b.build(h))
-		mounted := withExecutionContext(logger, opts.Authenticator, route, admit, handler)
+		mounted := withExecutionContext(logger, opts.Authenticator, route, b.forwardsKey(), admit, b.handler(h))
 		mux.Handle(pattern(route), withRecover(withRouteDeadline(route.Budget, mounted)))
 	}
 	if len(opts.IdentityContract) > 0 {

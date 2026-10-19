@@ -35,6 +35,7 @@ type fakeIdentity struct {
 	mu           sync.Mutex
 	calls        []received
 	answers      map[string]func(n int) (proto.Message, error)
+	headers      map[string]func(n int) metadata.MD
 	healthChecks atomic.Int32
 }
 
@@ -56,7 +57,15 @@ func (f *fakeIdentity) answer(method string, respond func(n int) (proto.Message,
 	return f
 }
 
-func (f *fakeIdentity) record(ctx context.Context, method string, request proto.Message) (func(int) (proto.Message, error), int) {
+func (f *fakeIdentity) header(method string, header func(n int) metadata.MD) *fakeIdentity {
+	if f.headers == nil {
+		f.headers = map[string]func(int) metadata.MD{}
+	}
+	f.headers[method] = header
+	return f
+}
+
+func (f *fakeIdentity) record(ctx context.Context, method string, request proto.Message) (func(int) (proto.Message, error), func(int) metadata.MD, int) {
 	md, _ := metadata.FromIncomingContext(ctx)
 	d, ok := ctx.Deadline()
 	f.mu.Lock()
@@ -68,7 +77,7 @@ func (f *fakeIdentity) record(ctx context.Context, method string, request proto.
 			n++
 		}
 	}
-	return f.answers[method], n
+	return f.answers[method], f.headers[method], n
 }
 
 func (f *fakeIdentity) callsTo(method string) []received {
@@ -92,7 +101,10 @@ func unary[Req, Resp any, PReq interface {
 }](f *fakeIdentity, name protoreflect.Name) grpc.MethodDesc {
 	return kernelgrpc.Unary[any, Req, PReq, proto.Message](rpc.IdentityServiceName, kernelgrpc.Method(identityDescriptor, name),
 		func(_ any, ctx context.Context, req PReq) (proto.Message, error) {
-			respond, n := f.record(ctx, string(name), req)
+			respond, header, n := f.record(ctx, string(name), req)
+			if header != nil {
+				_ = grpc.SetHeader(ctx, header(n))
+			}
 			if respond == nil {
 				return PResp(new(Resp)), nil
 			}
@@ -116,6 +128,16 @@ func (f *fakeIdentity) register(srv *grpc.Server, serving healthpb.HealthCheckRe
 			unary[servicev1.FindEffectivePermissionsRequest, servicev1.FindEffectivePermissionsResponse](f, "FindEffectivePermissions"),
 			unary[servicev1.FindBankAccountChangeRequest, servicev1.FindBankAccountChangeResponse](f, "FindBankAccountChange"),
 			unary[servicev1.FindBankAccountChangesByOrganizationRequest, servicev1.FindBankAccountChangesByOrganizationResponse](f, "FindBankAccountChangesByOrganization"),
+			unary[servicev1.RegisterOrganizationRequest, servicev1.RegisterOrganizationResponse](f, "RegisterOrganization"),
+			unary[servicev1.AddEstablishmentRequest, servicev1.AddEstablishmentResponse](f, "AddEstablishment"),
+			unary[servicev1.RegisterPersonRequest, servicev1.RegisterPersonResponse](f, "RegisterPerson"),
+			unary[servicev1.RegisterRepresentationRequest, servicev1.RegisterRepresentationResponse](f, "RegisterRepresentation"),
+			unary[servicev1.ProvisionUserAccountRequest, servicev1.ProvisionUserAccountResponse](f, "ProvisionUserAccount"),
+			unary[servicev1.SuspendUserRequest, servicev1.SuspendUserResponse](f, "SuspendUser"),
+			unary[servicev1.InviteUserRequest, servicev1.InviteUserResponse](f, "InviteUser"),
+			unary[servicev1.RevokeMembershipRequest, servicev1.RevokeMembershipResponse](f, "RevokeMembership"),
+			unary[servicev1.RequestBankAccountChangeRequest, servicev1.RequestBankAccountChangeResponse](f, "RequestBankAccountChange"),
+			unary[servicev1.ApproveBankAccountChangeRequest, servicev1.ApproveBankAccountChangeResponse](f, "ApproveBankAccountChange"),
 		},
 	}, f)
 	h := health.NewServer()

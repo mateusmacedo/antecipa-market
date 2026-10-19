@@ -36,7 +36,7 @@ func TestReadinessPassesOnceTheIdentityAnswersServing(t *testing.T) {
 	if err := (rpc.Readiness{"identity": conn}).Check(withDeadline(t, 5*time.Second)); err != nil {
 		t.Fatalf("Check() = %v, want nil", err)
 	}
-	if _, err := rpc.NewIdentity(conn).FindPerson(withDeadline(t, 2*time.Second), &servicev1.FindPersonRequest{PersonId: "p-1"}); err != nil {
+	if _, err := rpc.NewIdentity(conn, conn).FindPerson(withDeadline(t, 2*time.Second), &servicev1.FindPersonRequest{PersonId: "p-1"}); err != nil {
 		t.Fatalf("FindPerson() over the checked channel = %v", err)
 	}
 	if got := fake.healthChecks.Load(); got != 0 {

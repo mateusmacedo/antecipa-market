@@ -39,6 +39,7 @@ const (
 	keyDrainDelay = "dmpf.drain.delay"
 
 	identityContext    = "identity"
+	commandsContext    = "identity-commands"
 	permissionsContext = "identity-permissions"
 )
 
@@ -94,6 +95,11 @@ func RunWith(ctx context.Context, cfg Config, rt *otelboot.Runtime) error {
 		return err
 	}
 	defer func() { _ = conn.Close() }()
+	commandsConn, err := rpc.Dial(cfg.IdentityTarget, rpc.CommandsConfig(opts))
+	if err != nil {
+		return err
+	}
+	defer func() { _ = commandsConn.Close() }()
 	permissionsConn, err := rpc.Dial(cfg.IdentityTarget, rpc.PermissionsConfig(opts))
 	if err != nil {
 		return err
@@ -111,8 +117,8 @@ func RunWith(ctx context.Context, cfg Config, rt *otelboot.Runtime) error {
 	defer func() { _ = closeRevocations() }()
 	cfg.Auth.LoggerProvider = rt.LoggerProvider()
 	cfg.Auth.MeterProvider = rt.MeterProvider()
-	identity := rpc.NewIdentity(conn)
-	authenticator, err := Authenticator(ctx, cfg, rpc.NewIdentity(permissionsConn))
+	identity := rpc.NewIdentity(conn, commandsConn)
+	authenticator, err := Authenticator(ctx, cfg, rpc.NewIdentity(permissionsConn, permissionsConn))
 	if err != nil {
 		if ctx.Err() != nil {
 			return nil
@@ -125,7 +131,7 @@ func RunWith(ctx context.Context, cfg Config, rt *otelboot.Runtime) error {
 		Authenticator: authenticator,
 		CORSOrigins:   cfg.CORSOrigins,
 		Logger:        rt.LoggerFor(reflect.TypeFor[api.Options]().PkgPath()),
-		Ready:         rpc.Readiness{identityContext: conn, permissionsContext: permissionsConn}.Check,
+		Ready:         rpc.Readiness{identityContext: conn, commandsContext: commandsConn, permissionsContext: permissionsConn}.Check,
 		Draining:      draining.Load,
 	}
 	if options.IdentityContract, err = readContract(cfg.IdentityContractPath); err != nil {

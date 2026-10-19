@@ -12,10 +12,11 @@ import (
 // The subject and its permissions are deliberately absent: CTX-12 turns them
 // into provenance at this boundary and the callee resolves its own caller (IDN-02).
 type Call struct {
-	CorrelationID string
-	RequestID     string
-	TenantID      string
-	Locale        string
+	CorrelationID  string
+	RequestID      string
+	IdempotencyKey string
+	TenantID       string
+	Locale         string
 }
 
 type callKey struct{}
@@ -35,6 +36,7 @@ func contextInterceptor(ctx context.Context, method string, req, reply any, cc *
 	if call, ok := CallFrom(ctx); ok {
 		setPresent(md, kernelgrpc.CorrelationKey, call.CorrelationID)
 		setPresent(md, kernelgrpc.CausationKey, call.RequestID)
+		setPresent(md, kernelgrpc.IdempotencyKey, call.IdempotencyKey)
 		setPresent(md, kernelgrpc.TenantKey, call.TenantID)
 		setPresent(md, kernelgrpc.LocaleKey, call.Locale)
 	}

@@ -23,14 +23,13 @@ type Failure struct {
 const overloadRetryAfter = time.Second
 
 var (
-	InternalFailure    = Failure{Status: http.StatusInternalServerError, Code: "internal-failure", Message: "the request could not be completed"}
-	deadlineFailure    = Failure{Status: http.StatusGatewayTimeout, Code: "deadline-exceeded", Message: "the deadline of the request expired before the context answered"}
-	unavailableFailure = Failure{Status: http.StatusServiceUnavailable, Code: "unavailable", Message: "the context is unavailable"}
-	CanceledFailure    = Failure{Status: kernelgrpc.StatusClientClosedRequest, Code: "client-closed-request", Message: "the caller went away before the context answered"}
+	InternalFailure = Failure{Status: http.StatusInternalServerError, Code: "internal-failure", Message: "the request could not be completed"}
+	deadlineFailure = Failure{Status: http.StatusGatewayTimeout, Code: "deadline-exceeded", Message: "the deadline of the request expired before the context answered"}
+	CanceledFailure = Failure{Status: kernelgrpc.StatusClientClosedRequest, Code: "client-closed-request", Message: "the caller went away before the context answered"}
 
 	// The kernel's own admission refusal asks for the same second
 	// (http@v1.0.0-rc.5 admission.go:74).
-	OverloadedFailure = Failure{Status: unavailableFailure.Status, Code: unavailableFailure.Code, Message: unavailableFailure.Message, RetryAfter: overloadRetryAfter}
+	OverloadedFailure = Failure{Status: http.StatusServiceUnavailable, Code: "unavailable", Message: "the context is unavailable", RetryAfter: overloadRetryAfter}
 
 	// The HTTP status never lives here: it comes from kernelgrpc.HTTPStatus,
 	// the one table GRP-14 fixes.
@@ -39,7 +38,7 @@ var (
 		codes.Aborted:            {"version-conflict", "a concurrent write advanced the resource; replay the request"},
 		codes.AlreadyExists:      {"already-exists", "the resource already exists"},
 		codes.DeadlineExceeded:   {deadlineFailure.Code, deadlineFailure.Message},
-		codes.Unavailable:        {unavailableFailure.Code, unavailableFailure.Message},
+		codes.Unavailable:        {OverloadedFailure.Code, OverloadedFailure.Message},
 		codes.ResourceExhausted:  {"admission-refused", "the context refused the call; retry later"},
 		codes.InvalidArgument:    {"invalid-request", "the context refused the request as invalid"},
 		codes.FailedPrecondition: {"failed-precondition", "the resource is not in a state that accepts this request"},
@@ -72,7 +71,7 @@ func Classify(err error) Failure {
 	case errors.Is(err, context.Canceled):
 		return CanceledFailure
 	case errors.Is(err, resilience.ErrBreakerOpen), errors.Is(err, resilience.ErrBulkheadSaturated):
-		return unavailableFailure
+		return OverloadedFailure
 	}
 	if failure, ok := reasonFailures[kernelgrpc.ReasonOf(err)]; ok {
 		return failure
@@ -85,7 +84,11 @@ func Classify(err error) Failure {
 	if !mapped {
 		return InternalFailure
 	}
-	return Failure{Status: kernelgrpc.HTTPStatus(s.Code()), Code: named.code, Message: named.message}
+	failure := Failure{Status: kernelgrpc.HTTPStatus(s.Code()), Code: named.code, Message: named.message}
+	if failure.Status == http.StatusServiceUnavailable || failure.Status == http.StatusTooManyRequests {
+		failure.RetryAfter = overloadRetryAfter
+	}
+	return failure
 }
 
 func Category(err error) string { return kernelgrpc.Category(err) }

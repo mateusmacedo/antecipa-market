@@ -4,6 +4,7 @@ import (
 	"errors"
 	"net/http"
 	"net/http/httptest"
+	"reflect"
 	"strings"
 	"testing"
 	"time"
@@ -108,7 +109,8 @@ func decodeOf(body string) error {
 		Name string `json:"name"`
 	}
 	r := httptest.NewRequest(http.MethodPost, "/probe", strings.NewReader(body))
-	return decodeBody(httptest.NewRecorder(), r, &into)
+	r.Body = http.MaxBytesReader(httptest.NewRecorder(), r.Body, maxBodyBytes)
+	return decodeBody(r, mustShapeOf(reflect.TypeOf(&into)), &into)
 }
 
 func objectOf(size int) string {
