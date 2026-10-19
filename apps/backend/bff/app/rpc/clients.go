@@ -9,6 +9,7 @@ import (
 	"github.com/mateusmacedo/dmpf/libs/backend/go/observability/clock"
 	"github.com/mateusmacedo/dmpf/libs/backend/go/observability/metrics"
 	"github.com/mateusmacedo/dmpf/libs/backend/go/observability/resilience"
+	"github.com/mateusmacedo/dmpf/libs/backend/go/observability/retry"
 	"github.com/mateusmacedo/dmpf/libs/backend/go/transport/deadline"
 	"go.opentelemetry.io/otel/log"
 	"go.opentelemetry.io/otel/metric"
@@ -17,6 +18,7 @@ import (
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/backoff"
 	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/metadata"
 	"google.golang.org/protobuf/reflect/protoreflect"
 
 	servicev1 "github.com/mateusmacedo/antecipa-market/apps/backend/identity/contract/gen/go/company/identity/service/v1"
@@ -24,6 +26,7 @@ import (
 
 const (
 	identityDependency    = "identity"
+	commandsDependency    = "identity-commands"
 	permissionsDependency = "identity-permissions"
 
 	methodLimit     = 1500 * time.Millisecond
@@ -58,6 +61,28 @@ var (
 	methodFindEffectivePermissions             = fullMethod(identityService, "FindEffectivePermissions")
 	methodFindBankAccountChange                = fullMethod(identityService, "FindBankAccountChange")
 	methodFindBankAccountChangesByOrganization = fullMethod(identityService, "FindBankAccountChangesByOrganization")
+	methodRegisterOrganization                 = fullMethod(identityService, "RegisterOrganization")
+	methodAddEstablishment                     = fullMethod(identityService, "AddEstablishment")
+	methodRegisterPerson                       = fullMethod(identityService, "RegisterPerson")
+	methodRegisterRepresentation               = fullMethod(identityService, "RegisterRepresentation")
+	methodProvisionUserAccount                 = fullMethod(identityService, "ProvisionUserAccount")
+	methodSuspendUser                          = fullMethod(identityService, "SuspendUser")
+	methodInviteUser                           = fullMethod(identityService, "InviteUser")
+	methodRevokeMembership                     = fullMethod(identityService, "RevokeMembership")
+	methodRequestBankAccountChange             = fullMethod(identityService, "RequestBankAccountChange")
+	methodApproveBankAccountChange             = fullMethod(identityService, "ApproveBankAccountChange")
+
+	queryMethods = []string{
+		methodFindOrganization, methodFindOrganizationByTaxId, methodFindEstablishmentsByOrganization, methodFindPerson,
+		methodFindRepresentation, methodFindRepresentationsByOrganization, methodFindMembershipsByUser,
+		methodFindMembershipsByOrganization, methodFindEffectivePermissions, methodFindBankAccountChange,
+		methodFindBankAccountChangesByOrganization,
+	}
+	commandMethods = []string{
+		methodRegisterOrganization, methodAddEstablishment, methodRegisterPerson, methodRegisterRepresentation,
+		methodProvisionUserAccount, methodSuspendUser, methodInviteUser, methodRevokeMembership,
+		methodRequestBankAccountChange, methodApproveBankAccountChange,
+	}
 )
 
 func fullMethod(service protoreflect.ServiceDescriptor, name protoreflect.Name) string {
@@ -77,13 +102,22 @@ type Options struct {
 }
 
 func IdentityConfig(opts Options) kernelgrpc.Config {
-	names := kernelgrpc.MethodNames(identityService)
-	methods := make(map[string]kernelgrpc.MethodPolicy, len(names))
-	for _, name := range names {
-		method := kernelgrpc.FullMethod(IdentityServiceName, name)
-		methods[method] = policy(deadline.Budget{Dependency: identityDependency, Method: method, Limit: methodLimit, Slack: methodSlack, EstimatedDuration: methodEstimated})
+	return dependencyConfig(opts, identityDependency, policies(identityDependency, queryMethods))
+}
+
+// The kernel builds one breaker and one bulkhead per Config
+// (grpc@v1.0.0-rc.5 interceptor_compose.go:45-46): commands that trip or fill
+// their own leave the reads of every other tenant served.
+func CommandsConfig(opts Options) kernelgrpc.Config {
+	return dependencyConfig(opts, commandsDependency, policies(commandsDependency, commandMethods))
+}
+
+func policies(dependency string, methods []string) map[string]kernelgrpc.MethodPolicy {
+	declared := make(map[string]kernelgrpc.MethodPolicy, len(methods))
+	for _, method := range methods {
+		declared[method] = policy(deadline.Budget{Dependency: dependency, Method: method, Limit: methodLimit, Slack: methodSlack, EstimatedDuration: methodEstimated})
 	}
-	return dependencyConfig(opts, identityDependency, methods)
+	return declared
 }
 
 // The kernel builds one breaker and one bulkhead per Config
@@ -151,9 +185,19 @@ type Identity struct {
 	FindEffectivePermissions             Unary[servicev1.FindEffectivePermissionsRequest, servicev1.FindEffectivePermissionsResponse]
 	FindBankAccountChange                Unary[servicev1.FindBankAccountChangeRequest, servicev1.FindBankAccountChangeResponse]
 	FindBankAccountChangesByOrganization Unary[servicev1.FindBankAccountChangesByOrganizationRequest, servicev1.FindBankAccountChangesByOrganizationResponse]
+	RegisterOrganization                 Unary[servicev1.RegisterOrganizationRequest, servicev1.RegisterOrganizationResponse]
+	AddEstablishment                     Unary[servicev1.AddEstablishmentRequest, servicev1.AddEstablishmentResponse]
+	RegisterPerson                       Unary[servicev1.RegisterPersonRequest, servicev1.RegisterPersonResponse]
+	RegisterRepresentation               Unary[servicev1.RegisterRepresentationRequest, servicev1.RegisterRepresentationResponse]
+	ProvisionUserAccount                 Unary[servicev1.ProvisionUserAccountRequest, servicev1.ProvisionUserAccountResponse]
+	SuspendUser                          Unary[servicev1.SuspendUserRequest, servicev1.SuspendUserResponse]
+	InviteUser                           Unary[servicev1.InviteUserRequest, servicev1.InviteUserResponse]
+	RevokeMembership                     Unary[servicev1.RevokeMembershipRequest, servicev1.RevokeMembershipResponse]
+	RequestBankAccountChange             Unary[servicev1.RequestBankAccountChangeRequest, servicev1.RequestBankAccountChangeResponse]
+	ApproveBankAccountChange             Unary[servicev1.ApproveBankAccountChangeRequest, servicev1.ApproveBankAccountChangeResponse]
 }
 
-func NewIdentity(conn grpc.ClientConnInterface) Identity {
+func NewIdentity(conn, commands grpc.ClientConnInterface) Identity {
 	return Identity{
 		FindOrganization:                     unaryOf[servicev1.FindOrganizationRequest, servicev1.FindOrganizationResponse](conn, methodFindOrganization),
 		FindOrganizationByTaxId:              unaryOf[servicev1.FindOrganizationByTaxIdRequest, servicev1.FindOrganizationByTaxIdResponse](conn, methodFindOrganizationByTaxId),
@@ -166,15 +210,37 @@ func NewIdentity(conn grpc.ClientConnInterface) Identity {
 		FindEffectivePermissions:             unaryOf[servicev1.FindEffectivePermissionsRequest, servicev1.FindEffectivePermissionsResponse](conn, methodFindEffectivePermissions),
 		FindBankAccountChange:                unaryOf[servicev1.FindBankAccountChangeRequest, servicev1.FindBankAccountChangeResponse](conn, methodFindBankAccountChange),
 		FindBankAccountChangesByOrganization: unaryOf[servicev1.FindBankAccountChangesByOrganizationRequest, servicev1.FindBankAccountChangesByOrganizationResponse](conn, methodFindBankAccountChangesByOrganization),
+		RegisterOrganization:                 commandOf[servicev1.RegisterOrganizationRequest, servicev1.RegisterOrganizationResponse](commands, methodRegisterOrganization),
+		AddEstablishment:                     commandOf[servicev1.AddEstablishmentRequest, servicev1.AddEstablishmentResponse](commands, methodAddEstablishment),
+		RegisterPerson:                       commandOf[servicev1.RegisterPersonRequest, servicev1.RegisterPersonResponse](commands, methodRegisterPerson),
+		RegisterRepresentation:               commandOf[servicev1.RegisterRepresentationRequest, servicev1.RegisterRepresentationResponse](commands, methodRegisterRepresentation),
+		ProvisionUserAccount:                 commandOf[servicev1.ProvisionUserAccountRequest, servicev1.ProvisionUserAccountResponse](commands, methodProvisionUserAccount),
+		SuspendUser:                          commandOf[servicev1.SuspendUserRequest, servicev1.SuspendUserResponse](commands, methodSuspendUser),
+		InviteUser:                           commandOf[servicev1.InviteUserRequest, servicev1.InviteUserResponse](commands, methodInviteUser),
+		RevokeMembership:                     commandOf[servicev1.RevokeMembershipRequest, servicev1.RevokeMembershipResponse](commands, methodRevokeMembership),
+		RequestBankAccountChange:             commandOf[servicev1.RequestBankAccountChangeRequest, servicev1.RequestBankAccountChangeResponse](commands, methodRequestBankAccountChange),
+		ApproveBankAccountChange:             commandOf[servicev1.ApproveBankAccountChangeRequest, servicev1.ApproveBankAccountChangeResponse](commands, methodApproveBankAccountChange),
+	}
+}
+
+// Armed on the first failure the budget is half of what that attempt left
+// (observability@v1.0.0-rc.5 retry/budget.go Arm), and the second attempt got it
+// less the estimate and the reserve (resilience/timeout.go:56-61): 0.35 s of 1.4 s.
+func commandOf[Req, Resp any](conn grpc.ClientConnInterface, method string) Unary[Req, Resp] {
+	call := unaryOf[Req, Resp](conn, method)
+	return func(ctx context.Context, req *Req) (*Resp, error) {
+		return call(retry.WithBudget(ctx, retry.WithTotal(methodLimit)), req)
 	}
 }
 
 func unaryOf[Req, Resp any](conn grpc.ClientConnInterface, method string) Unary[Req, Resp] {
 	return func(ctx context.Context, req *Req) (*Resp, error) {
 		resp := new(Resp)
-		if err := conn.Invoke(ctx, method, req, resp); err != nil {
+		var header metadata.MD
+		if err := conn.Invoke(ctx, method, req, resp, grpc.Header(&header)); err != nil {
 			return nil, err
 		}
+		markReplayed(ctx, header)
 		return resp, nil
 	}
 }

@@ -39,7 +39,7 @@ func tracedClient(t *testing.T, fake *fakeIdentity) traced {
 		t.Fatalf("Dial(identity) = %v", err)
 	}
 	t.Cleanup(func() { _ = conn.Close() })
-	return traced{identity: rpc.NewIdentity(conn), spans: spans, edge: provider.Tracer("edge")}
+	return traced{identity: rpc.NewIdentity(conn, conn), spans: spans, edge: provider.Tracer("edge")}
 }
 
 func authoredKeys(md metadata.MD) []string {
@@ -93,6 +93,31 @@ func TestAnAbsentValueIsNeverSent(t *testing.T) {
 
 	if got := authoredKeys(fake.callsTo("FindPerson")[0].md); !slices.Equal(got, []string{kernelgrpc.CorrelationKey}) {
 		t.Fatalf("authored metadata %v, want only the correlation; a tenant is never invented (CTX-13)", got)
+	}
+}
+
+func TestTheIdempotencyKeyTravelsOnlyWhenTheCallCarriesOne(t *testing.T) {
+	cases := map[string]struct {
+		key  string
+		want []string
+	}{
+		"command": {key: "derived-1", want: []string{"derived-1"}},
+		"no key":  {key: "", want: nil},
+	}
+	for name, tc := range cases {
+		t.Run(name, func(t *testing.T) {
+			fake := &fakeIdentity{}
+			identity := identityClient(t, fake)
+			ctx := rpc.WithCall(withDeadline(t, 2*time.Second), rpc.Call{CorrelationID: "corr-1", IdempotencyKey: tc.key})
+
+			if _, err := identity.FindPerson(ctx, &servicev1.FindPersonRequest{PersonId: "p-1"}); err != nil {
+				t.Fatalf("FindPerson() = %v", err)
+			}
+
+			if got := fake.callsTo("FindPerson")[0].md.Get(kernelgrpc.IdempotencyKey); !slices.Equal(got, tc.want) {
+				t.Fatalf("metadata %s = %v, want %v", kernelgrpc.IdempotencyKey, got, tc.want)
+			}
+		})
 	}
 }
 

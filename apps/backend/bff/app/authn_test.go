@@ -44,7 +44,7 @@ func dialIdentityAt(t *testing.T, target string) rpc.Identity {
 		t.Fatalf("Dial(%s) = %v", target, err)
 	}
 	t.Cleanup(func() { _ = conn.Close() })
-	return rpc.NewIdentity(conn)
+	return rpc.NewIdentity(conn, conn)
 }
 
 func requestContext(t *testing.T, timeout time.Duration) context.Context {

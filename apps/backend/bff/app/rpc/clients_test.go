@@ -3,6 +3,8 @@ package rpc_test
 import (
 	"context"
 	"errors"
+	"reflect"
+	"strings"
 	"testing"
 	"time"
 
@@ -24,12 +26,16 @@ func identityClient(t *testing.T, fake *fakeIdentity) rpc.Identity {
 	t.Helper()
 	dialer := fake.serveBuffered(t, healthpb.HealthCheckResponse_SERVING)
 	opts := rpc.Options{Insecure: true, Clock: obsclock.System()}
-	conn, err := rpc.Dial("passthrough:///identity", rpc.IdentityConfig(opts), grpc.WithContextDialer(dialer))
-	if err != nil {
-		t.Fatalf("Dial(identity) = %v", err)
+	conns := make([]*grpc.ClientConn, 0, 2)
+	for _, cfg := range []kernelgrpc.Config{rpc.IdentityConfig(opts), rpc.CommandsConfig(opts)} {
+		conn, err := rpc.Dial("passthrough:///identity", cfg, grpc.WithContextDialer(dialer))
+		if err != nil {
+			t.Fatalf("Dial(%s) = %v", cfg.Sheet.Dependency, err)
+		}
+		t.Cleanup(func() { _ = conn.Close() })
+		conns = append(conns, conn)
 	}
-	t.Cleanup(func() { _ = conn.Close() })
-	return rpc.NewIdentity(conn)
+	return rpc.NewIdentity(conns[0], conns[1])
 }
 
 func withDeadline(t *testing.T, d time.Duration) context.Context {
@@ -39,20 +45,61 @@ func withDeadline(t *testing.T, d time.Duration) context.Context {
 	return ctx
 }
 
-func TestEveryMethodOfTheDescriptorDeclaresAPolicy(t *testing.T) {
-	cfg := rpc.IdentityConfig(rpc.Options{Insecure: true, Clock: obsclock.System()})
+func TestEveryMethodOfTheDescriptorButGrantMembershipDeclaresAPolicyOnOneConnection(t *testing.T) {
+	opts := rpc.Options{Insecure: true, Clock: obsclock.System()}
+	configs := []kernelgrpc.Config{rpc.IdentityConfig(opts), rpc.CommandsConfig(opts)}
 
 	names := kernelgrpc.MethodNames(identityDescriptor)
 	for _, name := range names {
-		if _, err := cfg.Policy(kernelgrpc.FullMethod(rpc.IdentityServiceName, name)); err != nil {
-			t.Errorf("%s: %v", name, err)
+		var owners []string
+		for _, cfg := range configs {
+			if _, err := cfg.Policy(kernelgrpc.FullMethod(rpc.IdentityServiceName, name)); err == nil {
+				owners = append(owners, cfg.Sheet.Dependency)
+			}
+		}
+		want := 1
+		if name == "GrantMembership" {
+			want = 0
+		}
+		if len(owners) != want {
+			t.Errorf("%s: declared by %v, want one connection (none for GrantMembership, outside the spec)", name, owners)
 		}
 	}
-	if len(cfg.Methods) != len(names) {
-		t.Fatalf("declared %d policies for the %d methods of the descriptor", len(cfg.Methods), len(names))
+	declared := 0
+	for _, cfg := range configs {
+		declared += len(cfg.Methods)
+		if err := cfg.Validate(); err != nil {
+			t.Fatalf("%s: Validate() = %v", cfg.Sheet.Dependency, err)
+		}
 	}
-	if err := cfg.Validate(); err != nil {
-		t.Fatalf("Validate() = %v", err)
+	if declared != len(names)-1 {
+		t.Fatalf("declared %d policies for the %d methods of the descriptor but GrantMembership", declared, len(names)-1)
+	}
+}
+
+func TestCommandsAndReadsDeclareTheirPoliciesUnderDependenciesOfTheirOwn(t *testing.T) {
+	opts := rpc.Options{Insecure: true, Clock: obsclock.System()}
+	reads, commands := rpc.IdentityConfig(opts), rpc.CommandsConfig(opts)
+
+	if reads.Sheet.Dependency != "identity" || commands.Sheet.Dependency != "identity-commands" {
+		t.Fatalf("dependencies %q and %q, want identity and identity-commands so breaker and bulkhead are not shared (RES-13)", reads.Sheet.Dependency, commands.Sheet.Dependency)
+	}
+	for _, tc := range []struct {
+		cfg   kernelgrpc.Config
+		reads bool
+	}{{reads, true}, {commands, false}} {
+		for method := range tc.cfg.Methods {
+			_, name, _ := strings.Cut(strings.TrimPrefix(method, "/"), "/")
+			if strings.HasPrefix(name, "Find") != tc.reads {
+				t.Errorf("%s declares %s, want only %s", tc.cfg.Sheet.Dependency, name, map[bool]string{true: "reads", false: "commands"}[tc.reads])
+			}
+		}
+	}
+	if len(commands.Methods) != 10 {
+		t.Fatalf("commands declare %d methods, want the 10 commands of the spec", len(commands.Methods))
+	}
+	if commands.HealthServiceName != reads.HealthServiceName || commands.InsecureForDevelopmentOnly != reads.InsecureForDevelopmentOnly || commands.TLS != reads.TLS {
+		t.Fatalf("commands health %q, want the identity's and the transport of the reads", commands.HealthServiceName)
 	}
 }
 
@@ -83,14 +130,16 @@ func TestThePermissionsConnectionDeclaresOnlyItsMethodUnderItsOwnDependency(t *t
 }
 
 func TestEveryMethodRetriesOnlyAnUnavailableIdentity(t *testing.T) {
-	cfg := rpc.IdentityConfig(rpc.Options{Insecure: true, Clock: obsclock.System()})
+	opts := rpc.Options{Insecure: true, Clock: obsclock.System()}
 
-	for method, policy := range cfg.Methods {
-		if len(policy.RetryableCodes) != 1 || policy.RetryableCodes[0] != codes.Unavailable {
-			t.Errorf("%s: RetryableCodes = %v, want [Unavailable] (GRP-08)", method, policy.RetryableCodes)
-		}
-		if policy.Budget.Slack <= 0 || policy.Budget.Dependency != "identity" || policy.Budget.Method != method {
-			t.Errorf("%s: budget %+v, want the identity dependency, the method and a slack (GRP-17)", method, policy.Budget)
+	for _, cfg := range []kernelgrpc.Config{rpc.IdentityConfig(opts), rpc.CommandsConfig(opts)} {
+		for method, policy := range cfg.Methods {
+			if len(policy.RetryableCodes) != 1 || policy.RetryableCodes[0] != codes.Unavailable {
+				t.Errorf("%s: RetryableCodes = %v, want [Unavailable] (GRP-08)", method, policy.RetryableCodes)
+			}
+			if policy.Budget.Slack <= 0 || policy.Budget.Dependency != cfg.Sheet.Dependency || policy.Budget.Method != method {
+				t.Errorf("%s: budget %+v, want the %s dependency, the method and a slack (GRP-17)", method, policy.Budget, cfg.Sheet.Dependency)
+			}
 		}
 	}
 }
@@ -166,6 +215,47 @@ func TestEachQueryReachesItsMethod(t *testing.T) {
 				t.Fatalf("%s reached the identity with %v, want one call carrying %v", tc.method, calls, tc.want)
 			}
 		})
+	}
+}
+
+func TestEveryMethodOfTheDescriptorButGrantMembershipHasAClientReachingIt(t *testing.T) {
+	fake := &fakeIdentity{}
+	identity := reflect.ValueOf(identityClient(t, fake))
+	methods := identityDescriptor.Methods()
+	clients := 0
+	for i := range methods.Len() {
+		method := methods.Get(i)
+		name := string(method.Name())
+		t.Run(name, func(t *testing.T) {
+			client := identity.FieldByName(name)
+			if name == "GrantMembership" {
+				if client.IsValid() {
+					t.Fatal("GrantMembership has a client, want none: the route is outside the spec")
+				}
+				return
+			}
+			if !client.IsValid() || client.IsNil() {
+				t.Fatalf("rpc.Identity has no client for %s", name)
+			}
+			clients++
+			request := reflect.New(client.Type().In(1).Elem())
+			if got := request.Interface().(proto.Message).ProtoReflect().Descriptor().FullName(); got != method.Input().FullName() {
+				t.Fatalf("the client of %s sends %s, want %s", name, got, method.Input().FullName())
+			}
+			out := client.Call([]reflect.Value{reflect.ValueOf(withDeadline(t, 2*time.Second)), request})
+			if err, _ := out[1].Interface().(error); err != nil {
+				t.Fatalf("%s() = %v", name, err)
+			}
+			if got := out[0].Interface().(proto.Message).ProtoReflect().Descriptor().FullName(); got != method.Output().FullName() {
+				t.Fatalf("the client of %s answers %s, want %s", name, got, method.Output().FullName())
+			}
+			if calls := fake.callsTo(name); len(calls) != 1 {
+				t.Fatalf("%s reached the identity %d times, want once on its own method", name, len(calls))
+			}
+		})
+	}
+	if fields := identity.NumField(); fields != clients || fields != methods.Len()-1 {
+		t.Fatalf("rpc.Identity has %d clients and %d were reached, want one per method of the descriptor but GrantMembership (%d)", fields, clients, methods.Len()-1)
 	}
 }
 

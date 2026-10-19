@@ -532,6 +532,7 @@ func TestTheInventoryNamesEveryIdentityRouteUnderTest(t *testing.T) {
 	for _, route := range identityRoutes() {
 		tested = append(tested, route.name)
 	}
+	tested = append(tested, commandRoutesUnderTest...)
 	var inventory []string
 	for name := range productionRoutes {
 		inventory = append(inventory, name)

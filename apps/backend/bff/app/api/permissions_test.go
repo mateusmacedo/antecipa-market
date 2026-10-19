@@ -287,13 +287,13 @@ func TestAPermissionsHopTheIdentityRefusesByAdmissionIs503ToRetryInASecond(t *te
 	}
 }
 
-func TestAnUnavailablePermissionsHopCarriesNoRetryAfter(t *testing.T) {
+func TestAnUnavailablePermissionsHopAsksTheCallerToRetryInASecond(t *testing.T) {
 	f := edgeOver(t, identityDown(t))
 
 	rec := f.do(t, http.MethodGet, "/probes/p-1", nil)
 
 	requireRejection(t, rec, http.StatusServiceUnavailable, "unavailable")
-	if got := rec.Header().Get("Retry-After"); got != "" {
-		t.Fatalf("Retry-After = %q, want none for an identity nobody knows when returns", got)
+	if got := rec.Header().Get("Retry-After"); got != "1" {
+		t.Fatalf("Retry-After = %q, want 1 like every 503 of an unavailable context", got)
 	}
 }

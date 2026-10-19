@@ -26,7 +26,7 @@ func dialPermissions(t *testing.T, identity *fakeIdentity) rpc.Identity {
 		t.Fatalf("Dial(%s) = %v", identity.addr, err)
 	}
 	t.Cleanup(func() { _ = conn.Close() })
-	return rpc.NewIdentity(conn)
+	return rpc.NewIdentity(conn, conn)
 }
 
 func TestATransientFailureOfThePermissionsHopLeavesTheRouteCallItsWholeDeadline(t *testing.T) {

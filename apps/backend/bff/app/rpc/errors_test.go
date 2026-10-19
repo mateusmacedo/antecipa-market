@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"net/http"
 	"testing"
+	"time"
 
 	kernelgrpc "github.com/mateusmacedo/dmpf/libs/backend/go/grpc"
 	"github.com/mateusmacedo/dmpf/libs/backend/go/observability/resilience"
@@ -66,6 +67,29 @@ func TestClassify(t *testing.T) {
 			got := rpc.Classify(tc.err)
 			if got.Status != tc.status || got.Code != tc.code || got.Message == "" {
 				t.Fatalf("Classify() = %+v, want %d %q with a public message", got, tc.status, tc.code)
+			}
+		})
+	}
+}
+
+func TestAnOverloadedOrUnavailableContextAsksTheCallerToRetryInASecond(t *testing.T) {
+	cases := []struct {
+		name  string
+		err   error
+		after time.Duration
+	}{
+		{"unavailable", status.Error(codes.Unavailable, "dial tcp"), time.Second},
+		{"open breaker", fmt.Errorf("grpc: identity: %w", resilience.ErrBreakerOpen), time.Second},
+		{"saturated bulkhead", fmt.Errorf("grpc: identity: %w", resilience.ErrBulkheadSaturated), time.Second},
+		{"admission", status.Error(codes.ResourceExhausted, "limit"), time.Second},
+		{"remote deadline", status.Error(codes.DeadlineExceeded, "late"), 0},
+		{"not found", status.Error(codes.NotFound, "absent"), 0},
+		{"internal", status.Error(codes.Internal, "panic"), 0},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			if got := rpc.Classify(tc.err); got.RetryAfter != tc.after {
+				t.Fatalf("Classify().RetryAfter = %v, want %v", got.RetryAfter, tc.after)
 			}
 		})
 	}

@@ -36,7 +36,7 @@ const categoryUnexpected = "Unexpected"
 // withExecutionContext verifies the token once, admits by the verified tenant,
 // resolves the effective permissions through ResolveIdentity, then mounts the
 // nine-field context; inside withRouteDeadline, since CTX-01 makes deadline mandatory.
-func withExecutionContext(logger *slog.Logger, authenticator Authenticator, route kernelhttp.Route, admit func(http.Handler) http.Handler, next http.Handler) http.Handler {
+func withExecutionContext(logger *slog.Logger, authenticator Authenticator, route kernelhttp.Route, forwardsKey bool, admit func(http.Handler) http.Handler, next http.Handler) http.Handler {
 	return http.HandlerFunc(func(rw http.ResponseWriter, r *http.Request) {
 		markSelfLogged(rw)
 		ctx := r.Context()
@@ -113,6 +113,10 @@ func withExecutionContext(logger *slog.Logger, authenticator Authenticator, rout
 			if tenant, ok := execution.Tenant(); ok {
 				call.TenantID = string(tenant)
 			}
+			if forwardsKey {
+				call.IdempotencyKey = derivedKey
+				ctx = rpc.WithReplaySlot(ctx)
+			}
 			ctx = tracing.WithExecutionBaggage(kernelhttp.WithExecutionContext(rpc.WithCall(ctx, call), execution), execution)
 			next.ServeHTTP(w, r.WithContext(ctx))
 		}
@@ -121,7 +125,15 @@ func withExecutionContext(logger *slog.Logger, authenticator Authenticator, rout
 			proceed()
 			return
 		}
-		admitted := http.HandlerFunc(func(http.ResponseWriter, *http.Request) { proceed() })
+		// WHY: the contract refuses a bad key "with 400 before any call to the
+		// context" (openapi.yaml IdempotencyKey); only an admitted request hops to
+		// the permissions, since every route requires a tenant.
+		admitted := http.HandlerFunc(func(http.ResponseWriter, *http.Request) {
+			if refusedIdempotencyKey(r, w, route, clientKey) {
+				return
+			}
+			proceed()
+		})
 		admit(admitted).ServeHTTP(w, r.WithContext(context.WithValue(ctx, verifiedTenantKey{}, *staged.verified.Tenant)))
 	})
 }
@@ -188,7 +200,7 @@ func recordPanicStatus(w *statusRecorder) {
 // deriveIdempotencyKey scopes the client's key to its subject, which CTX-12
 // keeps from crossing to the context: two callers never share an entry (IDM-03).
 func deriveIdempotencyKey(subject *ports.SubjectID, key string) string {
-	if key == "" {
+	if !ports.ValidIdempotencyKey(key) {
 		return ""
 	}
 	var owner string
@@ -318,6 +330,23 @@ func withRouteDeadline(budget deadline.Budget, next http.Handler) http.Handler {
 	})
 }
 
+// The server's ReadTimeout outlives every route (wiring.go readTimeout), so a
+// body trickled past the route deadline would hold the handler, its admission
+// slot and the RPC that follows.
+func withBody(limit int64, next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if until, governed := r.Context().Deadline(); governed {
+			_ = http.NewResponseController(w).SetReadDeadline(until)
+		}
+		if r.ContentLength > limit {
+			writeRejection(r, w, http.StatusBadRequest, "invalid-request", tooLargeMessage(limit))
+			return
+		}
+		r.Body = http.MaxBytesReader(w, r.Body, limit)
+		next.ServeHTTP(w, r)
+	})
+}
+
 func idempotencyHeaderOf(route kernelhttp.Route) string {
 	if route.IdempotencyKey != "" {
 		return route.IdempotencyKey
@@ -325,20 +354,17 @@ func idempotencyHeaderOf(route kernelhttp.Route) string {
 	return IdempotencyHeader
 }
 
-func requireIdempotencyKey(route kernelhttp.Route, next http.Handler) http.Handler {
+func refusedIdempotencyKey(r *http.Request, w http.ResponseWriter, route kernelhttp.Route, key string) bool {
 	header := idempotencyHeaderOf(route)
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		key := r.Header.Get(header)
-		if route.IdempotencyKey != "" && key == "" {
-			writeRejection(r, w, http.StatusBadRequest, "missing-idempotency-key", route.Method+" requires the "+header+" header")
-			return
-		}
-		if key != "" && !ports.ValidIdempotencyKey(key) {
-			writeRejection(r, w, http.StatusBadRequest, "invalid-idempotency-key", header+" accepts up to 128 characters of [A-Za-z0-9._-]")
-			return
-		}
-		next.ServeHTTP(w, r)
-	})
+	switch {
+	case route.IdempotencyKey != "" && key == "":
+		writeRejection(r, w, http.StatusBadRequest, "missing-idempotency-key", route.Method+" requires the "+header+" header")
+	case key != "" && !ports.ValidIdempotencyKey(key):
+		writeRejection(r, w, http.StatusBadRequest, "invalid-idempotency-key", header+" accepts up to 128 characters of [A-Za-z0-9._-]")
+	default:
+		return false
+	}
+	return true
 }
 
 func withCORS(origins []string, next http.Handler) http.Handler {

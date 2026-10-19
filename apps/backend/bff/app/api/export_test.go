@@ -3,6 +3,7 @@ package api
 import (
 	"context"
 	"net/http"
+	"reflect"
 
 	kernelhttp "github.com/mateusmacedo/dmpf/libs/backend/go/http"
 	"github.com/mateusmacedo/dmpf/libs/backend/go/observability/metrics"
@@ -26,8 +27,12 @@ const (
 )
 
 func NewBinding(kind RouteKind, route kernelhttp.Route, handler http.HandlerFunc) Binding {
-	return binding{kind: kind, route: route, build: func(handlers) http.HandlerFunc { return handler }}
+	return binding{kind: kind, route: route, bodyLimit: maxBodyBytes, build: func(handlers) http.HandlerFunc { return handler }}
 }
+
+const MaxBodyBytes = maxBodyBytes
+
+func BodyLimitOf(b Binding) int64 { return b.bodyLimit }
 
 func newHandler(bound []binding, ctrl *admission.Controller, instruments *metrics.Instruments, opts Options) (http.Handler, error) {
 	return mount(bound, handlers{}, ctrl, instruments, opts)
@@ -66,4 +71,24 @@ func RouteOf(b Binding) kernelhttp.Route { return b.route }
 
 func WriteFailure(r *http.Request, w http.ResponseWriter, failure rpc.Failure) {
 	writeFailure(r, w, failure)
+}
+
+func WriteJSON(r *http.Request, w http.ResponseWriter, status int, body any) {
+	writeJSON(r, w, status, body)
+}
+
+func RequestBodies() map[string]reflect.Type {
+	return map[string]reflect.Type{
+		"registerOrganization":     reflect.TypeFor[registerOrganizationBody](),
+		"findOrganizationByTaxId":  reflect.TypeFor[findOrganizationByTaxIDBody](),
+		"addEstablishment":         reflect.TypeFor[addEstablishmentBody](),
+		"registerPerson":           reflect.TypeFor[registerPersonBody](),
+		"provisionUserAccount":     reflect.TypeFor[provisionUserAccountBody](),
+		"requestBankAccountChange": reflect.TypeFor[requestBankAccountChangeBody](),
+		"registerRepresentation":   reflect.TypeFor[registerRepresentationBody](),
+		"inviteUser":               reflect.TypeFor[inviteUserBody](),
+		"suspendUser":              reflect.TypeFor[reasonBody](),
+		"revokeMembership":         reflect.TypeFor[reasonBody](),
+		"approveBankAccountChange": nil,
+	}
 }
