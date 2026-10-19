@@ -3,7 +3,7 @@
   "modulePrefix": "github.com/mateusmacedo/antecipa-market",
   "npmScope": "@mateusmacedo",
   "appsDir": "apps/backend",
-  "edge": "",
+  "edge": "bff",
   "spiffeTrustDomain": "dmpf",
   "composeProfile": "dmpf",
   "composeProject": "antecipa-market",

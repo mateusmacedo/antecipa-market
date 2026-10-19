@@ -11,6 +11,7 @@ name: antecipa-market-local
 include:
   - ../../apps/backend/identity/deploy/compose.yml
   - ../../apps/backend/partner/deploy/compose.yml
+  - ../../apps/backend/bff/deploy/compose.yml
   - compose/postgres.yml
   - compose/redis.yml
   - compose/redpanda.yml

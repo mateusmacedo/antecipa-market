@@ -25,7 +25,7 @@ services:
     environment:
       GRPC_ADDR: ':9090'
       GRPC_CLIENT_CA_FILE: /pki/ca.crt
-      GRPC_TRUSTED_CLIENTS: ''
+      GRPC_TRUSTED_CLIENTS: spiffe://dmpf/bff
       MIGRATE: 'true'
       GOMEMLIMIT: 176MiB
     volumes:
