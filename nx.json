@@ -63,10 +63,13 @@
       "plugin": "@nx/docker",
       "options": {
         "buildTarget": {
-          "name": "docker:build"
+          "name": "docker:build",
+          "cwd": ".",
+          "args": ["-f {projectRoot}/Dockerfile"]
         },
         "runTarget": {
-          "name": "docker:run"
+          "name": "docker:run",
+          "args": ["--rm", "--name {projectName}", "--network host", "--env-file deploy/.env"]
         }
       }
     },
