@@ -91,9 +91,18 @@ func (e expectation) statuses() []string {
 	}
 }
 
-// productionRoutes is the inventory of the routes the edge serves; it stays
-// empty until the identity routes land (DEVS-112, DEVS-113).
-var productionRoutes = map[string]expectation{}
+var productionRoutes = map[string]expectation{
+	"findOrganization":                     {api.RouteQuery, "200"},
+	"findPerson":                           {api.RouteQuery, "200"},
+	"findRepresentation":                   {api.RouteQuery, "200"},
+	"findBankAccountChange":                {api.RouteQuery, "200"},
+	"findEstablishmentsByOrganization":     {api.RouteListing, "200"},
+	"findRepresentationsByOrganization":    {api.RouteListing, "200"},
+	"findMembershipsByOrganization":        {api.RouteListing, "200"},
+	"findBankAccountChangesByOrganization": {api.RouteListing, "200"},
+	"findMembershipsByUser":                {api.RouteListing, "200"},
+	"findEffectivePermissions":             {api.RouteListing, "200"},
+}
 
 func contractProblems(t *testing.T, route kernelhttp.Route, want expectation) []string {
 	t.Helper()

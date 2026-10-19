@@ -56,7 +56,7 @@ func TestNewHandlerRefusesAnEdgeRouteWithoutPermission(t *testing.T) {
 	route := internalRoute(http.MethodGet)
 	route.Permission = ""
 
-	_, err := newHandler([]binding{internalBinding(route)}, internalController(t, route), nil, Options{Authenticator: authn.DevAuthenticator{}})
+	_, err := newHandler([]binding{internalBinding(route)}, internalController(t, route), nil, Options{Authenticator: VerifyOnly(authn.DevAuthenticator{})})
 
 	if !errors.Is(err, kernelhttp.ErrPermissionRequired) {
 		t.Fatalf("newHandler() = %v, want ErrPermissionRequired", err)
@@ -67,7 +67,7 @@ func TestNewHandlerRefusesAPostWithoutAnIdempotencyKey(t *testing.T) {
 	route := internalRoute(http.MethodPost)
 	route.IdempotencyKey = ""
 
-	_, err := newHandler([]binding{internalBinding(route)}, internalController(t, route), nil, Options{Authenticator: authn.DevAuthenticator{}})
+	_, err := newHandler([]binding{internalBinding(route)}, internalController(t, route), nil, Options{Authenticator: VerifyOnly(authn.DevAuthenticator{})})
 
 	if !errors.Is(err, kernelhttp.ErrIdempotencyKeyRequired) {
 		t.Fatalf("newHandler() = %v, want ErrIdempotencyKeyRequired", err)
@@ -77,7 +77,7 @@ func TestNewHandlerRefusesAPostWithoutAnIdempotencyKey(t *testing.T) {
 func TestNewHandlerRefusesRoutesWithoutAnAdmissionController(t *testing.T) {
 	route := internalRoute(http.MethodGet)
 
-	_, err := newHandler([]binding{internalBinding(route)}, nil, nil, Options{Authenticator: authn.DevAuthenticator{}})
+	_, err := newHandler([]binding{internalBinding(route)}, nil, nil, Options{Authenticator: VerifyOnly(authn.DevAuthenticator{})})
 
 	if !errors.Is(err, errAdmissionRequired) {
 		t.Fatalf("newHandler() = %v, want errAdmissionRequired", err)
@@ -85,7 +85,7 @@ func TestNewHandlerRefusesRoutesWithoutAnAdmissionController(t *testing.T) {
 }
 
 func TestNewHandlerServesWithoutRoutesOrController(t *testing.T) {
-	if _, err := newHandler(nil, nil, nil, Options{Authenticator: authn.DevAuthenticator{}}); err != nil {
+	if _, err := newHandler(nil, nil, nil, Options{Authenticator: VerifyOnly(authn.DevAuthenticator{})}); err != nil {
 		t.Fatalf("newHandler() = %v, want the edge to start with no route", err)
 	}
 	if _, err := newHandler(nil, nil, nil, Options{}); !errors.Is(err, ErrAuthenticatorRequired) {
