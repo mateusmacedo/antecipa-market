@@ -37,7 +37,7 @@ created: 2026-10-12
 - **Dependências**: `depends_on` declara só a fundação `SPEC-GXGASP24`. Upstream duro de contexto: nenhum. Upstream brando: Compliance Ledger (histórico de permissões, `docs/design/01` §4). Este contexto é a raiz da cadeia dura (identity, partner, gateway, consent, portfolio, eligibility, marketplace, contracting, effects, funding, settlement). Extensões do kernel que tocam este contexto, nenhuma bloqueando a construção desta versão:
   - SPEC-SBW7HT6Y (DEVS-97) - Keycloak de referência e claim `tenant_id`;
   - SPEC-STEJG347 (DEVS-101) - revogação de sessão no `authn`;
-  - SPEC-QVDGV6J0 (DEVS-100) - leitura de plataforma e projeção entre tenants;
+  - SPEC-QVDGV6J0 (DEVS-100) - leitura de plataforma e projeção entre tenants, entregue no `1.0.0-rc.6` (ADR-068 do DMPF); o uso aqui depende da adoção da rc.6 (DEVS-136);
   - SPEC-CWBA4BPV (DEVS-95) - object storage das evidências;
   - SPEC-CC5SHV1K (DEVS-102) - cifra em envelope de `PII` e `PII_SENSITIVE`;
   - SPEC-7SRQ3RPK (DEVS-103) - violação de unicidade traduzida em rejeição.
@@ -53,7 +53,7 @@ created: 2026-10-12
 | `90:L8` | rotação da chave secreta do HMAC (o `salt` do doc 90) que protege identificador fiscal e documento; a custódia é deste contexto: a chave vive só na configuração do `identity`, e a rotação é proibida nesta versão (‡) [ABERTA: docs/design/90-modelo-de-dados.md:L8 - política de rotação] | `taxIdHash`, `documentHash` |
 | A1 (#1), transversal | autorização regulatória da plataforma | existencial; não bloqueia a construção |
 | #12, transversal | volumetria | dimensionamento, inclusive partições Kafka (ADR-015); não a construção |
-| K4 (SPEC-QVDGV6J0) | leitura e projeção entre tenants | consultas servidas a contextos de outro tenant, papéis de plataforma, autocadastro e unicidade global (fora desta versão) |
+| K4 (SPEC-QVDGV6J0, entregue na `1.0.0-rc.6`; adoção na DEVS-136) | leitura e projeção entre tenants | consultas servidas a contextos de outro tenant, papéis de plataforma, autocadastro e unicidade global (fora desta versão) |
 
 - **Decisões registradas nesta spec (2026-10-12)**:
   1. *Origem das permissões efetivas* (ADR-016, condição 3): enriquecimento no `bff`. O Keycloak autentica e entrega o tenant; o `bff` resolve as permissões a cada requisição pela consulta `FindEffectivePermissions` deste contexto, sem cache (CTX-16). A alternativa de permissões como claims do Keycloak foi descartada por criar duas fontes de verdade e por só revogar vínculo na expiração do token, já que a SPEC-STEJG347 exclui revogação por pertencimento ou permissão. Autorizar por papel no contexto consumidor foi descartado por CTX-12 e IDN-10.
@@ -437,7 +437,7 @@ Sempre por identidade. A existência e o estado do agregado referenciado são ve
   - `UserSuspended` - Ledger
   - `BankAccountChangeRequested` e `BankAccountChangeApproved` - eventos propostos no doc 92 §4; consumidores no desenho de Funding e Notificações
 - **Consome**: nenhum.
-- **Consultas gRPC servidas a outros contextos**: `FindEffectivePermissions` (`bff`, a cada requisição); `FindOrganization` (KYB resolve o identificador fiscal em claro, no tenant da organização); `FindRepresentationsByOrganization` e `FindOrganizationByTaxId` (Eligibility, Partner, Contracting). Quando o chamador opera em outro tenant - o financiador lendo o cedente -, a consulta depende de K4 [ABERTA: SPEC-QVDGV6J0 - leitura de plataforma e projeção entre tenants; ADR-013].
+- **Consultas gRPC servidas a outros contextos**: `FindEffectivePermissions` (`bff`, a cada requisição); `FindOrganization` (KYB resolve o identificador fiscal em claro, no tenant da organização); `FindRepresentationsByOrganization` e `FindOrganizationByTaxId` (Eligibility, Partner, Contracting). Quando o chamador opera em outro tenant - o financiador lendo o cedente -, a consulta depende de K4 [ABERTA: SPEC-QVDGV6J0 entregue no kernel `1.0.0-rc.6` (DEVS-100, ADR-068 do DMPF); o uso aqui depende da adoção da rc.6 (DEVS-136); ADR-013].
 
 ## Borda e persistência
 
@@ -593,7 +593,7 @@ DADO uma mudança requested por U1 QUANDO ApproveBankAccountChange chega por U1 
 - **Papéis `approver` e `org_admin`**: exigem o nível `document_and_liveness`, cujo provedor não foi escolhido (C5b), e a concessão com segunda aprovação em passo próprio. **Papéis de financiador e de plataforma**: nível de verificação não definido [ABERTA: docs/design/01-design-identity-organization.md:§3]; os de plataforma dependem também de K4.
 - **Primeiro vínculo de cada organização** [ABERTA: sem `org_admin` nesta versão, nenhum fluxo de cliente cria o primeiro vínculo; o caminho de plataforma (backoffice) depende de K4 e da fatia de papéis de aprovação].
 - **Autocadastro e unicidade de identificador fiscal entre tenants**: registro global no tenant de plataforma, por operação de plataforma; dependem de SPEC-QVDGV6J0 (K4).
-- **Consultas vindas de outros tenants e acesso de papéis de plataforma**: SPEC-QVDGV6J0 (K4).
+- **Consultas vindas de outros tenants e acesso de papéis de plataforma**: SPEC-QVDGV6J0 (K4), entregue na `1.0.0-rc.6` (ADR-068 do DMPF); o uso aqui depende da adoção da rc.6 (DEVS-136).
 - **Documento em claro e cifra em envelope de `PII`**: SPEC-CC5SHV1K. **Violação de unicidade como rejeição**: SPEC-7SRQ3RPK.
 - **Provedor de identidade, MFA, sessões e verificação documental ou de vivacidade**: Keycloak (ADR-016; SPEC-SBW7HT6Y; SPEC-STEJG347) e C5b; o contexto guarda o `subject` e o nível de verificação atingido, não executa a autenticação.
 - **Configuração por organização da dupla aprovação** dos atos configuráveis (seleção de oferta, assinatura, revogação de consentimento, concessão de papel de aprovação) e o regime de aprovação única assistida: aguardam `01:I10` (validação jurídica).

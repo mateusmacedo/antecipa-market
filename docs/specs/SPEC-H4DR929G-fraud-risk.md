@@ -181,7 +181,7 @@ Nota de modelagem: `tenantId` não é campo dos agregados — o escopo vem do `E
   - As duas pontas são entidades distintas — `fraud-risk/entity-relation/same-entity`.
   - A consulta é limitada a dois graus (15 §6); regra relacional leva lista de exceção mantida (escritórios de contabilidade concentram endereço e representante).
   - Fonte dos dados das arestas: nenhum evento de `92` §4 traz sócio, endereço ou dispositivo **[ABERTA: 15:§3.3 — fonte das arestas (KYB, Identity, sessão)]**.
-  - Relação entre organizações de tenants distintos: **[ABERTA: requer extensão do kernel — ADR-051 DMPF]**.
+  - Relação entre organizações de tenants distintos: **[ABERTA: requer extensão do kernel - ADR-051 DMPF]**.
 
 ## Comandos (UPRs)
 
@@ -356,7 +356,7 @@ Todas correm fora da UoW.
   - `entity_relations(entity_a_id, entity_b_id)` — `FindEntityRelationByEntity`, dois graus por consultas sucessivas (relação materializada, 15 §6; estrutura de grafo dedicada fica fora)
   - O resto vai em `snapshot` `jsonb`.
 - **Divergências do design**: sem RLS como mecanismo primário (`tenant_id` e `ExecutionContext`, ADR-051); o envelope JSON e o `schemaUri` de `92` §1 são substituídos por Protobuf em CloudEvents; `instant` é inteiro de nanossegundos (o doc 00 §8 fala em milissegundos).
-- **Acesso cross-tenant** (analista de risco sobre casos e sinais de todos os tenants; grafo entre organizações de tenants distintos): **[ABERTA: requer extensão do kernel — ADR-051 DMPF]**.
+- **Acesso cross-tenant** (analista de risco sobre casos e sinais de todos os tenants; grafo entre organizações de tenants distintos): a leitura de plataforma existe no kernel desde a `1.0.0-rc.6` (DEVS-100, ADR-068 do DMPF) e o uso aqui depende da adoção da rc.6 (DEVS-136); o grafo entre tenants é junção entre tenants, que o ADR-068 deixa fora **[ABERTA: requer extensão do kernel - ADR-051 DMPF]**.
 - **Modo observação**: a política nasce em `observation` (15 §8); passar a `enforcing` é nova versão da política, decisão tomada após a calibragem (E1).
 
 ## Políticas transversais

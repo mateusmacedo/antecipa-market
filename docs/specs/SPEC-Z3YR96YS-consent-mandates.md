@@ -379,7 +379,7 @@ As relações são só por identidade. A verificação (†) de existência e vi
   - `AuthorizationSyncFailed` → `authorization_sync_failed.proto` — Ops, Ledger
   - `ConsentRevocationRequested` → `consent_revocation_requested.proto` — **[ABERTA: docs/design/92-schemas-eventos.md §4 omite o evento declarado em docs/prd/03-prd-consent-mandates.md; sem consumidor declarado além do Ledger]**
   - Notificações consome `ConsentGranted` e `ConsentRevoked` (`docs/design/16` §4) **[ABERTA: docs/design/92 §4 não lista Notificações como consumidor]**
-  - O acesso do financiador à concessão (projeção no tenant do financiador, `docs/design/00` §4.2) **[ABERTA: requer extensão do kernel — ADR-051 DMPF]**
+  - O acesso do financiador à concessão (projeção no tenant do financiador, `docs/design/00` §4.2) **[ABERTA: a capacidade existe no kernel desde a `1.0.0-rc.6` (DEVS-100, ADR-068 do DMPF); o uso aqui depende da adoção da rc.6 (DEVS-136)]**
 - **Consome**:
   - `company.identity.event.v1.RepresentationVerified` → `RecordRepresentationStanding` com `status = verified`; mapa: `representationId`, `organizationId`, `powerType`, `scopeCurrency`, `scopeMaxAmountMinor`, `scopeActTypes`, `validFrom`, `validUntil` ← mesmos campos do evento.
   - `company.identity.event.v1.RepresentationRevoked` → `RecordRepresentationStanding` com `status = revoked`; mapa: `representationId`, `organizationId` ← mesmos campos; `revokedAt` ← `revokedAt`.
@@ -511,6 +511,6 @@ DADO uma concessão active com periodUntil no futuro QUANDO ExpireConsent chega 
 - **Revogação parcial** (B12, 03:K12) **e consentimento por categoria de financiador** (03:K11): fora até a apuração; hoje a revogação é total e os destinatários são nominais.
 - **Renovação automática**: proibida; lembretes de vencimento são de Notificações.
 - **Caso operacional por sincronização falha ou revogação sem confirmação**: Backoffice, a partir de `AuthorizationSyncFailed` e de `FindPendingRevocations`.
-- **Acesso cross-tenant do financiador**: depende da extensão do kernel (ADR-051).
+- **Acesso cross-tenant do financiador**: depende da adoção da `1.0.0-rc.6` (DEVS-136), em que o kernel passou a oferecer o acesso entre tenants (DEVS-100, ADR-068 do DMPF).
 - **Armazenamento do texto e da prova bruta**: **[ABERTA: provider de object storage]**.
 - **Composition root**: o esqueleto de `app/` e o `cmd/` com `--role` nascem do generator; o harness escreve o conteúdo de domínio dentro deles.

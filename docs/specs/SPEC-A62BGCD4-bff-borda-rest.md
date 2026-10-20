@@ -1005,7 +1005,7 @@ Authenticate(ctx, credential):
   claims [ABERTA: SPEC-7KW0HHF6:454].
 - **Limites numéricos do doc 91** (600/min por usuário): a admissão do kernel é
   por rota e tenant; os valores ficam em configuração.
-- **Leitura entre tenants do backoffice**: SPEC-QVDGV6J0 (DEVS-100).
+- **Leitura entre tenants do backoffice**: SPEC-QVDGV6J0 (DEVS-100), entregue na `1.0.0-rc.6` (ADR-068 do DMPF); o uso aqui depende da adoção da rc.6 (DEVS-136).
 - **Primeiro vínculo e papéis `approver`, `org_admin`, de financiador e de
   plataforma**: Escopo fora da SPEC-7KW0HHF6.
 - **Ambiente de produção**: só dev e hmg pelo baseline (ADR-019).
