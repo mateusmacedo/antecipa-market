@@ -1,0 +1,11 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: bff
+data:
+  # O `api` do identity roda sem TLS em dev.
+  GRPC_INSECURE: 'true'
+  # Sem servidor de autorização em dev: a identidade vem do próprio Bearer, sem
+  # verificação. Em hmg o BFF verifica por OIDC (Secret bff-oidc).
+  AUTH_DEV_MOCK: 'true'
+  OTEL_RESOURCE_ATTRIBUTES: service.version=dev,deployment.environment.name=dev

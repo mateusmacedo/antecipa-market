@@ -33,8 +33,8 @@ consultam nele quem é a organização e quem a representa, e o `bff` consulta
 nele, a cada requisição, o que cada usuário pode fazer.
 
 - **Serve só gRPC interno** (`company.identity.service.v1.IdentityService`),
-  com 11 comandos e 11 consultas. O REST público é de uma borda à parte, o
-  `bff`, que ainda não existe neste workspace e servirá o OpenAPI publicado em
+  com 11 comandos e 11 consultas. O REST público é do `bff`, que serve o
+  OpenAPI publicado em
   [`contract/openapi/v1/openapi.yaml`](contract/openapi/v1/openapi.yaml).
 - **Publica 7 eventos** de integração no canal Kafka `identity.events`, pela
   outbox, e não consome canal nenhum.
@@ -423,8 +423,8 @@ NX_BASE=origin/master pnpm nx run identity-contract:buf-breaking
   `docker build -f apps/backend/identity/Dockerfile -t identity:local .`.
 - **Compose local.** No `--profile dmpf` de `infra/local`,
   [`deploy/compose.yml`](deploy/compose.yml) declara os dois papéis em
-  container, com mTLS no `api`. Enquanto a borda não existir, a allowlist
-  `GRPC_TRUSTED_CLIENTS` fica vazia e o `api` em container recusa a partida.
+  container, com mTLS no `api`. A allowlist `GRPC_TRUSTED_CLIENTS` admite só
+  o `bff` (`spiffe://dmpf/bff`).
 - **Kubernetes.** Os manifestos Kustomize ficam em
   [`deploy/k8s/`](deploy/k8s/), com a base e os overlays `dev` e `hmg`. A chave
   de identificador vem do Secret `identity-identifier-key`, lido só pelo `api`;

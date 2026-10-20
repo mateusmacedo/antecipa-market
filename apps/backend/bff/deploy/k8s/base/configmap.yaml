@@ -1,0 +1,24 @@
+# O contrato viaja na imagem e é servido pelo BFF. O alvo gRPC é o Service do
+# `api` do identity no mesmo namespace; o balanceamento por chamada vem do
+# resolver dns e do round_robin do cliente.
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: bff
+data:
+  HTTP_ADDR: ':8080'
+  IDENTITY_GRPC_TARGET: dns:///identity-api:9090
+  OPENAPI_IDENTITY_PATH: /contracts/openapi/identity/v1/openapi.yaml
+  OTEL_SERVICE_NAME: bff
+  OTEL_EXPORTER_OTLP_PROTOCOL: grpc
+  OTEL_EXPORTER_OTLP_ENDPOINT: http://otel-collector:4317
+  OTEL_TRACES_SAMPLER_ARG: '1.0'
+  OTEL_LOGS_EXPORTER: otlp
+  OTEL_PROPAGATORS: tracecontext
+  OTEL_GO_X_OBSERVABILITY: 'true'
+  OTEL_BSP_EXPORT_TIMEOUT: '3000'
+  OTEL_BLRP_EXPORT_TIMEOUT: '3000'
+  DRAIN_DELAY: '5s'
+  # accessTokenLifespan do realm: a entrada da deny-list vive além do token
+  # mais longo emitido antes do logout.
+  OIDC_REVOCATION_TTL_SECONDS: '300'

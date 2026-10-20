@@ -1,0 +1,17 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: bff
+data:
+  # O BFF verifica o `api` do identity pela CA montada de bff-grpc-ca; o
+  # nome verificado é o host do alvo (o Service identity-api).
+  GRPC_CA_FILE: /etc/dmpf/grpc/ca.crt
+  # O BFF apresenta o próprio certificado (URI spiffe://dmpf/bff), montado de
+  # bff-grpc-client: os `api` não servem workload que não verificaram.
+  GRPC_CLIENT_CERT_FILE: /etc/dmpf/grpc-client/tls.crt
+  GRPC_CLIENT_KEY_FILE: /etc/dmpf/grpc-client/tls.key
+  OTEL_RESOURCE_ATTRIBUTES: service.version=hmg,deployment.environment.name=hmg
+  OTEL_EXPORTER_OTLP_ENDPOINT: https://otel-collector:4317
+  OTEL_EXPORTER_OTLP_CERTIFICATE: /etc/dmpf/grpc/ca.crt
+  # O Redis do hmg é externo: a API e o session-events recusam redis://.
+  REDIS_REQUIRE_TLS: 'true'

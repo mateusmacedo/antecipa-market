@@ -1,0 +1,21 @@
+# Sem identidade de workload do chamador (FND-07): quem alcança a borda é decidido pela
+# rede. matchExpressions evita que o Kustomize injete o label `name` da base no seletor.
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: bff
+spec:
+  podSelector:
+    matchLabels:
+      app.kubernetes.io/component: bff
+  policyTypes: [Ingress]
+  ingress:
+    - from:
+        - podSelector:
+            matchExpressions:
+              - key: dmpf/api-client
+                operator: In
+                values: ['true']
+      ports:
+        - port: http
+          protocol: TCP

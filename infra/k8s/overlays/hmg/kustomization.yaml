@@ -1,0 +1,28 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+# Postgres, Kafka e Redis ficam fora do cluster; os Secrets vêm de ExternalSecret/SealedSecret
+# com os nomes dos secrets.example.yaml.tmpl, e sem eles os pods param em
+# CreateContainerConfigError, a falha desejada.
+
+namespace: dmpf-hmg
+
+resources:
+  - ../../../observability
+  - ../../../keycloak
+  - apps
+
+configMapGenerator:
+  - name: otel-collector
+    behavior: merge
+    files:
+      - tls.yaml=otel-collector-tls.yaml
+  - name: keycloak
+    behavior: merge
+    literals:
+      - DMPF_BACKCHANNEL_LOGOUT_URL=http://bff-session-events:8091/backchannel-logout
+    options:
+      disableNameSuffixHash: true
+
+patches:
+  - path: otel-collector-patch.yaml

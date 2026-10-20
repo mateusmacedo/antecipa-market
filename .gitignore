@@ -63,6 +63,7 @@ plans
 .env
 .env.*
 !.env.example
+!.env.session-events.example
 
 # Next.js
 .next
