@@ -54,7 +54,7 @@ func (top *topology) call(t *testing.T, req edgeRequest, authorization string) (
 }
 
 // The identity refuses with the same code but its own message, so only the
-// message tells the edge's refusal apart (app/api/middleware.go:293).
+// message tells the edge's refusal apart (rejectionMessage, app/api/middleware.go).
 const (
 	edgeForbidden    = "the resolved identity does not carry what this operation requires"
 	edgeUnauthorized = "the request carries no verifiable credential"

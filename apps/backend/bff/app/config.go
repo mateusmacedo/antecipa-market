@@ -36,8 +36,8 @@ const (
 	envRedisURL             = "REDIS_URL"
 )
 
-// WHY: terminationGracePeriodSeconds 30 (bff deploy/k8s/base/deployment.yaml:72 and
-// deployment-session-events.yaml:85) covers the drain plus two ShutdownGrace windows
+// WHY: terminationGracePeriodSeconds 30 (bff deploy/k8s/base/deployment.yaml and
+// deployment-session-events.yaml) covers the drain plus two ShutdownGrace windows
 // in sequence: the HTTP Shutdown and the telemetry flush deferred by boot.Boot.
 const maxDrainDelay = 10 * time.Second
 

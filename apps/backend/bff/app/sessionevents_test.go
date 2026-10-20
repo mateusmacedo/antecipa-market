@@ -120,8 +120,8 @@ func (r *fakeRealm) polled(path string) int {
 	return len(r.polls[path])
 }
 
-// cyclesReadingBothSources counts the dateTo values both sources were asked
-// for: SessionPolling.Poll computes one window per cycle (authn sessionpolling.go:155).
+// WHY: SessionPolling.Poll computes one window per cycle (authn sessionpolling.go:155),
+// so a dateTo asked of both sources marks one cycle that read both.
 func (r *fakeRealm) cyclesReadingBothSources() int {
 	r.mu.Lock()
 	defer r.mu.Unlock()

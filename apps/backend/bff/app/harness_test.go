@@ -268,8 +268,8 @@ func (top *topology) waitServing(addr, service string, creds credentials.Transpo
 	})
 }
 
-// mutualProbe presents the edge's own certificate: the identity answers
-// nothing, health included, to a workload it does not trust (IDN-03).
+// WHY: the identity answers nothing, health included, to a workload it does not
+// trust (IDN-03), so the probe presents the edge's own certificate.
 func mutualProbe(t *testing.T, caFile, certFile, keyFile string) credentials.TransportCredentials {
 	t.Helper()
 	config, err := rpc.ClientTLS(caFile, "localhost", certFile, keyFile)
