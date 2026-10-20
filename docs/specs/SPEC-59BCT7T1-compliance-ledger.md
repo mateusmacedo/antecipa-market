@@ -3,7 +3,7 @@ id: SPEC-59BCT7T1
 slug: compliance-ledger
 title: Bounded context — compliance-ledger
 stage: backlog
-priority: P1
+priority: P2
 depends_on: [SPEC-GXGASP24]
 ticket_url: https://linear.app/mmda/issue/DEVS-80/spec-59bct7t1-bounded-context-compliance-ledger
 subtask_urls: []
@@ -371,7 +371,7 @@ Todas correm fora da UoW.
   - `legal_holds`: `status`. `retention_policies`: `category`, `effective_from`.
 - **Imutabilidade**: a tecnologia é a decisão D7 da fundação (`SPEC-GXGASP24`), referenciada aqui e não decidida. No DMPF a role da app é dona do banco (tem `UPDATE` e `DELETE`); a camada "permissão de banco sem UPDATE/DELETE" (12 §3, C6.2) exige uma role separada, só de `INSERT`, para `audit_records`. Diverge do design: C6.2 supõe que a role da aplicação não tenha esses privilégios.
 - **Divergências do design**: sem RLS como mecanismo primário (`tenant_id` + `ExecutionContext`, ADR-051); o envelope JSON/`schemaUri` de `92` §1 é substituído por Protobuf/CloudEvents; `instant` é inteiro de nanossegundos (o doc 00 §8 fala em milissegundos); a reconciliação "outbox dos módulos × ledger" (12 §4) exigiria ler o banco de outro contexto, o que o DMPF proíbe **[ABERTA: mecanismo de reconciliação produtor × ledger sem acesso cruzado a banco]**.
-- **Acesso cross-tenant** (auditor do financiador, dossiê sobre operação de outro tenant): **[ABERTA: requer extensão do kernel — ADR-051 DMPF]**.
+- **Acesso cross-tenant** (auditor do financiador, dossiê sobre operação de outro tenant): **[ABERTA: a capacidade existe no kernel desde a `1.0.0-rc.6` (DEVS-100, ADR-068 do DMPF); o uso aqui depende da adoção da rc.6 (DEVS-136)]**.
 
 ## Políticas transversais
 
