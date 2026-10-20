@@ -4,6 +4,19 @@
 
 Aceito — 2026-10-12. Implementa SPEC-GXGASP24 (DEVS-76).
 
+> **Addendum (2026-10-19)** — o kernel `1.0.0-rc.6` entregou a SPEC-QVDGV6J0
+> (DEVS-100; ADR-068 do kernel), e a pendência de acesso e projeção entre
+> tenants deixou de ser lacuna do kernel. A leitura de plataforma passa por
+> `PlatformReader` sobre o `postgres.Table`, com alcance declarado
+> (`ports.PlatformReach`, de que `http.PlatformReach` é alias), auditoria que
+> falha fechada e gate `forbidigo` (`dmpf-gate-check.sh`). A projeção passa por
+> `Projector`, com o tenant de destino explícito, tirado do payload, e o
+> envelope inalterado (ADR-068, item 7). O ADR-068 emenda o ADR-050 e o ADR-051
+> do kernel e, in-place, o `IDN-11` e o `IDN-12`. A decisão deste ADR vale como
+> está; o uso aqui depende da adoção da `1.0.0-rc.6` (DEVS-136), e o texto de
+> Contexto, Consequências e Pendências sobre esse ponto fica como registro
+> histórico.
+
 ## Contexto
 
 A decisão D2 vem de `docs/design/00-arquitetura-tecnica.md` §4. O §4.1
