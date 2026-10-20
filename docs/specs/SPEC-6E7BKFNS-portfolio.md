@@ -3,7 +3,7 @@ id: SPEC-6E7BKFNS
 slug: portfolio
 title: Bounded context — portfolio
 stage: backlog
-priority: P1
+priority: P2
 depends_on: [SPEC-GXGASP24, SPEC-Z3YR96YS]
 ticket_url: https://linear.app/mmda/issue/DEVS-86/spec-6e7bkfns-bounded-context-portfolio
 subtask_urls: []
@@ -598,7 +598,8 @@ Consultas correm fora da UoW. As de ativo paginam por cursor (91 §2.3).
   por inbox com `eventId` (FND-04 §6.4).
 - **Autorização**: pelo gancho de autorização do bloco `application`, antes da transação
   (FND-04 §3.2). A projeção do portfólio para o financiador é cópia sob concessão no tenant dele,
-  e o backoffice lê entre tenants. **[ABERTA: requer extensão do kernel - ADR-051 DMPF]**
+  e o backoffice lê entre tenants. **[ABERTA: a capacidade existe no kernel desde a `1.0.0-rc.6`
+  (DEVS-100, ADR-068 do DMPF); o uso aqui depende da adoção da rc.6 (DEVS-136)]**
 - **Auditoria**: pela trilha de auditoria do kernel (FND-08; `observability/audit`); o Ledger
   preserva os snapshots por `PortfolioSnapshotCreated`.
 - **Classificação de dados**: valores `CONFIDENTIAL`; identificadores fiscais só como hash

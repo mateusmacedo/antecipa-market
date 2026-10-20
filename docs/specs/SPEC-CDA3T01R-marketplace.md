@@ -3,7 +3,7 @@ id: SPEC-CDA3T01R
 slug: marketplace
 title: Bounded context — marketplace
 stage: backlog
-priority: P1
+priority: P2
 depends_on: [SPEC-GXGASP24, SPEC-GM5GH5BF]
 ticket_url: https://linear.app/mmda/issue/DEVS-88/spec-cda3t01r-bounded-context-marketplace
 subtask_urls: []
@@ -571,7 +571,8 @@ Consultas correm fora da UoW.
   (representação e alçada) e Portfolio (snapshot na revalidação).
 - O financiador recebe só os dados autorizados pelo nível de divulgação do convite; a projeção
   para o tenant do financiador é cópia sob concessão (00 §4.2), e o `organizationId` do cedente
-  fica nulo no nível de triagem. **[ABERTA: requer extensão do kernel - ADR-051 DMPF]**
+  fica nulo no nível de triagem. **[ABERTA: a capacidade existe no kernel desde a `1.0.0-rc.6`
+  (DEVS-100, ADR-068 do DMPF); o uso aqui depende da adoção da rc.6 (DEVS-136)]**
 - Nota de inconsistência: 07 §3.3 R5 pede duas ordenações no `OffersPresented`; 92 §3.3 traz uma.
 
 ## Borda e persistência
@@ -600,7 +601,8 @@ Consultas correm fora da UoW.
 - **Autorização**: pelo gancho de autorização do bloco `application`, antes da transação
   (FND-04 §3.2). Ato do cedente exige representação válida e com alçada. Cada financiador vê só
   as próprias ofertas; revelar preço de concorrente é vazamento (94:T4). O acesso entre tenants
-  **[ABERTA: requer extensão do kernel - ADR-051 DMPF]**.
+  **[ABERTA: a capacidade existe no kernel desde a `1.0.0-rc.6` (DEVS-100, ADR-068 do DMPF); o uso
+  aqui depende da adoção da rc.6 (DEVS-136)]**.
 - **Auditoria**: pela trilha de auditoria do kernel (FND-08; `observability/audit`); o Ledger
   preserva a apresentação. A reprodutibilidade da ordenação é teste de CI a cada mudança de
   política (07 §3.4).

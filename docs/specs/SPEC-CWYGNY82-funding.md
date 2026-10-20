@@ -348,7 +348,7 @@ O disparo vem de evento consumido, de chamada gRPC (cedente, financiador pela Pa
 - **Banco**: database e role `funding`, schema `public`, tabelas `funding_instructions` e `disbursement_destinations`, com `tenant_id` à frente da chave. Persistência híbrida: em `funding_instructions`, colunas tipadas `contract_id` (`FindFundingInstructionsByContract`), `cedent_organization_id` e `status` (`FindFundingInstructionsByCedent`); em `disbursement_destinations`, `organization_id` e `status` (`FindDisbursementDestinationsByOrganization`); o resto vai em `snapshot` `jsonb`. O comprovante e os documentos do financiador ficam por referência [ABERTA: provider de object storage].
 - **Instante**: inteiro de nanossegundos no domínio.
 - Diverge do design: 90 §1.3 fala em milissegundos e 92 §1 em envelope JSON com `schemaUri`; vale o DMPF (nanossegundos; Protobuf com CloudEvents montado pelo relay).
-- Diverge do design: multi-tenancy por `tenant_id` à frente da chave e escopo injetado pelo `ExecutionContext` (ADR-051 do DMPF), não por RLS (00 §4.1). A visão do financiador sobre a instrução e a leitura do backoffice entre tenants [ABERTA: requer extensão do kernel - ADR-051 DMPF].
+- Diverge do design: multi-tenancy por `tenant_id` à frente da chave e escopo injetado pelo `ExecutionContext` (ADR-051 do DMPF), não por RLS (00 §4.1). A visão do financiador sobre a instrução e a leitura do backoffice entre tenants [ABERTA: a capacidade existe no kernel desde a `1.0.0-rc.6` (DEVS-100, ADR-068 do DMPF); o uso aqui depende da adoção da rc.6 (DEVS-136)].
 - Diverge do design: broker Kafka (default do DMPF; confirmação na decisão D4 da fundação), não SQS.
 
 ## Políticas transversais

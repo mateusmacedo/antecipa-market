@@ -3,7 +3,7 @@ id: SPEC-GM5GH5BF
 slug: eligibility
 title: Bounded context — eligibility
 stage: backlog
-priority: P1
+priority: P2
 depends_on: [SPEC-GXGASP24, SPEC-6E7BKFNS, SPEC-R25V2A8C]
 ticket_url: https://linear.app/mmda/issue/DEVS-87/spec-gm5gh5bf-bounded-context-eligibility
 subtask_urls: []
@@ -439,7 +439,8 @@ Consultas correm fora da UoW.
   `eventId` (FND-04 §6.4).
 - **Autorização**: pelo gancho de autorização do bloco `application`, antes da transação
   (FND-04 §3.2); o ato em nome do cedente exige representação válida (`ORG-REP-001`). O acesso do
-  backoffice entre tenants **[ABERTA: requer extensão do kernel - ADR-051 DMPF]**.
+  backoffice entre tenants **[ABERTA: a capacidade existe no kernel desde a `1.0.0-rc.6` (DEVS-100,
+  ADR-068 do DMPF); o uso aqui depende da adoção da rc.6 (DEVS-136)]**.
 - **Auditoria**: pela trilha de auditoria do kernel (FND-08; `observability/audit`); o Ledger
   recebe os quatro eventos publicados. A avaliação é reproduzível: mesma entrada e mesma versão
   de política dão o mesmo resultado.

@@ -5,6 +5,14 @@
 Aceito — 2026-10-12, para o mecanismo base; storage concreto, âncora externa e
 extensões do kernel em Pendências. Implementa SPEC-GXGASP24 (DEVS-76).
 
+> **Addendum (2026-10-19)** — o kernel `1.0.0-rc.6` entregou a SPEC-QVDGV6J0
+> (DEVS-100; ADR-068 do kernel), a extensão que Pendências lista para a leitura
+> das cabeças entre tenants pelo selo e pelo verificador: `PlatformReader` sobre
+> o `postgres.Table`, com alcance declarado, auditoria que falha fechada e gate
+> `forbidigo`. O uso aqui depende da adoção da `1.0.0-rc.6` (DEVS-136). Este
+> addendum trata só dessa leitura; as demais pendências seguem como estavam
+> registradas.
+
 ## Contexto
 
 A decisão D7 vem de `docs/design/00-arquitetura-tecnica.md` §5.2: as classes

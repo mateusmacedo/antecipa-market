@@ -12,6 +12,11 @@ Aceito — 2026-10-12. Implementa SPEC-GXGASP24 (DEVS-76).
 > entregou a SPEC-QPRR24C4 (ADR-063), a SPEC-SBW7HT6Y (ADR-064) e a
 > SPEC-STEJG347 (ADR-065). As demais linhas seguem como estavam, porque as
 > specs que as tratam continuam em `backlog` no kernel.
+>
+> **Addendum (2026-10-19)** — a SPEC-QVDGV6J0 (DEVS-100), citada nas linhas 2 e
+> 15, foi entregue no kernel `1.0.0-rc.6` (ADR-068 do kernel). A tabela segue
+> como estava até a reconferência do bump, pelo item 4, que fica com a adoção
+> da `1.0.0-rc.6` (DEVS-136).
 
 ## Contexto
 

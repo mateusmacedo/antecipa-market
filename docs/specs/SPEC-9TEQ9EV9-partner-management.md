@@ -35,7 +35,7 @@ created: 2026-10-12
 - **Situação**: `parcial` — o núcleo é construível no kernel `1.0.0-rc.5`: cadastro, estágios, acordo, capacidade, homologação, suspensão, rollout, produto, perfil de integração e política operacional. Ficam no Escopo fora: `CommercialRule`, consumo de eventos, `inactive`, cliente gRPC real do Identity e disparo agendado.
 - **Fase de entrega**: 1; primeira fatia em tenant único da plataforma.
 - **Dependências**: `depends_on` declara só a fundação (`SPEC-GXGASP24`) e a aresta dura reduzida (`SPEC-7KW0HHF6`, Identity: a organização do parceiro); a cadeia transitiva fica implícita. Brandas: nenhuma nesta versão; o consumo de `ExternalSchemaMismatchDetected` (Receivables Gateway) e de `FundingRequestOpened` (Marketplace) está no Escopo fora. A retroalimentação — Gateway, Eligibility e Marketplace consomem os eventos de capacidade deste contexto — nunca entra em `depends_on`. Extensões do kernel que tocam este contexto, nenhuma bloqueando a construção desta versão:
-  - SPEC-QVDGV6J0 (DEVS-100) - leitura de plataforma e projeção entre tenants (K4);
+  - SPEC-QVDGV6J0 (DEVS-100) - leitura de plataforma e projeção entre tenants (K4), entregue no `1.0.0-rc.6` (ADR-068 do DMPF); o uso aqui depende da adoção da rc.6 (DEVS-136);
   - SPEC-CWBA4BPV (DEVS-95) - object storage das evidências;
   - SPEC-7SRQ3RPK (DEVS-103) - violação de unicidade traduzida em rejeição;
   - SPEC-QPRR24C4 (DEVS-94) - role migradora separada da role de runtime, entregue no `1.0.0-rc.5` (ADR-063).
@@ -48,12 +48,12 @@ created: 2026-10-12
 | B17, 13:N8 | ambiente de homologação e critérios acordáveis com cada parceiro | H1 a H12 aplicados a todo parceiro; critérios por parceiro fora desta versão |
 | 13:N10 | situação regulatória a verificar por tipo de parceiro | H16 declarado pelo operador em `ActivateAgreement` |
 | 13:N11 | cláusula de acesso residual no contrato de saída | `inactive` fora desta versão |
-| K4 (SPEC-QVDGV6J0, DEVS-100) | leitura e projeção entre tenants | consultas servidas a outros tenants; nesta versão, a configuração vive num tenant único da plataforma |
+| K4 (SPEC-QVDGV6J0, DEVS-100, entregue na `1.0.0-rc.6`; adoção na DEVS-136) | leitura e projeção entre tenants | consultas servidas a outros tenants; nesta versão, a configuração vive num tenant único da plataforma |
 | Effects (SPEC-ZFDEPFWC) | consulta de efeitos vigentes por parceiro, ausente da spec de Effects | pré-condição de `inactive`, fora desta versão |
 
 - **Decisões registradas nesta spec (2026-10-17)**:
   1. *Idempotência*: todo comando exige chave de idempotência na metadata gRPC (FND-04; ADR-056 do DMPF); o replay com a mesma chave devolve a resposta registrada.
-  2. *Tenant único*: nesta versão, a configuração de parceiros vive num tenant único da plataforma, e o `tenantId` dos filtros é o tenant avaliado no rollout; leitura entre tenants espera o K4 (SPEC-QVDGV6J0).
+  2. *Tenant único*: nesta versão, a configuração de parceiros vive num tenant único da plataforma, e o `tenantId` dos filtros é o tenant avaliado no rollout; leitura entre tenants espera a adoção da `1.0.0-rc.6` (DEVS-136), que traz o K4 (SPEC-QVDGV6J0).
   3. *Enum de ambiente*: `environment` é `development | integration | homologation | production`, igual ao Gateway (SPEC-N1X148AW:62), em `Capability`, `IntegrationProfile`, eventos e consultas.
   4. *Eventos de produto por fato*: `PartnerProductChanged` com `changeKind` dá lugar a `PartnerProductDefined`, `PartnerProductChanged`, `PartnerProductExpired` e `PartnerProductRetired` (`docs/design/92-schemas-eventos.md` §5.3).
   5. *Rollout notificado e determinístico*: `ChangeRollout` emite `CapabilityRolloutChanged`; o bucket do tenant vem de sha256 pela porta da Nota (§); a dimensão de produto do rollout está no Escopo fora.
@@ -473,7 +473,7 @@ As relações são só por identidade. A verificação (†) de existência e vi
 - Diverge do design (ADR-022, linha 6): eventos são Protobuf com CloudEvents montado pelo relay; o envelope JSON e o `schemaUri` do doc 92 §1 não se aplicam.
 - Diverge do design (ADR-022, linha 9): `instant` é inteiro de nanossegundos no domínio.
 - Diverge do design (ADR-022, linha 15): a unicidade por tenant é verificada por pré-leitura, com o índice como salvaguarda (††), até a SPEC-7SRQ3RPK.
-- Nesta versão, a configuração de parceiros vive num tenant único da plataforma, e o rollout avalia o `tenantId` dos filtros (decisão de tenant único); leitura e projeção entre tenants esperam o K4, no Escopo fora.
+- Nesta versão, a configuração de parceiros vive num tenant único da plataforma, e o rollout avalia o `tenantId` dos filtros (decisão de tenant único); leitura e projeção entre tenants esperam a adoção do K4 (`1.0.0-rc.6`, DEVS-136), no Escopo fora.
 - Segredos são referenciados por `secretRef`; nenhum valor entra no domínio, em evento ou em log.
 
 ## Políticas transversais
@@ -677,7 +677,7 @@ DADO uma política na version 1 de um parceiro QUANDO DefineOperationalPolicy ch
 - **Cofre de segredos e emissão de certificado**: o contexto guarda a referência (`secretRef`, `certificateRef`), não o valor nem o ciclo de vida do segredo.
 - **Procedimento humano de offboarding**: inventário de operações em curso, tratamento caso a caso e cláusula de acesso residual são do Backoffice e do contrato de saída (13:N11).
 - **Comandos de suspensão por produto, tipo de ativo e parceiro inteiro**: nesta versão, a suspensão é por capacidade (`SuspendCapability`), e a do parceiro muda só o `Partner` (`ChangePartnerStage`).
-- **Leitura e projeção entre tenants**: K4 (SPEC-QVDGV6J0, DEVS-100); nesta versão, a configuração vive num tenant único da plataforma.
+- **Leitura e projeção entre tenants**: K4 (SPEC-QVDGV6J0, DEVS-100), entregue na `1.0.0-rc.6` (ADR-068 do DMPF) e dependente da adoção da rc.6 (DEVS-136); nesta versão, a configuração vive num tenant único da plataforma.
 - **Armazenamento de evidência de homologação e de contrato**: porta de object storage da SPEC-CWBA4BPV (DEVS-95); o contexto guarda só ids opacos.
 - **Composition root**: o esqueleto de `app/` e o `cmd/` com `--role` nascem do generator; o harness escreve o conteúdo de domínio dentro deles.
 - **`CommercialRule` e `FindCommercialRule`**: agregado, comando de definição, consulta e tabela saem desta versão, com os três códigos de regra comercial (`commercial-rule/validity-invalid`, `commercial-rule/sponsored-positions-invalid` e `commercial-rule/rates-invalid`) **[ABERTA: #7 (D1–D3; 13:N9) — o modelo de monetização trava o agregado e o comando; `canOverrideMerit` depende de docs/design/07-design-marketplace.md §3.3 R6; docs/design/92-schemas-eventos.md §4 não traz evento de `CommercialRule`, embora Billing dependa dela (docs/design/18)]**. A verificação de H17 contra a regra comercial entra com ela.

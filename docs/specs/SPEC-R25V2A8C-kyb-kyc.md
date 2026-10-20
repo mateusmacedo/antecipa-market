@@ -411,7 +411,7 @@ As relações são só por identidade. A existência do agregado referenciado (�
 - Diverge do design: o isolamento por tenant é `tenant_id` injetado pelo `ExecutionContext` no `postgres.Table` (ADR-051 DMPF), não RLS como mecanismo primário (`docs/design/00` §4.1); `tenantId` não é campo do agregado.
 - Diverge do design: eventos são Protobuf com CloudEvents montado pelo relay; o envelope JSON e o `schemaUri` do doc 92 §1 não se aplicam.
 - Diverge do design: `instant` é inteiro de nanossegundos no domínio (`docs/design/00` §8 fala em milissegundos).
-- O acesso do financiador ao dossiê (projeção no tenant do financiador, `docs/design/00` §4.2) **[ABERTA: requer extensão do kernel — ADR-051 DMPF]**.
+- O acesso do financiador ao dossiê (projeção no tenant do financiador, `docs/design/00` §4.2) **[ABERTA: a capacidade existe no kernel desde a `1.0.0-rc.6` (DEVS-100, ADR-068 do DMPF); o uso aqui depende da adoção da rc.6 (DEVS-136)]**.
 - Campos `PII` e `PII_SENSITIVE` (`observedValue`, documentos) pedem envelope adicional e chave segregada **[ABERTA: sem provider verificado no kernel — docs/design/90 §1.4]**.
 
 ## Políticas transversais
@@ -525,7 +525,7 @@ DADO um caso cujos checks estão todos dentro da validade QUANDO ExpireVerificat
 - **Catálogo de verificações e `PrecedenceRule` como dado versionado**: carregados como configuração, sem agregado nesta versão.
 - **Fontes de dados e `CHK-BNK-001`**: adaptadores só depois de C3 e C1; listas obrigatórias (02:Y10) e critério de beneficiário final (02:Y9) idem.
 - **Monitoramento e gatilhos automáticos de revalidação** (consulta periódica, comparação de estrutura): agendador fora do contexto, que invoca `ExpireVerification`.
-- **Acesso do financiador ao dossiê e log de acessos para o cedente**: dependem da extensão de kernel (ADR-051) e da decisão do log.
+- **Acesso do financiador ao dossiê e log de acessos para o cedente**: dependem da adoção da `1.0.0-rc.6` (DEVS-136), em que o kernel passou a oferecer a extensão (DEVS-100, ADR-068 do DMPF), e da decisão do log.
 - **Notificação ao cedente e ao parceiro**: contexto Notificações.
 - **Armazenamento de evidência bruta**: **[ABERTA: provider de object storage]**.
 - **Composition root**: o esqueleto de `app/` e o `cmd/` com `--role` nascem do generator; o harness escreve o conteúdo de domínio dentro deles.

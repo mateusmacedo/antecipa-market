@@ -46,7 +46,7 @@ created: 2026-10-12
 | `#1`, A1 | Autorização do BCB (existencial, transversal) | Contexto inteiro |
 
 - **Decisões de produto abertas**: quem solicita e quem aprova o dossiê de auditoria (`95` matriz × `17` §5); o papel de "supervisor" que 17 usa e a matriz de 95 não tem.
-- **Condição para sair do backlog**: `SPEC-GXGASP24` concluída e decisão sobre o acesso cross-tenant (a fila mostra casos de todos os tenants, 17 §6.1), que exige extensão do kernel. Nenhum bloqueio externo trava o núcleo; B2 e E2 travam só a faixa fina da alçada por valor.
+- **Condição para sair do backlog**: `SPEC-GXGASP24` concluída e decisão sobre o acesso cross-tenant (a fila mostra casos de todos os tenants, 17 §6.1), capacidade que existe no kernel desde a `1.0.0-rc.6` (DEVS-100, ADR-068 do DMPF) e cujo uso aqui depende da adoção da rc.6 (DEVS-136). Nenhum bloqueio externo trava o núcleo; B2 e E2 travam só a faixa fina da alçada por valor.
 
 ## Agregados
 
@@ -380,7 +380,7 @@ Todas correm fora da UoW.
   - `escalation_rules(case_type)` — `FindEscalationRuleByCaseType`
   - O resto vai em `snapshot` `jsonb`.
 - **Divergências do design**: sem RLS como mecanismo primário (`tenant_id` e `ExecutionContext`, ADR-051); o envelope JSON e o `schemaUri` de `92` §1 são substituídos por Protobuf em CloudEvents; `instant` é inteiro de nanossegundos (o doc 00 §8 fala em milissegundos).
-- **Acesso cross-tenant**: a fila mostra casos de todos os tenants (17 §6.1) e o analista de plataforma lê dados de qualquer cliente (00 §4.1): **[ABERTA: requer extensão do kernel — ADR-051 DMPF]**. Todo acesso cross-tenant é registrado no ledger (00 §4.1).
+- **Acesso cross-tenant**: a fila mostra casos de todos os tenants (17 §6.1) e o analista de plataforma lê dados de qualquer cliente (00 §4.1): **[ABERTA: a capacidade existe no kernel desde a `1.0.0-rc.6` (DEVS-100, ADR-068 do DMPF); o uso aqui depende da adoção da rc.6 (DEVS-136)]**. Todo acesso cross-tenant é registrado no ledger (00 §4.1).
 
 ## Políticas transversais
 
