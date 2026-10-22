@@ -3,7 +3,6 @@ package application
 import (
 	"context"
 	"errors"
-	"slices"
 
 	port "github.com/mateusmacedo/dmpf/libs/backend/go/ports"
 
@@ -31,33 +30,8 @@ func personFound(ctx context.Context, persons ports.PersonRepository, id domain.
 	return true, nil
 }
 
-// The kernel Relation filters by one column, so the organization half of the
-// key is refined in memory over the rows of the filtered column.
-func (s Service) establishmentTaxIDRegistered(ctx context.Context, taxIDHash string, organizationID domain.OrganizationID) (bool, error) {
-	found, err := s.EstablishmentTaxIDReader.LoadByTaxIDHash(ctx, taxIDHash)
-	if absent(err) {
-		return false, nil
-	}
-	if err != nil {
-		return false, err
-	}
-	return slices.ContainsFunc(found, func(e domain.EstablishmentSnapshot) bool { return e.OrganizationID == organizationID }), nil
-}
-
-func (s Service) documentRegistered(ctx context.Context, documentHash string) (bool, error) {
-	found, err := s.DocumentReader.LoadByDocumentHash(ctx, documentHash)
-	if absent(err) {
-		return false, nil
-	}
-	if err != nil {
-		return false, err
-	}
-	return len(found) > 0, nil
-}
-
 // absent tells a read that met only another tenant's rows: nothing of them is
-// visible in this tenant, so the uniqueness reads find the value free and
-// FindEffectivePermissions finds no membership.
+// visible in this tenant, so FindEffectivePermissions finds no membership.
 func absent(err error) bool {
 	var access port.CrossTenantAccess
 	return errors.As(err, &access)

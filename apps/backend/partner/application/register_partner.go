@@ -25,10 +25,6 @@ func (s Service) RegisterPartner(ctx context.Context, cmd RegisterPartner) (usec
 			if err != nil {
 				return fail(err)
 			}
-			registered, err := s.partnerRegistered(ctx, cmd.OrganizationID, cmd.Role)
-			if err != nil {
-				return fail(err)
-			}
 			outcome, err := usecase.Decide(ctx, res.Partners, res.Outbox, origin(AggregateTypePartner, string(cmd.PartnerID)), cmd.PartnerID, identity,
 				loadAbsentPartner,
 				func(p *domain.Partner) (kernel.Accepted[domain.RegisterPartnerResponse], *kernel.Rejection) {
@@ -37,7 +33,6 @@ func (s Service) RegisterPartner(ctx context.Context, cmd RegisterPartner) (usec
 						Role:              cmd.Role,
 						OrganizationFound: found,
 						OrganizationKinds: kinds,
-						AlreadyRegistered: registered,
 						At:                identity.OccurredAt,
 					})
 				})

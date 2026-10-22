@@ -33,6 +33,11 @@ var organizationTable = postgres.Table[domain.OrganizationID, domain.Organizatio
 	Name:     "organizations",
 	IDColumn: "organization_id",
 	Columns:  []string{"tax_id_hash", "jurisdiction", "snapshot"},
+	Unique: []postgres.Unique{{
+		Name:      "organizations_tenant_id_tax_id_hash_jurisdiction_key",
+		Columns:   []string{"tenant_id", "tax_id_hash", "jurisdiction"},
+		Rejection: domain.RejectOrganizationDuplicateTaxID,
+	}},
 
 	Encode: func(s domain.OrganizationSnapshot) ([]any, error) {
 		listed := s.Kinds.List()

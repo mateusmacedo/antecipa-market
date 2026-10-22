@@ -25,7 +25,7 @@ func TestOrganizationsMatchTheProjectionFixture(t *testing.T) {
 	if err != nil {
 		t.Fatalf("decode fixture: %v", err)
 	}
-	if f.Identity.Context != "identity" || f.Identity.Aggregate != "organization" || len(f.Cases) != 7 {
+	if f.Identity.Context != "identity" || f.Identity.Aggregate != "organization" || len(f.Cases) != 6 {
 		t.Fatalf("fixture identity/cases = %+v/%d", f.Identity, len(f.Cases))
 	}
 	tb.RunProjection(t, f, runOrganization)
@@ -37,16 +37,15 @@ func runOrganization(t *testing.T, c tb.ProjectionCase) (domainkit.Projection, d
 		t.Fatalf("unknown upr %q in case %s", c.Command["upr"], c.Name)
 	}
 	s := registerSubject(domain.RegisterOrganization{
-		Kinds:                  kindsFrom(c.Command["kinds"]),
-		Jurisdiction:           c.Command["jurisdiction"],
-		TaxIDType:              domain.TaxIDType(c.Command["tax_id_type"]),
-		TaxID:                  c.Command["tax_id"],
-		TaxIDHash:              c.Command["tax_id_hash"],
-		TaxIDHashKeyVersion:    int(integer(t, c.Command["tax_id_hash_key_version"])),
-		TaxIDAlreadyRegistered: boolean(t, c.Command["tax_id_already_registered"]),
-		LegalName:              c.Command["legal_name"],
-		TradeName:              c.Command["trade_name"],
-		At:                     kernel.Instant(integer(t, c.Command["at"])),
+		Kinds:               kindsFrom(c.Command["kinds"]),
+		Jurisdiction:        c.Command["jurisdiction"],
+		TaxIDType:           domain.TaxIDType(c.Command["tax_id_type"]),
+		TaxID:               c.Command["tax_id"],
+		TaxIDHash:           c.Command["tax_id_hash"],
+		TaxIDHashKeyVersion: int(integer(t, c.Command["tax_id_hash_key_version"])),
+		LegalName:           c.Command["legal_name"],
+		TradeName:           c.Command["trade_name"],
+		At:                  kernel.Instant(integer(t, c.Command["at"])),
 	})
 	return domainkit.Run(organizationFromState(t, c.StateBefore), s), domainkit.ReadTwice(organizationFromState(t, c.StateBefore), s)
 }

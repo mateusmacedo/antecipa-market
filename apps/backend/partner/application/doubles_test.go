@@ -2,6 +2,7 @@ package application_test
 
 import (
 	"context"
+	"strings"
 	"testing"
 
 	usecase "github.com/mateusmacedo/dmpf/libs/backend/go/application"
@@ -29,13 +30,65 @@ const (
 var testOccurred = port.Instant(1_755_432_000_000_000_000)
 
 var (
-	partnerTable   = memory.Table[domain.PartnerID, domain.PartnerSnapshot]{Name: "partners"}
-	agreementTable = memory.Table[domain.AgreementID, domain.PartnerAgreementSnapshot]{Name: "partner_agreements"}
-	profileTable   = memory.Table[domain.ProfileID, domain.IntegrationProfileSnapshot]{Name: "integration_profiles"}
-	policyTable    = memory.Table[domain.PolicyID, domain.OperationalPolicySnapshot]{Name: "operational_policies"}
-	capTable       = memory.Table[domain.CapabilityID, domain.CapabilitySnapshot]{Name: "capabilities"}
-	productTable   = memory.Table[domain.ProductID, domain.FinancialProductSnapshot]{Name: "financial_products"}
+	partnerTable = memory.Table[domain.PartnerID, domain.PartnerSnapshot]{Name: "partners", Unique: []memory.Unique[domain.PartnerSnapshot]{{
+		Name: "partners_tenant_id_organization_id_role_key",
+		Key: func(s domain.PartnerSnapshot) ([]string, bool) {
+			return []string{string(s.OrganizationID), string(s.Role)}, true
+		},
+		Rejection: domain.RejectPartnerAlreadyRegistered,
+	}}}
+	agreementTable = memory.Table[domain.AgreementID, domain.PartnerAgreementSnapshot]{Name: "partner_agreements", Unique: seriesUniques("partner_agreements",
+		func(s domain.PartnerAgreementSnapshot) (string, string) {
+			return string(s.SupersedesID), string(s.PartnerID)
+		},
+		domain.RejectPartnerAgreementSupersedesInvalid)}
+	profileTable = memory.Table[domain.ProfileID, domain.IntegrationProfileSnapshot]{Name: "integration_profiles", Unique: seriesUniques("integration_profiles",
+		func(s domain.IntegrationProfileSnapshot) (string, string) {
+			return string(s.SupersedesID), seriesKey(string(s.PartnerID), string(s.Environment))
+		},
+		domain.RejectIntegrationProfileSupersedesInvalid)}
+	policyTable = memory.Table[domain.PolicyID, domain.OperationalPolicySnapshot]{Name: "operational_policies", Unique: seriesUniques("operational_policies",
+		func(s domain.OperationalPolicySnapshot) (string, string) {
+			return string(s.SupersedesID), string(s.PartnerID)
+		},
+		domain.RejectOperationalPolicySupersedesInvalid)}
+	capTable = memory.Table[domain.CapabilityID, domain.CapabilitySnapshot]{Name: "capabilities", Unique: seriesUniques("capabilities",
+		func(s domain.CapabilitySnapshot) (string, string) {
+			return string(s.SupersedesID), seriesKey(string(s.PartnerID), s.Operation, s.AssetType, string(s.Environment))
+		},
+		domain.RejectCapabilitySupersedesInvalid)}
+	productTable = memory.Table[domain.ProductID, domain.FinancialProductSnapshot]{Name: "financial_products", Unique: seriesUniques("financial_products",
+		func(s domain.FinancialProductSnapshot) (string, string) {
+			return string(s.SupersedesID), seriesKey(string(s.PartnerID), s.Code)
+		},
+		domain.RejectFinancialProductSupersedesInvalid)}
 )
+
+func seriesKey(parts ...string) string { return strings.Join(parts, "\x1f") }
+
+// seriesUniques mirrors the two constraints of a versioned table: supersedes
+// names one version once, and a series holds one first version, whose
+// series_origin is the series key; a later version has none.
+func seriesUniques[S any](table string, keys func(S) (supersedes, series string), rejection *kernel.Rejection) []memory.Unique[S] {
+	return []memory.Unique[S]{
+		{
+			Name: table + "_tenant_id_supersedes_id_key",
+			Key: func(s S) ([]string, bool) {
+				supersedes, _ := keys(s)
+				return []string{supersedes}, supersedes != ""
+			},
+			Rejection: rejection,
+		},
+		{
+			Name: table + "_tenant_id_series_origin_key",
+			Key: func(s S) ([]string, bool) {
+				supersedes, series := keys(s)
+				return []string{series}, supersedes == ""
+			},
+			Rejection: rejection,
+		},
+	}
+}
 
 type harness struct {
 	fakes       *serviceskit.Fakes
@@ -289,8 +342,11 @@ func newHarness(t *testing.T, options ...option) *harness {
 				table: "financial_products", rec: h.rec,
 				inner: serviceskit.FaultyRepository(productTable.Repository(tx.Memory()), cfg.tableFaults["financial_products"]),
 			},
-			Outbox:   serviceskit.FaultyOutbox(tx.Outbox(), cfg.outbox),
-			Commands: tx.CommandInbox(application.CommandConsumer),
+			AgreementsByPartner:   agreementsOfPartner{h.agreements},
+			ProfilesByPartner:     profilesOfPartner{h.profiles},
+			CapabilitiesByPartner: capabilitiesOfPartner{h.caps},
+			Outbox:                serviceskit.FaultyOutbox(tx.Outbox(), cfg.outbox),
+			Commands:              tx.CommandInbox(application.CommandConsumer),
 		}
 	}
 

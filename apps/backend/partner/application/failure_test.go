@@ -20,7 +20,6 @@ func TestEachFailureOfRegisterPartnerCarriesTheUseCasePrefix(t *testing.T) {
 		wantMsg string
 	}{
 		{"directory", nil, func(h *harness) { h.directory.err = errBoom }, "application: register partner prt-100: boom"},
-		{"uniqueness read", nil, func(h *harness) { h.partners.err = errBoom }, "application: register partner prt-100: boom"},
 		{"load", []option{withTableFaults("partners", serviceskit.Faults{Load: errBoom})}, nil, "application: register partner prt-100: boom"},
 		{"save", []option{withTableFaults("partners", serviceskit.Faults{Save: errBoom})}, nil, "application: register partner prt-100: boom"},
 		{"enqueue", []option{withEnqueueError(errBoom)}, nil, "application: register partner prt-100: enqueue: boom"},

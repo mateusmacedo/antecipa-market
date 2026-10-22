@@ -68,13 +68,14 @@ func TestCapabilityRepositoryConformsToTheKit(t *testing.T) {
 			Within: func(ctx context.Context, fn func(context.Context, port.Repository[domain.CapabilityID, domain.CapabilitySnapshot]) error) error {
 				return pg.Within(ctx, pool, provider.NewCapabilityRepository, fn)
 			},
-			Reader:   provider.NewCapabilityReader(postgres.NewReadPool(pool)),
-			NewID:    func(n int) domain.CapabilityID { return domain.CapabilityID("kit-" + strconv.Itoa(n)) },
-			NewState: capabilityState,
-			Marker: func(s domain.CapabilitySnapshot) int {
-				n, _ := strconv.Atoi(string(s.PartnerID)[len("prt-"):])
-				return n
+			Reader: provider.NewCapabilityReader(postgres.NewReadPool(pool)),
+			NewID:  func(n int) domain.CapabilityID { return domain.CapabilityID("kit-" + strconv.Itoa(n)) },
+			NewState: func(marker int) domain.CapabilitySnapshot {
+				s := capabilityState(marker)
+				s.PartnerID = kitPartner
+				return s
 			},
+			Marker:           func(s domain.CapabilitySnapshot) int { return int(s.EnabledAt - kitBase) },
 			TenantUnresolved: postgres.ErrTenantUnresolved,
 			Concurrent:       true,
 		}
@@ -132,7 +133,7 @@ func TestTheSeriesOfACapabilityHoldsOneFirstVersionAndOneSuccessorOfEachVersion(
 		within string
 	}{
 		{"a second first version of the series", []domain.CapabilitySnapshot{capabilityVersion("cap-1", "prt-1", "register-receivable", 1, "")},
-			capabilityVersion("cap-x", "prt-1", "register-receivable", 1, ""), "capabilities_partner_id_operation_asset_type_environment_idx"},
+			capabilityVersion("cap-x", "prt-1", "register-receivable", 1, ""), "capabilities_tenant_id_series_origin_key"},
 		{"a second successor of the same version", []domain.CapabilitySnapshot{
 			capabilityVersion("cap-1", "prt-1", "register-receivable", 1, ""), capabilityVersion("cap-2", "prt-1", "register-receivable", 2, "cap-1"),
 		}, capabilityVersion("cap-x", "prt-1", "register-receivable", 2, "cap-1"), "capabilities_tenant_id_supersedes_id_key"},
@@ -148,7 +149,7 @@ func TestTheSeriesOfACapabilityHoldsOneFirstVersionAndOneSuccessorOfEachVersion(
 
 			var violation *pgconn.PgError
 			if !errors.As(err, &violation) || violation.Code != "23505" || violation.ConstraintName != tc.within || errors.Is(err, port.ErrVersionConflict) {
-				t.Fatalf("Save(%s) = %v, want the unique violation of %s as a technical error", tc.second.ID, err, tc.within)
+				t.Fatalf("Save(%s) = %v, want the unique violation of %s, declared to the Save (ADR-066)", tc.second.ID, err, tc.within)
 			}
 			if got := pg.Counts(t, pool, capabilitiesTable)[capabilitiesTable]; got != int64(len(tc.held)) {
 				t.Fatalf("capabilities = %d rows, want %d", got, len(tc.held))

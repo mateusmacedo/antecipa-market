@@ -27,7 +27,6 @@ func TestRegisterPartnerWalksTheStepsInOrder(t *testing.T) {
 		"within",
 		"commands.Register",
 		"directory.FindOrganization",
-		"partners.LoadByOrganization",
 		"partners.Load",
 		"partners.Save",
 		"outbox.Enqueue",
@@ -88,9 +87,6 @@ func TestRegisterPartnerAsksTheDirectoryUnderTheTenantOfTheRequest(t *testing.T)
 	if want := []directoryCall{{tenant: "globex", id: testOrganizationID}}; !slices.Equal(h.directory.calls, want) {
 		t.Fatalf("FindOrganization calls = %+v, want %+v", h.directory.calls, want)
 	}
-	if want := []domain.OrganizationID{testOrganizationID}; !slices.Equal(h.partners.asked, want) {
-		t.Fatalf("the uniqueness read asked for %v, want %v", h.partners.asked, want)
-	}
 }
 
 func TestRegisterPartnerRejectsEachPreconditionWithoutWriting(t *testing.T) {
@@ -103,14 +99,16 @@ func TestRegisterPartnerRejectsEachPreconditionWithoutWriting(t *testing.T) {
 			domain.CodePartnerOrganizationNotFound},
 		{"organization of another kind", func(h *harness) { h.directory.kinds[testOrganizationID] = []domain.OrganizationKind{"client"} },
 			domain.CodePartnerOrganizationKindMismatch},
-		{"organization and role already registered", func(h *harness) {
-			h.partners.hold(testOrganizationID, domain.PartnerSnapshot{ID: "prt-held", OrganizationID: testOrganizationID, Role: domain.RoleFunder, Status: domain.PartnerOffboarding})
-		}, domain.CodePartnerAlreadyRegistered},
+		{"organization and role already registered", nil, domain.CodePartnerAlreadyRegistered},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			h := newHarness(t)
-			tc.prepare(h)
 			ctx := withExecution(t, context.Background())
+			if tc.prepare != nil {
+				tc.prepare(h)
+			} else {
+				seed(t, h, ctx, partnerTable, "prt-held", domain.PartnerSnapshot{ID: "prt-held", OrganizationID: testOrganizationID, Role: domain.RoleFunder, Status: domain.PartnerOffboarding})
+			}
 
 			outcome, err := h.service.RegisterPartner(ctx, registerPartner())
 
@@ -133,9 +131,10 @@ func TestRegisterPartnerRejectsEachPreconditionWithoutWriting(t *testing.T) {
 func TestRegisterPartnerAdmitsAnotherRoleOfTheSameOrganization(t *testing.T) {
 	h := newHarness(t)
 	h.directory.kinds[testOrganizationID] = []domain.OrganizationKind{domain.KindFunder, domain.KindPartner}
-	h.partners.hold(testOrganizationID, domain.PartnerSnapshot{ID: "prt-held", OrganizationID: testOrganizationID, Role: domain.RoleRegistry})
+	ctx := withExecution(t, context.Background())
+	seed(t, h, ctx, partnerTable, "prt-held", domain.PartnerSnapshot{ID: "prt-held", OrganizationID: testOrganizationID, Role: domain.RoleRegistry})
 
-	outcome, err := h.service.RegisterPartner(withExecution(t, context.Background()), registerPartner())
+	outcome, err := h.service.RegisterPartner(ctx, registerPartner())
 
 	if err != nil {
 		t.Fatalf("RegisterPartner() error = %v, want nil", err)
@@ -145,9 +144,9 @@ func TestRegisterPartnerAdmitsAnotherRoleOfTheSameOrganization(t *testing.T) {
 	}
 }
 
-func TestRegisterPartnerCountsACrossTenantAccessAsAbsent(t *testing.T) {
+func TestRegisterPartnerAdmitsTheSameOrganizationAndRoleInAnotherTenant(t *testing.T) {
 	h := newHarness(t)
-	h.partners.err = port.CrossTenantAccess{Object: "partners?organization_id=org-100", ContextTenant: testTenant, DataTenant: "globex"}
+	seed(t, h, withTenant(t, context.Background(), "globex"), partnerTable, "prt-held", domain.PartnerSnapshot{ID: "prt-held", OrganizationID: testOrganizationID, Role: domain.RoleFunder})
 
 	outcome, err := h.service.RegisterPartner(withExecution(t, context.Background()), registerPartner())
 

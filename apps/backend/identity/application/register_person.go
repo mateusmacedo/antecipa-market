@@ -28,20 +28,15 @@ func (s Service) RegisterPerson(ctx context.Context, cmd RegisterPerson) (usecas
 			if err != nil {
 				return fail(err)
 			}
-			registered, err := s.documentRegistered(ctx, protected.Hash)
-			if err != nil {
-				return fail(err)
-			}
 			outcome, err := usecase.Decide(ctx, res.Persons, res.Outbox, origin(AggregateTypePerson, string(cmd.PersonID)), cmd.PersonID, identity,
 				loadAbsentPerson,
 				func(p *domain.Person) (kernel.Accepted[domain.RegisterPersonResponse], *kernel.Rejection) {
 					return p.Register(domain.RegisterPerson{
-						FullName:                  cmd.FullName,
-						Document:                  cmd.Document,
-						DocumentHash:              protected.Hash,
-						DocumentHashKeyVersion:    protected.KeyVersion,
-						DocumentAlreadyRegistered: registered,
-						At:                        identity.OccurredAt,
+						FullName:               cmd.FullName,
+						Document:               cmd.Document,
+						DocumentHash:           protected.Hash,
+						DocumentHashKeyVersion: protected.KeyVersion,
+						At:                     identity.OccurredAt,
 					})
 				})
 			if err != nil {

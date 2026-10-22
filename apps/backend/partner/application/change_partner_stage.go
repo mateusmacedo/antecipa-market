@@ -61,11 +61,11 @@ func (s Service) activationFacts(ctx context.Context, res Resources, cmd ChangeP
 	if err != nil || !found {
 		return facts, err
 	}
-	if facts.effectiveAgreement, err = s.agreementInEffect(ctx, cmd.PartnerID, at); err != nil {
+	if facts.effectiveAgreement, err = agreementInEffect(ctx, res, cmd.PartnerID, at); err != nil {
 		return facts, err
 	}
 	if partner.Status == domain.PartnerHomologating {
-		facts.enabledCapability, err = s.capabilityEnabled(ctx, cmd.PartnerID)
+		facts.enabledCapability, err = capabilityEnabled(ctx, res, cmd.PartnerID)
 	}
 	return facts, err
 }

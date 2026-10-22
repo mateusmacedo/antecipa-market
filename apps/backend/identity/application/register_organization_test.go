@@ -27,7 +27,6 @@ func TestRegisterWalksTheStepsInOrder(t *testing.T) {
 		"within",
 		"commands.Register",
 		"protector.Protect",
-		"organizations.LoadByTaxIDHash",
 		"organizations.Load",
 		"organizations.Save",
 		"outbox.Enqueue",
@@ -107,9 +106,6 @@ func TestRegisterProtectsTheTaxIDUnderTheTenantOfTheRequest(t *testing.T) {
 	if !slices.Equal(h.protector.calls, want) {
 		t.Fatalf("Protect calls = %+v, want %+v", h.protector.calls, want)
 	}
-	if want := []string{fakeHash("globex", domain.TaxIDTypeCNPJ, alphanumericCNPJ)}; !slices.Equal(h.taxIDs.asked, want) {
-		t.Fatalf("the uniqueness read asked for %v, want the hash of the tenant %v", h.taxIDs.asked, want)
-	}
 }
 
 func TestRegisterRejectsEachPreconditionWithoutWriting(t *testing.T) {
@@ -127,12 +123,12 @@ func TestRegisterRejectsEachPreconditionWithoutWriting(t *testing.T) {
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			h := newHarness(t)
-			if tc.held {
-				h.taxIDs.hold(registeredSnapshot("org-held", testTenant, testJurisdiction))
-			}
 			cmd := register()
 			tc.mutate(&cmd)
 			ctx := withExecution(t, context.Background())
+			if tc.held {
+				h.seedOrganization(t, ctx, registeredSnapshot("org-held", testTenant, testJurisdiction))
+			}
 
 			outcome, err := h.service.RegisterOrganization(ctx, cmd)
 
@@ -154,9 +150,10 @@ func TestRegisterRejectsEachPreconditionWithoutWriting(t *testing.T) {
 
 func TestRegisterAcceptsTheSameTaxIDInAnotherJurisdiction(t *testing.T) {
 	h := newHarness(t)
-	h.taxIDs.hold(registeredSnapshot("org-held", testTenant, "PT"))
+	ctx := withExecution(t, context.Background())
+	h.seedOrganization(t, ctx, registeredSnapshot("org-held", testTenant, "PT"))
 
-	outcome, err := h.service.RegisterOrganization(withExecution(t, context.Background()), register())
+	outcome, err := h.service.RegisterOrganization(ctx, register())
 
 	if err != nil {
 		t.Fatalf("RegisterOrganization() error = %v, want nil", err)
@@ -166,11 +163,9 @@ func TestRegisterAcceptsTheSameTaxIDInAnotherJurisdiction(t *testing.T) {
 	}
 }
 
-// A CrossTenantAccess on the uniqueness read means another tenant holds the
-// hash; uniqueness is per tenant, so it counts as absent.
-func TestRegisterCountsACrossTenantAccessAsAbsent(t *testing.T) {
+func TestRegisterAcceptsTheSameTaxIDInAnotherTenant(t *testing.T) {
 	h := newHarness(t)
-	h.taxIDs.err = port.CrossTenantAccess{Object: "organizations?tax_id_hash=h", ContextTenant: testTenant, DataTenant: "globex"}
+	h.seedOrganization(t, withTenant(t, context.Background(), "globex"), registeredSnapshot("org-held", "globex", testJurisdiction))
 
 	outcome, err := h.service.RegisterOrganization(withExecution(t, context.Background()), register())
 

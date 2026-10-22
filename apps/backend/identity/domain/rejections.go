@@ -43,3 +43,11 @@ const (
 	CodeBankAccountChangeNotRequested               kernel.Code = "identity-organization/bank-account-change/not-requested"
 	CodeBankAccountChangeSameActorApproval          kernel.Code = "identity-organization/bank-account-change/same-actor-approval"
 )
+
+// The duplicate rejections are static: the unique constraint raises them from
+// the Save, where no command value is at hand to detail (ADR-066).
+var (
+	RejectOrganizationDuplicateTaxID  = kernel.Reject(CodeOrganizationDuplicateTaxID, "tax id already registered in the jurisdiction")
+	RejectEstablishmentDuplicateTaxID = kernel.Reject(CodeEstablishmentDuplicateTaxID, "tax id already registered in the organization")
+	RejectPersonDuplicateDocument     = kernel.Reject(CodePersonDuplicateDocument, "document already registered")
+)

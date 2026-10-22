@@ -26,6 +26,11 @@ var profileTable = postgres.Table[domain.ProfileID, domain.IntegrationProfileSna
 	Name:     "integration_profiles",
 	IDColumn: "integration_profile_id",
 	Columns:  []string{"partner_id", "environment", "certificate_expires_at", "supersedes_id", "snapshot"},
+	Guard:    "partner_id",
+	Unique: []postgres.Unique{
+		{Name: "integration_profiles_tenant_id_supersedes_id_key", Columns: []string{"tenant_id", "supersedes_id"}, Rejection: domain.RejectIntegrationProfileSupersedesInvalid},
+		{Name: "integration_profiles_tenant_id_series_origin_key", Columns: []string{"tenant_id", "series_origin"}, Rejection: domain.RejectIntegrationProfileSupersedesInvalid},
+	},
 
 	Encode: func(s domain.IntegrationProfileSnapshot) ([]any, error) {
 		raw, err := json.Marshal(profileState{

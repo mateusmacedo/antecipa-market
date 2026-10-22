@@ -31,7 +31,7 @@ func projectionFixture(t *testing.T, name string) tb.ProjectionFixture {
 
 func TestPartnersMatchTheProjectionFixture(t *testing.T) {
 	f := projectionFixture(t, "partner.golden")
-	if f.Identity.Context != "partner" || f.Identity.Aggregate != "partner" || len(f.Cases) != 12 {
+	if f.Identity.Context != "partner" || f.Identity.Aggregate != "partner" || len(f.Cases) != 11 {
 		t.Fatalf("fixture identity/cases = %+v/%d", f.Identity, len(f.Cases))
 	}
 	tb.RunProjection(t, f, runPartner)
@@ -72,7 +72,6 @@ func runPartner(t *testing.T, c tb.ProjectionCase) (domainkit.Projection, domain
 				Role:              domain.PartnerRole(c.Command["role"]),
 				OrganizationFound: boolean(t, c.Command["organization_found"]),
 				OrganizationKinds: kindsFrom(c.Command["organization_kinds"]),
-				AlreadyRegistered: boolean(t, c.Command["already_registered"]),
 				At:                kernel.Instant(integer(t, c.Command["at"])),
 			})
 		}, func(r domain.RegisterPartnerResponse) domainkit.Fields {

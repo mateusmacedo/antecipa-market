@@ -46,6 +46,11 @@ var capabilityTable = postgres.Table[domain.CapabilityID, domain.CapabilitySnaps
 	Name:     "capabilities",
 	IDColumn: "capability_id",
 	Columns:  []string{"partner_id", "operation", "asset_type", "environment", "status", "supersedes_id", "snapshot"},
+	Guard:    "partner_id",
+	Unique: []postgres.Unique{
+		{Name: "capabilities_tenant_id_supersedes_id_key", Columns: []string{"tenant_id", "supersedes_id"}, Rejection: domain.RejectCapabilitySupersedesInvalid},
+		{Name: "capabilities_tenant_id_series_origin_key", Columns: []string{"tenant_id", "series_origin"}, Rejection: domain.RejectCapabilitySupersedesInvalid},
+	},
 
 	Encode: func(s domain.CapabilitySnapshot) ([]any, error) {
 		raw, err := json.Marshal(stateOfCapability(s))

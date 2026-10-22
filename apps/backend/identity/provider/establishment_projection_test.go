@@ -15,7 +15,7 @@ import (
 
 func TestEstablishmentsMatchTheProjectionFixture(t *testing.T) {
 	f := projectionFixture(t, "establishment.golden")
-	if f.Identity.Context != "identity" || f.Identity.Aggregate != "establishment" || len(f.Cases) != 6 {
+	if f.Identity.Context != "identity" || f.Identity.Aggregate != "establishment" || len(f.Cases) != 5 {
 		t.Fatalf("fixture identity/cases = %+v/%d", f.Identity, len(f.Cases))
 	}
 	tb.RunProjection(t, f, runEstablishment)
@@ -40,17 +40,16 @@ func runEstablishment(t *testing.T, c tb.ProjectionCase) (domainkit.Projection, 
 		t.Fatalf("unknown upr %q in case %s", c.Command["upr"], c.Name)
 	}
 	s := addSubject(domain.AddEstablishment{
-		OrganizationID:         domain.OrganizationID(c.Command["organization"]),
-		OrganizationStatus:     statusFrom(c.Command["organization_status"]),
-		TaxIDType:              domain.TaxIDType(c.Command["tax_id_type"]),
-		TaxID:                  c.Command["tax_id"],
-		TaxIDHash:              c.Command["tax_id_hash"],
-		TaxIDHashKeyVersion:    int(integer(t, c.Command["tax_id_hash_key_version"])),
-		TaxIDAlreadyRegistered: boolean(t, c.Command["tax_id_already_registered"]),
-		TradeName:              c.Command["trade_name"],
-		Receiver:               boolean(t, c.Command["receiver"]),
-		ExternalReferences:     referencesFrom(t, c.Command["external_references"]),
-		At:                     kernel.Instant(integer(t, c.Command["at"])),
+		OrganizationID:      domain.OrganizationID(c.Command["organization"]),
+		OrganizationStatus:  statusFrom(c.Command["organization_status"]),
+		TaxIDType:           domain.TaxIDType(c.Command["tax_id_type"]),
+		TaxID:               c.Command["tax_id"],
+		TaxIDHash:           c.Command["tax_id_hash"],
+		TaxIDHashKeyVersion: int(integer(t, c.Command["tax_id_hash_key_version"])),
+		TradeName:           c.Command["trade_name"],
+		Receiver:            boolean(t, c.Command["receiver"]),
+		ExternalReferences:  referencesFrom(t, c.Command["external_references"]),
+		At:                  kernel.Instant(integer(t, c.Command["at"])),
 	})
 	before := establishmentFromState(t, c.StateBefore)
 	return domainkit.Run(before, s), domainkit.ReadTwice(establishmentFromState(t, c.StateBefore), s)

@@ -14,19 +14,17 @@ const (
 )
 
 // RegisterOrganization carries the protected tax id as the caller derived it:
-// the domain holds no key, so TaxIDHash and TaxIDHashKeyVersion arrive ready,
-// and TaxIDAlreadyRegistered is the tenant uniqueness the use case looked up.
+// the domain holds no key, so TaxIDHash and TaxIDHashKeyVersion arrive ready.
 type RegisterOrganization struct {
-	Kinds                  OrganizationKinds
-	Jurisdiction           string
-	TaxIDType              TaxIDType
-	TaxID                  string
-	TaxIDHash              string
-	TaxIDHashKeyVersion    int
-	TaxIDAlreadyRegistered bool
-	LegalName              string
-	TradeName              string
-	At                     kernel.Instant
+	Kinds               OrganizationKinds
+	Jurisdiction        string
+	TaxIDType           TaxIDType
+	TaxID               string
+	TaxIDHash           string
+	TaxIDHashKeyVersion int
+	LegalName           string
+	TradeName           string
+	At                  kernel.Instant
 }
 
 type RegisterOrganizationResponse struct {
@@ -56,17 +54,16 @@ type EstablishmentID string
 // for an organization that
 // was not found, so it refuses like any status other than active.
 type AddEstablishment struct {
-	OrganizationID         OrganizationID
-	OrganizationStatus     OrganizationStatus
-	TaxIDType              TaxIDType
-	TaxID                  string
-	TaxIDHash              string
-	TaxIDHashKeyVersion    int
-	TaxIDAlreadyRegistered bool
-	TradeName              string
-	Receiver               bool
-	ExternalReferences     []ExternalReference
-	At                     kernel.Instant
+	OrganizationID      OrganizationID
+	OrganizationStatus  OrganizationStatus
+	TaxIDType           TaxIDType
+	TaxID               string
+	TaxIDHash           string
+	TaxIDHashKeyVersion int
+	TradeName           string
+	Receiver            bool
+	ExternalReferences  []ExternalReference
+	At                  kernel.Instant
 }
 
 type AddEstablishmentResponse struct {
@@ -94,12 +91,11 @@ type PersonID string
 // person keeps its hash and mask, never the value, because sensitive personal
 // data is not stored in this version.
 type RegisterPerson struct {
-	FullName                  string
-	Document                  string
-	DocumentHash              string
-	DocumentHashKeyVersion    int
-	DocumentAlreadyRegistered bool
-	At                        kernel.Instant
+	FullName               string
+	Document               string
+	DocumentHash           string
+	DocumentHashKeyVersion int
+	At                     kernel.Instant
 }
 
 type RegisterPersonResponse struct {

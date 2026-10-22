@@ -25,7 +25,7 @@ func (s Service) DefineProduct(ctx context.Context, cmd DefineProduct) (usecase.
 			if err != nil {
 				return fail(err)
 			}
-			sustained, err := s.agreementSustains(ctx, res.Agreements, cmd.AgreementID, cmd.PartnerID, identity.OccurredAt)
+			sustained, err := agreementSustains(ctx, res, cmd.AgreementID, cmd.PartnerID, identity.OccurredAt)
 			if err != nil {
 				return fail(err)
 			}

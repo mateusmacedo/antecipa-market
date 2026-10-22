@@ -96,9 +96,9 @@ func TestOrganizationRoundTripsTheWholeState(t *testing.T) {
 	}
 }
 
-// The unique constraint is the authority the pre-check of the use case only
-// anticipates: a second organization with the same hash and jurisdiction in the
-// tenant fails as a technical error, never as a version conflict.
+// The unique constraint is the authority: a second organization with the same
+// hash and jurisdiction in the tenant fails the Save with the declared
+// violation, never as a version conflict.
 func TestTheSameTaxIDHashAndJurisdictionIsRefusedInTheTenant(t *testing.T) {
 	pool := appkit.OpenPool(t)
 	ctx := withExecution(t, context.Background())
@@ -109,7 +109,7 @@ func TestTheSameTaxIDHashAndJurisdictionIsRefusedInTheTenant(t *testing.T) {
 	err := save(ctx, pool, "org-b", organization(1))
 
 	if err == nil || errors.Is(err, port.ErrVersionConflict) {
-		t.Fatalf("Save(second) = %v, want the unique violation as a technical error", err)
+		t.Fatalf("Save(second) = %v, want the declared unique violation", err)
 	}
 	if got := pg.Counts(t, pool, organizationsTable)[organizationsTable]; got != 1 {
 		t.Fatalf("organizations = %d rows, want 1", got)

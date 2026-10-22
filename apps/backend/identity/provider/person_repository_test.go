@@ -154,28 +154,3 @@ func TestTwoConcurrentRegistrationsOfTheSameDocumentLeaveOneRow(t *testing.T) {
 		t.Fatalf("persons = %d rows, want 1", got)
 	}
 }
-
-func TestLoadByDocumentHashReturnsThePersonOfTheHashInTheTenant(t *testing.T) {
-	pool := appkit.OpenPool(t)
-	ctx := withExecution(t, context.Background())
-	for id, s := range map[domain.PersonID]domain.PersonSnapshot{"per-a": person(1), "per-b": person(2)} {
-		if err := savePerson(ctx, pool, id, s); err != nil {
-			t.Fatalf("save %s: %v", id, err)
-		}
-	}
-	reader := provider.NewPersonsByDocumentReader(postgres.NewReadPool(pool))
-
-	found, err := reader.LoadByDocumentHash(ctx, "hash-1")
-
-	if err != nil || len(found) != 1 || found[0].ID != "per-a" || found[0].FullName != person(1).FullName {
-		t.Fatalf("LoadByDocumentHash() = %+v, %v; want per-a alone", found, err)
-	}
-	if none, err := reader.LoadByDocumentHash(ctx, "hash-absent"); err != nil || len(none) != 0 {
-		t.Fatalf("LoadByDocumentHash(hash-absent) = %v, %v; want nothing and no error", none, err)
-	}
-	_, err = reader.LoadByDocumentHash(withTenant(t, context.Background(), "globex"), "hash-1")
-	var access port.CrossTenantAccess
-	if !errors.As(err, &access) || access.DataTenant != "acme" {
-		t.Fatalf("LoadByDocumentHash() from another tenant = %v, want a CrossTenantAccess", err)
-	}
-}

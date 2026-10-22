@@ -122,7 +122,7 @@ var relationCommands = []commandCall{
 	},
 	{
 		method:    "RegisterPerson",
-		request:   func() proto.Message { return personRequest("per-2") },
+		request:   func() proto.Message { r := personRequest("per-2"); r.Document = "529.982.247-25"; return r },
 		differing: func() proto.Message { r := personRequest("per-2"); r.Document = "987.654.321-00"; return r },
 		response:  func() proto.Message { return &servicev1.RegisterPersonResponse{} },
 		id: func(m proto.Message) string {

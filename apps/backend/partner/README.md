@@ -9,7 +9,7 @@ pedido.
 
 É o bounded context `partner-management`, especificado em
 [`SPEC-9TEQ9EV9`](../../../docs/specs/SPEC-9TEQ9EV9-partner-management.md) e
-construído sobre o kernel DMPF `v1.0.0-rc.5`.
+construído sobre o kernel DMPF `v1.0.0-rc.7`.
 
 ## Sumário
 
@@ -75,7 +75,7 @@ Os targets `serve-*` leem `deploy/.env.example` e, por cima, `deploy/.env`.
 
 | Variável | Papel | Efeito |
 | --- | --- | --- |
-| `PG_DSN` | todos, obrigatória | Banco do contexto, com a role de runtime `partner` |
+| `PG_DSN` | todos, obrigatória | Banco do contexto, com a role de runtime `partner`. No `api`, ganha `lock_timeout=2s` e `idle_in_transaction_session_timeout=30s` quando não os traz (guarda do ADR-067; o valor da DSN prevalece) |
 | `GRPC_INSECURE` ou `GRPC_TLS_CERT_FILE`, `GRPC_TLS_KEY_FILE`, `GRPC_CLIENT_CA_FILE` e `GRPC_TRUSTED_CLIENTS` | `api`, obrigatória uma das políticas | `true` dispensa o TLS, só em desenvolvimento; senão, certificado do servidor e autenticação do chamador por mTLS |
 | `GRPC_ADDR` | `api` | Default `:9090` no código; o `deploy/.env.example` usa `127.0.0.1:9195` |
 | `MIGRATE` e `PG_MIGRATE_DSN` | `api` | Com `MIGRATE=true`, a role migradora `partner_migrator` de `PG_MIGRATE_DSN`, obrigatória nesse caso, aplica o schema e os grants antes de servir |
@@ -95,9 +95,9 @@ que só o `serve-api` e o `docker:run` carregam: a credencial da migradora não
 chega ao `relay`.
 
 O `api` abre dois pools sobre o `PG_DSN`: um para as transações e outro para
-as leituras fora delas, onde correm as consultas e as pré-leituras dos
-comandos (unicidade do parceiro, cabeça de cada série de versões e as
-condições que dependem de outro agregado). Cada pool segue o `pool_max_conns`
+as leituras fora delas, onde correm as consultas e a pré-leitura da cabeça de
+cada série de versões. As condições que dependem de outro agregado (†) leem na
+transação, sob a guarda. Cada pool segue o `pool_max_conns`
 do DSN, ou o default do pgx, então o processo abre até o dobro desse valor.
 
 Os prazos de idempotência e de purga vêm de `Defaults()`, sem variável de
@@ -182,11 +182,12 @@ listas dentro do teto. A entrada malformada volta como
 `INVALID_ARGUMENT`. Uma recusa de domínio volta como `rejection` (`code`,
 `message`) na própria resposta, com código `partner-management/<agregado>/<rejeicao>`.
 Uma falha do caso de uso vira status gRPC por `kernelgrpc.StatusOf`, entre eles
-`NOT_FOUND`, `ABORTED` para conflito de versão, `PERMISSION_DENIED`,
+`NOT_FOUND`, `ABORTED` para conflito de versão e para a espera pela guarda além
+do `lock_timeout` (contorno até a DEVS-157), `PERMISSION_DENIED`,
 `DEADLINE_EXCEEDED`, `CANCELLED` e `INTERNAL`. Numa corrida pela mesma
 organização e papel, ou pela mesma posição de uma série de versões, o índice
-único decide: uma chamada grava e a outra sai como `INTERNAL`, sem linha nem
-evento.
+único decide: uma chamada grava e a outra recebe a `rejection` declarada
+(`already-registered` ou `supersedes-invalid`), sem linha nem evento.
 
 ### Consultas
 
@@ -303,34 +304,49 @@ Banco próprio: database `partner`, schema `public`, com a role migradora
 `partner_migrator` como dona e a role de runtime `partner` só com os grants
 de [`provider.Grants`](provider/schema.go) (`postgres.Mutable` por tabela).
 `tenant_id` vai à frente da chave, e a persistência é híbrida: coluna tipada
-só para o que uma consulta filtra ou para a salvaguarda de unicidade, o resto
-do estado em `snapshot` `jsonb`, onde vive também a versão de domínio. O DDL
-vive em [`provider/schema.sql`](provider/schema.sql).
+só para o que uma consulta filtra ou para uma restrição única, o resto do
+estado em `snapshot` `jsonb`, onde vive também a versão de domínio. O DDL vive
+em [`provider/schema.sql`](provider/schema.sql).
 
-| Tabela | Colunas tipadas além da chave | Salvaguarda por tenant |
+| Tabela | Colunas tipadas além da chave | Unicidade declarada por tenant |
 | --- | --- | --- |
-| `partners` | `organization_id`, `role`, `status` | `UNIQUE (tenant_id, organization_id, role)` |
+| `partners` | `organization_id`, `role`, `status` | `(organization_id, role)` → `partner/already-registered` |
 | `partner_agreements` | `partner_id`, `status`, `supersedes_id` | v1 única por `partner_id` |
 | `capabilities` | `partner_id`, `operation`, `asset_type`, `environment`, `status`, `supersedes_id` | v1 única por `partner_id`, `operation`, `asset_type`, `environment` |
 | `financial_products` | `partner_id`, `code`, `status`, `valid_until`, `supersedes_id` | v1 única por `partner_id`, `code` |
 | `integration_profiles` | `partner_id`, `environment`, `certificate_expires_at`, `supersedes_id` | v1 única por `partner_id`, `environment` |
 | `operational_policies` | `partner_id`, `supersedes_id` | v1 única por `partner_id` |
 
-Nas cinco tabelas versionadas, `UNIQUE (tenant_id, supersedes_id)` impede duas
-versões sobre a mesma anterior, e o índice único parcial `WHERE supersedes_id
-IS NULL` impede duas v1 na mesma série. A pré-leitura no pool de leitura dá a
-recusa de domínio; o índice é a salvaguarda na corrida. Do kernel vêm
-`outbox`, `inbox` e `quarantine`.
+Cada `CONSTRAINT <tabela>_<colunas>_key UNIQUE` tem um `postgres.Unique` de
+mesmo nome no provider (ADR-066 do kernel), e a partida confere a declaração
+no catálogo (`VerifyUniques`). O `Save` devolve a violação como a rejeição
+declarada, e a requisição perdedora de uma corrida recebe a recusa, sem linha
+nem evento. Nas cinco tabelas versionadas, `UNIQUE (tenant_id, supersedes_id)`
+impede duas versões sobre a mesma anterior, e a coluna gerada `series_origin`,
+com a chave da série na v1 e `NULL` nas demais, impede duas v1 na mesma série
+com `UNIQUE (tenant_id, series_origin)`. `partner_agreements`,
+`integration_profiles` e `capabilities` declaram `Guard: partner_id`: as
+pré-condições (†) leem a série do parceiro na UoW sob lock compartilhado, e
+todo `Save` dessas tabelas toma o exclusivo da mesma chave (ADR-067 do
+kernel). Do kernel vêm `outbox`, `inbox` e `quarantine`.
+
+O `postgres.Migrate` é idempotente e não tem tabela de versão: um database
+`partner` criado antes do kernel `1.0.0-rc.7` mantém os índices parciais
+antigos e não tem `series_origin`, e a partida recusa com
+`ErrUniqueDivergent`. Fora de produção, faça backup e recrie só o database
+`partner`, com a role `partner_migrator` como dona, sem apagar o volume do
+Postgres, que identity e bff também usam. A próxima partida com `MIGRATE=true`
+aplica o schema novo.
 
 ### Dependências
 
-O `go.mod` declara o kernel por versão (`v1.0.0-rc.5`). Dentro do workspace,
+O `go.mod` declara o kernel por versão (`v1.0.0-rc.7`). Dentro do workspace,
 quem resolve é o `go.work` da raiz. O `require` do módulo de contrato irmão é
 gravado pelo `modsync`, que deve rodar de novo a cada import novo de módulo do
 workspace:
 
 ```bash
-go run github.com/mateusmacedo/dmpf/tools/dmpf-conformance/cmd/modsync@v1.0.0-rc.5 --root . --write
+go run github.com/mateusmacedo/dmpf/tools/dmpf-conformance/cmd/modsync@v1.0.0-rc.7 --root . --write
 ```
 
 ## Testes
@@ -359,7 +375,7 @@ Gates completos do contexto, os mesmos de qualquer módulo:
 ```bash
 pnpm nx run-many -t fmt-check,vet,build,lint,test-race,test-distributed -p partner,partner-contract
 DMPF_APPS_DIR=apps/backend bash node_modules/@mateusmacedo/dmpf-plugin/scripts/dmpf-context-check.sh --context apps/backend/partner
-go run github.com/mateusmacedo/dmpf/tools/dmpf-conformance/cmd/conformance@v1.0.0-rc.5 --root .
+go run github.com/mateusmacedo/dmpf/tools/dmpf-conformance/cmd/conformance@v1.0.0-rc.7 --root .
 ```
 
 ## Contrato
@@ -395,7 +411,7 @@ NX_BASE=origin/master pnpm nx run partner-contract:buf-breaking
   [`deploy/infra.json`](deploy/infra.json). Mudou o `infra.json`? Regrave:
 
   ```bash
-  go run github.com/mateusmacedo/dmpf/tools/dmpf-conformance/cmd/infrasync@v1.0.0-rc.5 --root . --write
+  go run github.com/mateusmacedo/dmpf/tools/dmpf-conformance/cmd/infrasync@v1.0.0-rc.7 --root . --write
   ```
 
 ## Contribuição

@@ -9,7 +9,6 @@ import (
 	port "github.com/mateusmacedo/dmpf/libs/backend/go/ports"
 
 	"github.com/mateusmacedo/antecipa-market/apps/backend/partner/domain"
-	"github.com/mateusmacedo/antecipa-market/apps/backend/partner/ports"
 )
 
 // ErrTenantUnresolved refuses to ask the directory without a tenant: the
@@ -34,17 +33,6 @@ func (s Service) organizationKinds(ctx context.Context, id domain.OrganizationID
 		return nil, false, err
 	}
 	return kinds, true, nil
-}
-
-// partnerRegistered is the consultative uniqueness read: it runs on the read
-// pool, apart from the command transaction, so the unique constraint stays the
-// authority and a race ends as a technical failure of the loser.
-func (s Service) partnerRegistered(ctx context.Context, organizationID domain.OrganizationID, role domain.PartnerRole) (bool, error) {
-	found, err := s.PartnersByOrganization.LoadByOrganization(ctx, organizationID)
-	if err != nil && !absent(err) {
-		return false, err
-	}
-	return slices.ContainsFunc(found, func(p domain.PartnerSnapshot) bool { return p.Role == role }), nil
 }
 
 func (s Service) agreementHead(ctx context.Context, partnerID domain.PartnerID) (domain.AgreementHead, error) {
@@ -96,24 +84,26 @@ func absent(err error) bool {
 	return errors.As(err, &access)
 }
 
-func (s Service) agreementInEffect(ctx context.Context, partnerID domain.PartnerID, at kernel.Instant) (bool, error) {
-	found, err := s.AgreementsByPartner.LoadByPartner(ctx, partnerID)
+// The relational preconditions (†) read the series through the Resources of
+// the unit of work, under the guard on the partner (ADR-067).
+func agreementInEffect(ctx context.Context, res Resources, partnerID domain.PartnerID, at kernel.Instant) (bool, error) {
+	found, err := res.AgreementsByPartner.LoadByPartner(ctx, partnerID)
 	if err != nil && !absent(err) {
 		return false, err
 	}
 	return domain.AgreementInEffect(found, at), nil
 }
 
-func (s Service) profileInEffect(ctx context.Context, partnerID domain.PartnerID, environment domain.Environment, at kernel.Instant) (bool, error) {
-	found, err := s.ProfilesByPartner.LoadByPartner(ctx, partnerID)
+func profileInEffect(ctx context.Context, res Resources, partnerID domain.PartnerID, environment domain.Environment, at kernel.Instant) (bool, error) {
+	found, err := res.ProfilesByPartner.LoadByPartner(ctx, partnerID)
 	if err != nil && !absent(err) {
 		return false, err
 	}
 	return domain.ProfileInEffect(found, environment, at), nil
 }
 
-func (s Service) capabilityEnabled(ctx context.Context, partnerID domain.PartnerID) (bool, error) {
-	found, err := s.CapabilitiesByPartner.LoadByPartner(ctx, partnerID)
+func capabilityEnabled(ctx context.Context, res Resources, partnerID domain.PartnerID) (bool, error) {
+	found, err := res.CapabilitiesByPartner.LoadByPartner(ctx, partnerID)
 	if err != nil && !absent(err) {
 		return false, err
 	}
@@ -149,16 +139,19 @@ func (s Service) productHead(ctx context.Context, partnerID domain.PartnerID, co
 	return head, nil
 }
 
-func (s Service) agreementSustains(ctx context.Context, agreements ports.AgreementRepository, id domain.AgreementID, partnerID domain.PartnerID, at kernel.Instant) (bool, error) {
-	agreement, found, err := loaded(ctx, agreements, id)
-	if err != nil || !found {
-		return false, err
-	}
-	series, err := s.AgreementsByPartner.LoadByPartner(ctx, partnerID)
+// agreementSustains takes the agreement from the series it reads under the
+// guard: a Load of its own before the guard could see the agreement of before
+// a concurrent ActivateAgreement and the series of after it.
+func agreementSustains(ctx context.Context, res Resources, id domain.AgreementID, partnerID domain.PartnerID, at kernel.Instant) (bool, error) {
+	series, err := res.AgreementsByPartner.LoadByPartner(ctx, partnerID)
 	if err != nil && !absent(err) {
 		return false, err
 	}
-	return domain.AgreementSustains(agreement, series, partnerID, at), nil
+	i := slices.IndexFunc(series, func(a domain.PartnerAgreementSnapshot) bool { return a.ID == id })
+	if i < 0 {
+		return false, nil
+	}
+	return domain.AgreementSustains(series[i], series, partnerID, at), nil
 }
 
 func loaded[ID comparable, S any](ctx context.Context, repository port.Repository[ID, S], id ID) (S, bool, error) {

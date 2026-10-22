@@ -1,6 +1,6 @@
 # bff
 
-Borda REST/JSON pública do workspace, portada do `bff` de referência do kernel DMPF `1.0.0-rc.5` (ADR-044 do kernel). Sem banco, outbox nem consumer: autentica o sujeito, recusa o token de uma sessão revogada consultando a deny-list guardada no Redis de `REDIS_URL`, autoriza por permissão e traduz cada rota do contrato OpenAPI em uma chamada gRPC a um bounded context (`RST-01`, `GRP-01`, `IDN-16`). Especificado pela `docs/specs/SPEC-A62BGCD4-bff-borda-rest.md`.
+Borda REST/JSON pública do workspace, portada do `bff` de referência do kernel DMPF `1.0.0-rc.7` (ADR-044 do kernel). Sem banco, outbox nem consumer: autentica o sujeito, recusa o token de uma sessão revogada consultando a deny-list guardada no Redis de `REDIS_URL`, autoriza por permissão e traduz cada rota do contrato OpenAPI em uma chamada gRPC a um bounded context (`RST-01`, `GRP-01`, `IDN-16`). Especificado pela `docs/specs/SPEC-A62BGCD4-bff-borda-rest.md`.
 
 Nesta versão (DEVS-113) a borda serve 21 rotas do `identity`: as 10 de consulta (DEVS-112), 10 de comando e a consulta por CNPJ em `POST`. As permissões efetivas são resolvidas no próprio `identity` a cada requisição. `POST /identity/memberships/{membershipId}/grant` fica fora desta versão. A mesma imagem tem o papel `session-events`, que alimenta a deny-list (DEVS-114).
 
@@ -179,5 +179,5 @@ pnpm nx run bff:test-race
 ## Limitações
 
 - O certificado de cliente `bff-client` é emitido pelo serviço `pki` do Compose local; num ambiente em que o volume `pki` já existia antes, é preciso recriá-lo para que o certificado seja gerado.
-- A medição ponta a ponta dos 60 s da revogação contra o Keycloak de referência não roda no workspace; vale a garantia do kernel `1.0.0-rc.5`.
+- A medição ponta a ponta dos 60 s da revogação contra o Keycloak de referência não roda no workspace; vale a garantia do kernel `1.0.0-rc.7`.
 - O replay de idempotência não tem prova ponta a ponta contra o `identity` real: o e2e não tem caminho feliz, porque nenhum usuário obtém permissão pela API, e toda chamada para no 403. O replay fica provado nos testes com o `identity` falso.

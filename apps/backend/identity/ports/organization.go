@@ -13,9 +13,9 @@ type (
 	OrganizationReader     = port.Reader[domain.OrganizationID, domain.OrganizationSnapshot]
 )
 
-// OrganizationsByTaxIDReader serves FindOrganizationByTaxId and the uniqueness
-// pre-check. The kernel Relation filters by one column, so it answers every
-// jurisdiction of the hash and the caller refines the result in memory.
+// OrganizationsByTaxIDReader serves FindOrganizationByTaxId. The kernel
+// Relation filters by one column, so it answers every jurisdiction of the hash
+// and the caller refines the result in memory.
 type OrganizationsByTaxIDReader interface {
 	LoadByTaxIDHash(ctx context.Context, taxIDHash string) ([]domain.OrganizationSnapshot, error)
 }

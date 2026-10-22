@@ -62,12 +62,15 @@ func TestIntegrationProfileRepositoryConformsToTheKit(t *testing.T) {
 			Within: func(ctx context.Context, fn func(context.Context, port.Repository[domain.ProfileID, domain.IntegrationProfileSnapshot]) error) error {
 				return pg.Within(ctx, pool, provider.NewIntegrationProfileRepository, fn)
 			},
-			Reader:   provider.NewIntegrationProfileReader(postgres.NewReadPool(pool)),
-			NewID:    func(n int) domain.ProfileID { return domain.ProfileID("kit-" + strconv.Itoa(n)) },
-			NewState: profile,
+			Reader: provider.NewIntegrationProfileReader(postgres.NewReadPool(pool)),
+			NewID:  func(n int) domain.ProfileID { return domain.ProfileID("kit-" + strconv.Itoa(n)) },
+			NewState: func(marker int) domain.IntegrationProfileSnapshot {
+				s := profile(marker)
+				s.PartnerID = kitPartner
+				return s
+			},
 			Marker: func(s domain.IntegrationProfileSnapshot) int {
-				n, _ := strconv.Atoi(string(s.PartnerID)[len("prt-"):])
-				return n
+				return int(s.CertificateExpiresAt - 1_786_968_000_000_000_000)
 			},
 			TenantUnresolved: postgres.ErrTenantUnresolved,
 			Concurrent:       true,
@@ -127,7 +130,7 @@ func TestTheSeriesOfAnEnvironmentHoldsOneFirstVersionAndOneSuccessorOfEachVersio
 		within string
 	}{
 		{"a second first version of the environment", []domain.IntegrationProfileSnapshot{profileVersion("ipf-1", "prt-1", domain.EnvironmentProduction, 1, "")},
-			profileVersion("ipf-x", "prt-1", domain.EnvironmentProduction, 1, ""), "integration_profiles_tenant_id_partner_id_environment_idx"},
+			profileVersion("ipf-x", "prt-1", domain.EnvironmentProduction, 1, ""), "integration_profiles_tenant_id_series_origin_key"},
 		{"a second successor of the same version", []domain.IntegrationProfileSnapshot{
 			profileVersion("ipf-1", "prt-1", domain.EnvironmentProduction, 1, ""), profileVersion("ipf-2", "prt-1", domain.EnvironmentProduction, 2, "ipf-1"),
 		}, profileVersion("ipf-x", "prt-1", domain.EnvironmentProduction, 2, "ipf-1"), "integration_profiles_tenant_id_supersedes_id_key"},
@@ -143,7 +146,7 @@ func TestTheSeriesOfAnEnvironmentHoldsOneFirstVersionAndOneSuccessorOfEachVersio
 
 			var violation *pgconn.PgError
 			if !errors.As(err, &violation) || violation.Code != "23505" || violation.ConstraintName != tc.within || errors.Is(err, port.ErrVersionConflict) {
-				t.Fatalf("Save(%s) = %v, want the unique violation of %s as a technical error", tc.second.ID, err, tc.within)
+				t.Fatalf("Save(%s) = %v, want the unique violation of %s, declared to the Save (ADR-066)", tc.second.ID, err, tc.within)
 			}
 			if got := pg.Counts(t, pool, profilesTable)[profilesTable]; got != int64(len(tc.held)) {
 				t.Fatalf("integration_profiles = %d rows, want %d", got, len(tc.held))

@@ -13,7 +13,6 @@ type RegisterPartner struct {
 	Role              PartnerRole
 	OrganizationFound bool
 	OrganizationKinds []OrganizationKind
-	AlreadyRegistered bool
 	At                kernel.Instant
 }
 

@@ -145,6 +145,11 @@ func FromEnv(role Role, lookup func(string) string) (Config, error) {
 	if role == RoleAPI && cfg.Migrate {
 		cfg.MigrateDSN = lookup(envMigrateDSN)
 	}
+	if role == RoleAPI && cfg.DSN != "" {
+		if cfg.DSN, err = withSessionTimeouts(cfg.DSN); err != nil {
+			return Config{}, err
+		}
+	}
 
 	if cfg.Signals, err = boot.SignalsFromEnv(lookup); err != nil {
 		return Config{}, err

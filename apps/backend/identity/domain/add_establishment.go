@@ -14,8 +14,6 @@ func (e *Establishment) Add(cmd AddEstablishment) (kernel.Accepted[AddEstablishm
 			return kernel.Refuse[AddEstablishmentResponse](CodeEstablishmentOrganizationNotActive, "organization must exist and be active", organization)
 		case NormalizeTaxID(cmd.TaxIDType, cmd.TaxID) == "":
 			return kernel.Refuse[AddEstablishmentResponse](CodeEstablishmentTaxIDEmpty, "tax id must not be empty")
-		case cmd.TaxIDAlreadyRegistered:
-			return kernel.Refuse[AddEstablishmentResponse](CodeEstablishmentDuplicateTaxID, "tax id already registered in the organization", organization)
 		}
 		next.organizationID = cmd.OrganizationID
 		next.taxIDType = cmd.TaxIDType

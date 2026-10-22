@@ -10,7 +10,7 @@ clonar, validar o ambiente e então gerar a primeira app ou lib do seu projeto.
 - Node.js `^24` (ver `.nvmrc` / `.node-version`).
 - `pnpm@11.14.0`, conforme `packageManager` em `package.json`.
 - Corepack habilitado, para usar exatamente a versão declarada do pnpm.
-- Go na diretiva do `go.work` (hoje `1.26.10`; o `@mateusmacedo/dmpf-plugin` exige no mínimo `1.26.9`).
+- Go na diretiva do `go.work` (hoje `1.26.10`), exigido pelo `@mateusmacedo/dmpf-plugin`.
 - Token do GitHub com o escopo `read:packages`: o `@mateusmacedo/dmpf-plugin` vem do
   GitHub Packages, que exige autenticação até para pacote público.
 

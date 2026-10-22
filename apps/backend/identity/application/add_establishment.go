@@ -25,10 +25,6 @@ func (s Service) AddEstablishment(ctx context.Context, cmd AddEstablishment) (us
 			if err != nil {
 				return fail(err)
 			}
-			registered, err := s.establishmentTaxIDRegistered(ctx, protected.Hash, cmd.OrganizationID)
-			if err != nil {
-				return fail(err)
-			}
 			status, err := organizationStatus(ctx, res.Organizations, cmd.OrganizationID)
 			if err != nil {
 				return fail(err)
@@ -37,17 +33,16 @@ func (s Service) AddEstablishment(ctx context.Context, cmd AddEstablishment) (us
 				loadAbsentEstablishment,
 				func(e *domain.Establishment) (kernel.Accepted[domain.AddEstablishmentResponse], *kernel.Rejection) {
 					return e.Add(domain.AddEstablishment{
-						OrganizationID:         cmd.OrganizationID,
-						OrganizationStatus:     status,
-						TaxIDType:              cmd.TaxIDType,
-						TaxID:                  cmd.TaxID,
-						TaxIDHash:              protected.Hash,
-						TaxIDHashKeyVersion:    protected.KeyVersion,
-						TaxIDAlreadyRegistered: registered,
-						TradeName:              cmd.TradeName,
-						Receiver:               cmd.Receiver,
-						ExternalReferences:     cmd.ExternalReferences,
-						At:                     identity.OccurredAt,
+						OrganizationID:      cmd.OrganizationID,
+						OrganizationStatus:  status,
+						TaxIDType:           cmd.TaxIDType,
+						TaxID:               cmd.TaxID,
+						TaxIDHash:           protected.Hash,
+						TaxIDHashKeyVersion: protected.KeyVersion,
+						TradeName:           cmd.TradeName,
+						Receiver:            cmd.Receiver,
+						ExternalReferences:  cmd.ExternalReferences,
+						At:                  identity.OccurredAt,
 					})
 				})
 			if err != nil {

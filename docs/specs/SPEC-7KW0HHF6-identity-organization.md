@@ -32,7 +32,7 @@ created: 2026-10-12
 ## Origem e bloqueios externos
 
 - **Fontes**: `docs/prd/01-prd-identity-organization.md`; `docs/design/01-design-identity-organization.md` §2 a §6; `docs/design/90-modelo-de-dados.md` §1.4 e §3.1; `docs/design/92-schemas-eventos.md` §4; matriz de papéis em `docs/design/95-personas-jornadas.md`; `docs/prd/14-catalogo-contratos-eventos.md`; ADR-013, ADR-015, ADR-016, ADR-021 e ADR-022 (linhas 2, 6, 8, 9, 14 e 15).
-- **Situação**: `desbloqueado` - a fundação está concluída e o núcleo desta versão roda no kernel `1.0.0-rc.4`, com dois contornos registrados no ADR-022 (linhas 14 e 15).
+- **Situação**: `desbloqueado` - a fundação está concluída e o núcleo desta versão roda no kernel `1.0.0-rc.7`, com o contorno registrado no ADR-022 (linha 14); o da linha 15 foi encerrado pela unicidade declarada (nota ††).
 - **Fase de entrega**: 1.
 - **Dependências**: `depends_on` declara só a fundação `SPEC-GXGASP24`. Upstream duro de contexto: nenhum. Upstream brando: Compliance Ledger (histórico de permissões, `docs/design/01` §4). Este contexto é a raiz da cadeia dura (identity, partner, gateway, consent, portfolio, eligibility, marketplace, contracting, effects, funding, settlement). Extensões do kernel que tocam este contexto, nenhuma bloqueando a construção desta versão:
   - SPEC-SBW7HT6Y (DEVS-97) - Keycloak de referência e claim `tenant_id`;
@@ -58,7 +58,7 @@ created: 2026-10-12
 - **Decisões registradas nesta spec (2026-10-12)**:
   1. *Origem das permissões efetivas* (ADR-016, condição 3): enriquecimento no `bff`. O Keycloak autentica e entrega o tenant; o `bff` resolve as permissões a cada requisição pela consulta `FindEffectivePermissions` deste contexto, sem cache (CTX-16). A alternativa de permissões como claims do Keycloak foi descartada por criar duas fontes de verdade e por só revogar vínculo na expiração do token, já que a SPEC-STEJG347 exclui revogação por pertencimento ou permissão. Autorizar por papel no contexto consumidor foi descartado por CTX-12 e IDN-10.
   2. *Tenant da organização*: um tenant por organização, já provisionado nesta versão - o backoffice cria a organização no Keycloak com o atributo `tenant_id` (SPEC-SBW7HT6Y), e `RegisterOrganization` roda nesse tenant pelo caminho normal do kernel. Autocadastro e unicidade global ficam para fatia posterior, com K4.
-  3. *Lacunas do kernel*: cifra em envelope e unicidade como rejeição nascem como specs no kernel (ADR-022, regra 3). Até a implementação, este contexto usa os contornos das notas (††) e (‡‡).
+  3. *Lacunas do kernel*: cifra em envelope e unicidade como rejeição nascem como specs no kernel (ADR-022, regra 3). A unicidade como rejeição já é a do kernel (nota ††); até adotar a cifra em envelope, este contexto usa o contorno da nota (‡‡).
   4. *Escopo desta versão*: o núcleo implementável sem decisão de produto aberta; o restante está em Escopo fora.
 - **Decisões de produto abertas**: regime de aprovação única assistida [ABERTA: docs/design/01-design-identity-organization.md:§5]; sacado no escopo (`docs/design/95-personas-jornadas.md`, ator A10 daquele documento, distinto de A10 do resumo executivo); emissor de `RepresentationVerified` (ver `Representation`); passo de aprovação da revogação de representação (ver Escopo fora); primeiro vínculo de cada organização (ver Escopo fora).
 - **Condição para sair do backlog** (cumprida): `SPEC-GXGASP24` concluída e as decisões acima registradas. Nada externo bloqueou o núcleo desta versão.
@@ -67,7 +67,7 @@ created: 2026-10-12
 
 Nota (†): pré-condição que depende de outro agregado é verificada no `Run` do caso de uso por `Load` de outro repositório da mesma UoW, antes de `usecase.Decide` (FRT-01 do DMPF); `ErrNotFound` vira a rejeição declarada. O agregado lido não entra no lock otimista; o risco de *write skew* é aceito porque as pré-condições só leem estado de mudança rara (`active`).
 
-Nota (††): unicidade é por tenant, com `tenant_id` à frente do índice único (ADR-013). Até a SPEC-7SRQ3RPK (ADR-022, linha 15), vale um contorno explícito à UOW-11 do DMPF: o `Run` do caso de uso, já depois do registro idempotente, faz uma leitura consultiva por porta de leitura, que roda em autocommit separado da UoW do comando, e devolve a rejeição declarada quando acha o valor. Nessa leitura, `CrossTenantAccess` conta como ausente no tenant; a chave composta é refinada em memória sobre o resultado da coluna filtrada, porque o `Relation` do kernel filtra por uma coluna. O índice único é a autoridade: numa corrida, exatamente uma requisição grava e a outra sai como erro técnico (`Unexpected`), sem linha nem evento. Unicidade entre tenants está no Escopo fora.
+Nota (††): unicidade é por tenant, com `tenant_id` à frente da restrição única (ADR-013). A partir do kernel `1.0.0-rc.7`, a unicidade é declarada (SPEC-7SRQ3RPK, ADR-066 do kernel; DEVS-136): cada `CONSTRAINT <tabela>_<colunas>_key UNIQUE (tenant_id, ...)` do `schema.sql` tem um `postgres.Unique` de mesmo nome no provider, com a rejeição estática do `domain`, e a partida confere a declaração no catálogo (`VerifyUniques`). O `Save` traduz a violação na rejeição declarada, e o `usecase.Decide` a devolve como recusa, gravada na inbox e reproduzida no replay. Não há leitura antes do `Save`: o contorno à UOW-11 que a lia em autocommit (ADR-022, linha 15) deixou de valer. A restrição é a autoridade: numa corrida, exatamente uma requisição grava e a outra recebe a rejeição declarada, sem linha nem evento. A rejeição estática não leva detalhe do comando. Unicidade entre tenants está no Escopo fora.
 
 Nota (‡): `taxIdHash` e `documentHash` vêm de uma porta de proteção de identificador, declarada no bloco `ports` e realizada no `provider` - o `depguard` proíbe `crypto/*` em `domain` e `application`; o caso de uso a chama antes da UPR. A porta calcula HMAC-SHA256 com a chave secreta da configuração do `identity` (o "salt" do doc 90, que aqui é chave de HMAC, não salt) sobre a entrada `v1 | tenant | tipo | valor normalizado`, com cada campo prefixado pelo próprio tamanho, e devolve `{hash, keyVersion}`, com o hash em hexadecimal. Normalização por tipo: CNPJ em maiúsculas e sem pontuação, aceitando o formato alfanumérico; CPF e documento de pessoa, só dígitos. O tenant na entrada separa os hashes entre tenants. A `keyVersion` é persistida ao lado de cada hash. A chave tem no mínimo 32 bytes, é validada na partida e nunca aparece em log. Rotação proibida nesta versão: sem o documento em claro, os hashes antigos não podem ser recalculados. A máscara é função pura do bloco `domain`. A entrada gRPC traz o valor em claro; ele nunca sai do contexto em evento nem em log.
 
@@ -528,15 +528,15 @@ ENTÃO a mudança vai a approved e BankAccountChangeApproved é emitido
 
 DADO duas requisições RegisterOrganization no tenant com o mesmo taxId e jurisdiction, chaves de idempotência distintas e uma barreira que sobrepõe as transações
 QUANDO as duas chegam ao mesmo tempo
-ENTÃO exatamente uma é aceita, exatamente uma linha fica em organizations e exatamente um OrganizationRegistered vai à outbox; a outra sai como erro técnico
+ENTÃO exatamente uma é aceita, exatamente uma linha fica em organizations e exatamente um OrganizationRegistered vai à outbox; a outra recebe `identity-organization/organization/duplicate-tax-id`, sem linha nem evento
 
 DADO duas requisições AddEstablishment com o mesmo organizationId e taxId, chaves de idempotência distintas e uma barreira que sobrepõe as transações
 QUANDO as duas chegam ao mesmo tempo
-ENTÃO exatamente uma é aceita, exatamente uma linha fica em establishments e exatamente um EstablishmentAdded vai à outbox; a outra sai como erro técnico
+ENTÃO exatamente uma é aceita, exatamente uma linha fica em establishments e exatamente um EstablishmentAdded vai à outbox; a outra recebe `identity-organization/establishment/duplicate-tax-id`, sem linha nem evento
 
 DADO duas requisições RegisterPerson no tenant com o mesmo document, chaves de idempotência distintas e uma barreira que sobrepõe as transações
 QUANDO as duas chegam ao mesmo tempo
-ENTÃO exatamente uma é aceita e exatamente uma linha fica em persons; a outra sai como erro técnico
+ENTÃO exatamente uma é aceita e exatamente uma linha fica em persons; a outra recebe `identity-organization/person/duplicate-document`, sem linha
 
 DADO duas requisições RegisterOrganization concorrentes com o mesmo taxId e jurisdiction, uma no tenant A e outra no tenant B
 QUANDO as duas chegam ao mesmo tempo

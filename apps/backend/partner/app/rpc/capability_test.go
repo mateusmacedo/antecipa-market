@@ -15,7 +15,8 @@ import (
 )
 
 func partnerAt(id domain.PartnerID, s domain.PartnerStatus) domain.PartnerSnapshot {
-	return domain.PartnerSnapshot{ID: id, OrganizationID: "org-1", Role: domain.RoleFunder, Status: s, RegisteredAt: occurred, StageChangedAt: occurred}
+	organization := domain.OrganizationID("org-" + strings.TrimPrefix(string(id), "prt-"))
+	return domain.PartnerSnapshot{ID: id, OrganizationID: organization, Role: domain.RoleFunder, Status: s, RegisteredAt: occurred, StageChangedAt: occurred}
 }
 
 func capabilityAt(id domain.CapabilityID, s domain.CapabilityStatus) domain.CapabilitySnapshot {
@@ -23,6 +24,13 @@ func capabilityAt(id domain.CapabilityID, s domain.CapabilityStatus) domain.Capa
 		ID: id, PartnerID: "prt-1", Operation: "register-receivable", AssetType: "duplicata", Environment: domain.EnvironmentProduction,
 		Version: 1, IsWrite: true, StateQuerySupported: true, Status: s, Rollout: domain.Rollout{Mode: domain.RolloutDisabled},
 	}
+}
+
+// ofAssetType puts a capability in a series of its own: two first versions of
+// one series cannot coexist under the unique constraint (ADR-066).
+func ofAssetType(c domain.CapabilitySnapshot, assetType string) domain.CapabilitySnapshot {
+	c.AssetType = assetType
+	return c
 }
 
 func activeAgreement() domain.PartnerAgreementSnapshot {
@@ -143,8 +151,8 @@ func TestDeclareCapabilityAnswersTheDeclaredCapabilityAndEachRefusal(t *testing.
 func TestRecordHomologationAnswersTheStatusAndEachRefusal(t *testing.T) {
 	h := newHarness(t, relations{})
 	seedIn(t, h, capsTable, "cap-1", capabilityAt("cap-1", domain.CapabilityStatusDeclared))
-	seedIn(t, h, capsTable, "cap-2", capabilityAt("cap-2", domain.CapabilityStatusHomologated))
-	seedIn(t, h, capsTable, "cap-3", capabilityAt("cap-3", domain.CapabilityStatusDeclared))
+	seedIn(t, h, capsTable, "cap-2", ofAssetType(capabilityAt("cap-2", domain.CapabilityStatusHomologated), "cheque"))
+	seedIn(t, h, capsTable, "cap-3", ofAssetType(capabilityAt("cap-3", domain.CapabilityStatusDeclared), "nota-promissoria"))
 
 	var recorded servicev1.RecordHomologationResponse
 	req := &servicev1.RecordHomologationRequest{CapabilityId: "cap-1", Results: every("H1", "H2", "H3", "H4", "H5", "H6", "H7", "H8", "H10", "H11", "H12")}
@@ -180,8 +188,8 @@ func TestEnableCapabilityAnswersTheEnablingAndEachRefusal(t *testing.T) {
 		profiles:   profilesByPartner{"prt-1": {expiringIn("ipf-1", 90*day, 0)}},
 	})
 	seedIn(t, h, capsTable, "cap-1", capabilityAt("cap-1", domain.CapabilityStatusHomologated))
-	seedIn(t, h, capsTable, "cap-2", capabilityAt("cap-2", domain.CapabilityStatusDeclared))
-	mismatch := capabilityAt("cap-3", domain.CapabilityStatusSuspended)
+	seedIn(t, h, capsTable, "cap-2", ofAssetType(capabilityAt("cap-2", domain.CapabilityStatusDeclared), "cheque"))
+	mismatch := ofAssetType(capabilityAt("cap-3", domain.CapabilityStatusSuspended), "nota-promissoria")
 	mismatch.Suspension = domain.Suspension{Reason: "schema v4", Trigger: domain.TriggerSchemaMismatch, SuspendedAt: occurred - port.Instant(day)}
 	seedIn(t, h, capsTable, "cap-3", mismatch)
 	elsewhere := capabilityAt("cap-4", domain.CapabilityStatusHomologated)
@@ -228,7 +236,7 @@ func TestEnablingWithoutAProfileOfTheEnvironmentIsRefused(t *testing.T) {
 func TestSuspendCapabilityOverTheServiceSuspendsByHand(t *testing.T) {
 	h := newHarness(t, relations{})
 	seedIn(t, h, capsTable, "cap-1", capabilityAt("cap-1", domain.CapabilityStatusEnabled))
-	seedIn(t, h, capsTable, "cap-2", capabilityAt("cap-2", domain.CapabilityStatusDeclared))
+	seedIn(t, h, capsTable, "cap-2", ofAssetType(capabilityAt("cap-2", domain.CapabilityStatusDeclared), "cheque"))
 
 	var suspended servicev1.SuspendCapabilityResponse
 	if err := h.invoke(withTenant(t), "SuspendCapability", &servicev1.SuspendCapabilityRequest{CapabilityId: "cap-1", Reason: "partner incident"}, &suspended); err != nil {

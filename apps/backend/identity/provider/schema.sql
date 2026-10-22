@@ -5,14 +5,14 @@ CREATE TABLE IF NOT EXISTS organizations (
   tenant_id       text   NOT NULL,
   organization_id text   NOT NULL,
   version         bigint NOT NULL DEFAULT 0,
-  -- Typed because FindOrganizationByTaxId and the uniqueness pre-check filter
-  -- by the hash; the jurisdiction is typed because the constraint holds it.
+  -- Typed because FindOrganizationByTaxId filters by the hash; the
+  -- jurisdiction is typed because the constraint holds it.
   tax_id_hash     text   NOT NULL,
   jurisdiction    text   NOT NULL,
   snapshot        jsonb  NOT NULL,
   CONSTRAINT organizations_pkey PRIMARY KEY (tenant_id, organization_id),
-  -- The authority over uniqueness per tenant (spec note ††): the pre-check of
-  -- the use case only answers early, and a race ends here for the loser.
+  -- The authority over uniqueness per tenant (spec note ††): the Save turns
+  -- its violation into the declared rejection, so a race ends here for the loser.
   CONSTRAINT organizations_tenant_id_tax_id_hash_jurisdiction_key UNIQUE (tenant_id, tax_id_hash, jurisdiction)
 );
 
@@ -26,7 +26,7 @@ CREATE TABLE IF NOT EXISTS establishments (
   establishment_id text   NOT NULL,
   version          bigint NOT NULL DEFAULT 0,
   -- Typed because FindEstablishmentsByOrganization filters by the organization
-  -- and the uniqueness pre-check by the hash.
+  -- and the constraint holds the hash.
   organization_id  text   NOT NULL,
   tax_id_hash      text   NOT NULL,
   snapshot         jsonb  NOT NULL,

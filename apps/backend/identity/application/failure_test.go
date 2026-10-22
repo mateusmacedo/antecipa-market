@@ -22,7 +22,6 @@ func TestEachFailureOfRegisterCarriesTheUseCasePrefix(t *testing.T) {
 		wantMsg string
 	}{
 		{"protect", nil, func(h *harness) { h.protector.err = errBoom }, errBoom, "application: register organization org-100: boom"},
-		{"uniqueness read", nil, func(h *harness) { h.taxIDs.err = errBoom }, errBoom, "application: register organization org-100: boom"},
 		{"load", []option{withLoadError(errBoom)}, nil, errBoom, "application: register organization org-100: boom"},
 		{"save", []option{withSaveError(errBoom)}, nil, errBoom, "application: register organization org-100: boom"},
 		{"enqueue", []option{withEnqueueError(errBoom)}, nil, errBoom, "application: register organization org-100: enqueue: boom"},
@@ -58,7 +57,7 @@ func TestRegisterAlreadyExistingCarriesThePrefix(t *testing.T) {
 }
 
 func TestNoFailureMessageCarriesTheTaxID(t *testing.T) {
-	h := newHarness(t)
+	h := newHarness(t, withSaveError(errBoom))
 	h.taxIDs.err = errBoom
 
 	_, err := h.service.RegisterOrganization(withExecution(t, context.Background()), register())

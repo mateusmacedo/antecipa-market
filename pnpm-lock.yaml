@@ -10,8 +10,8 @@ catalogs:
       specifier: 2.4.16
       version: 2.4.16
     '@mateusmacedo/dmpf-plugin':
-      specifier: 1.0.0-rc.5
-      version: 1.0.0-rc.5
+      specifier: 1.0.0-rc.7
+      version: 1.0.0-rc.7
     '@nestjs/common':
       specifier: 11.1.28
       version: 11.1.28
@@ -130,7 +130,7 @@ importers:
         version: 2.4.16
       '@mateusmacedo/dmpf-plugin':
         specifier: 'catalog:'
-        version: 1.0.0-rc.5(@nx/devkit@23.1.0(nx@23.1.0(@swc-node/register@1.11.1(@swc/core@1.15.40(@swc/helpers@0.5.23))(@swc/types@0.1.27)(typescript@6.0.3))(@swc/core@1.15.40(@swc/helpers@0.5.23))))
+        version: 1.0.0-rc.7(@nx/devkit@23.1.0(nx@23.1.0(@swc-node/register@1.11.1(@swc/core@1.15.40(@swc/helpers@0.5.23))(@swc/types@0.1.27)(typescript@6.0.3))(@swc/core@1.15.40(@swc/helpers@0.5.23))))
       '@nestjs/common':
         specifier: 'catalog:'
         version: 11.1.28(reflect-metadata@0.2.2)(rxjs@7.8.2)
@@ -1481,8 +1481,8 @@ packages:
     resolution: {integrity: sha512-Z7C/xXCiGWsg0KuKsHTKJxbWhpI3Vs5GwLfOean7MGyVFGqdRgBbAjOCh6u4bbjPc/8MJ2pZmK/0DLdCbivLDA==}
     engines: {node: '>=8'}
 
-  '@mateusmacedo/dmpf-plugin@1.0.0-rc.5':
-    resolution: {integrity: sha512-jt4LcQNqJBUv7TR1pTv1AFxCRsOrntghzimSuf//0vKZ7OlLKvZdEwRCJ21eW5ecnKqMhGGK/2Kby01vLSfbuA==, tarball: https://npm.pkg.github.com/download/@mateusmacedo/dmpf-plugin/1.0.0-rc.5/76d4e6650467b57fbfce5fea0884386ad0da14e4}
+  '@mateusmacedo/dmpf-plugin@1.0.0-rc.7':
+    resolution: {integrity: sha512-21Nb9JQiyY7TVrswzhC0DyDdAd06bDRqq9d9Ut3aV+xWGbrI8Ta9WdjmzLHOIHQRCSdHCT/5Y+91T5oJzMMscA==, tarball: https://npm.pkg.github.com/download/@mateusmacedo/dmpf-plugin/1.0.0-rc.7/232a5a8d9f07481703a3a9b992436fb8fde388e0}
     peerDependencies:
       '@nx/devkit': ^23.0.0
 
@@ -7862,7 +7862,7 @@ snapshots:
 
   '@lukeed/csprng@1.1.0': {}
 
-  '@mateusmacedo/dmpf-plugin@1.0.0-rc.5(@nx/devkit@23.1.0(nx@23.1.0(@swc-node/register@1.11.1(@swc/core@1.15.40(@swc/helpers@0.5.23))(@swc/types@0.1.27)(typescript@6.0.3))(@swc/core@1.15.40(@swc/helpers@0.5.23))))':
+  '@mateusmacedo/dmpf-plugin@1.0.0-rc.7(@nx/devkit@23.1.0(nx@23.1.0(@swc-node/register@1.11.1(@swc/core@1.15.40(@swc/helpers@0.5.23))(@swc/types@0.1.27)(typescript@6.0.3))(@swc/core@1.15.40(@swc/helpers@0.5.23))))':
     dependencies:
       '@nx/devkit': 23.1.0(nx@23.1.0(@swc-node/register@1.11.1(@swc/core@1.15.40(@swc/helpers@0.5.23))(@swc/types@0.1.27)(typescript@6.0.3))(@swc/core@1.15.40(@swc/helpers@0.5.23)))
       tslib: 2.8.1

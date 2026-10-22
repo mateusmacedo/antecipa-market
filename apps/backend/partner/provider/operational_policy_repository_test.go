@@ -106,7 +106,7 @@ func TestTheSeriesOfAPartnerHoldsOneFirstPolicyAndOneSuccessorOfEachVersion(t *t
 		within string
 	}{
 		{"a second first version of the partner", []domain.OperationalPolicySnapshot{policyVersion("pol-1", "prt-1", 1, "")},
-			policyVersion("pol-x", "prt-1", 1, ""), "operational_policies_tenant_id_partner_id_idx"},
+			policyVersion("pol-x", "prt-1", 1, ""), "operational_policies_tenant_id_series_origin_key"},
 		{"a second successor of the same version", []domain.OperationalPolicySnapshot{policyVersion("pol-1", "prt-1", 1, ""), policyVersion("pol-2", "prt-1", 2, "pol-1")},
 			policyVersion("pol-x", "prt-1", 2, "pol-1"), "operational_policies_tenant_id_supersedes_id_key"},
 	} {
@@ -121,7 +121,7 @@ func TestTheSeriesOfAPartnerHoldsOneFirstPolicyAndOneSuccessorOfEachVersion(t *t
 
 			var violation *pgconn.PgError
 			if !errors.As(err, &violation) || violation.Code != "23505" || violation.ConstraintName != tc.within || errors.Is(err, port.ErrVersionConflict) {
-				t.Fatalf("Save(%s) = %v, want the unique violation of %s as a technical error", tc.second.ID, err, tc.within)
+				t.Fatalf("Save(%s) = %v, want the unique violation of %s, declared to the Save (ADR-066)", tc.second.ID, err, tc.within)
 			}
 			if got := pg.Counts(t, pool, policiesTable)[policiesTable]; got != int64(len(tc.held)) {
 				t.Fatalf("operational_policies = %d rows, want %d", got, len(tc.held))

@@ -115,7 +115,7 @@ func TestTheSeriesOfAPartnerAndCodeHoldsOneFirstProductAndOneSuccessorOfEachVers
 		within string
 	}{
 		{"a second first version of the code", []domain.FinancialProductSnapshot{productVersion("fpr-1", "prt-1", "receivables-advance", 1, "")},
-			productVersion("fpr-x", "prt-1", "receivables-advance", 1, ""), "financial_products_tenant_id_partner_id_code_idx"},
+			productVersion("fpr-x", "prt-1", "receivables-advance", 1, ""), "financial_products_tenant_id_series_origin_key"},
 		{"a second successor of the same version", []domain.FinancialProductSnapshot{
 			productVersion("fpr-1", "prt-1", "receivables-advance", 1, ""), productVersion("fpr-2", "prt-1", "receivables-advance", 2, "fpr-1"),
 		}, productVersion("fpr-x", "prt-1", "receivables-advance", 2, "fpr-1"), "financial_products_tenant_id_supersedes_id_key"},
@@ -131,7 +131,7 @@ func TestTheSeriesOfAPartnerAndCodeHoldsOneFirstProductAndOneSuccessorOfEachVers
 
 			var violation *pgconn.PgError
 			if !errors.As(err, &violation) || violation.Code != "23505" || violation.ConstraintName != tc.within || errors.Is(err, port.ErrVersionConflict) {
-				t.Fatalf("Save(%s) = %v, want the unique violation of %s as a technical error", tc.second.ID, err, tc.within)
+				t.Fatalf("Save(%s) = %v, want the unique violation of %s, declared to the Save (ADR-066)", tc.second.ID, err, tc.within)
 			}
 			if got := pg.Counts(t, pool, productsTable)[productsTable]; got != int64(len(tc.held)) {
 				t.Fatalf("financial_products = %d rows, want %d", got, len(tc.held))

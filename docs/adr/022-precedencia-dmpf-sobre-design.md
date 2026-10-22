@@ -17,6 +17,18 @@ Aceito — 2026-10-12. Implementa SPEC-GXGASP24 (DEVS-76).
 > 15, foi entregue no kernel `1.0.0-rc.6` (ADR-068 do kernel). A tabela segue
 > como estava até a reconferência do bump, pelo item 4, que fica com a adoção
 > da `1.0.0-rc.6` (DEVS-136).
+>
+> **Addendum (2026-10-21)** — a DEVS-136 adotou o kernel `1.0.0-rc.7`
+> (`workflowRef` `ddd3d0c`), que inclui a rc.6. A linha 15 deixa de ser
+> divergência: a SPEC-7SRQ3RPK (ADR-066 do kernel) entrega a unicidade
+> declarada, e identity e partner a adotam. Cada `CONSTRAINT ..._key UNIQUE`
+> tem `postgres.Unique` com a rejeição de domínio, e a pré-checagem por
+> leitura sai; o partner também troca os índices parciais da v1 de cada série
+> por `series_origin`. A leitura das pré-condições (†) do partner passa para a
+> UoW sob a guarda da SPEC-HFDSHFR1 (ADR-067 do kernel). A linha 14 segue: a
+> porta de cifra em envelope (SPEC-CC5SHV1K, DEVS-102) entrou na rc.7, mas a
+> adoção fica para outra issue. As demais linhas não foram reconferidas nesta
+> adoção.
 
 ## Contexto
 

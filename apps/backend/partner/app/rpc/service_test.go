@@ -133,21 +133,23 @@ func TestRegisterPartnerAnswersTheRegisteredPartner(t *testing.T) {
 
 func TestRegisterPartnerAnswersEachRefusalInTheBody(t *testing.T) {
 	cases := []struct {
-		name    string
-		planted relations
-		edit    func(*servicev1.RegisterPartnerRequest)
-		code    string
+		name string
+		held bool
+		edit func(*servicev1.RegisterPartnerRequest)
+		code string
 	}{
-		{"organization unknown to identity", relations{}, func(r *servicev1.RegisterPartnerRequest) { r.OrganizationId = "org-none" },
+		{"organization unknown to identity", false, func(r *servicev1.RegisterPartnerRequest) { r.OrganizationId = "org-none" },
 			"partner-management/partner/organization-not-found"},
-		{"registry of a funder organization", relations{}, func(r *servicev1.RegisterPartnerRequest) { r.Role = servicev1.PartnerRole_PARTNER_ROLE_REGISTRY },
+		{"registry of a funder organization", false, func(r *servicev1.RegisterPartnerRequest) { r.Role = servicev1.PartnerRole_PARTNER_ROLE_REGISTRY },
 			"partner-management/partner/organization-kind-mismatch"},
-		{"funder already registered", relations{partners: partnersByOrganization{"org-1": {{ID: "prt-held", OrganizationID: "org-1", Role: domain.RoleFunder}}}},
-			func(*servicev1.RegisterPartnerRequest) {}, "partner-management/partner/already-registered"},
+		{"funder already registered", true, func(*servicev1.RegisterPartnerRequest) {}, "partner-management/partner/already-registered"},
 	}
 	for _, c := range cases {
 		t.Run(c.name, func(t *testing.T) {
-			h := newHarness(t, c.planted)
+			h := newHarness(t, relations{})
+			if c.held {
+				seedIn(t, h, partnersTable, "prt-held", domain.PartnerSnapshot{ID: "prt-held", OrganizationID: "org-1", Role: domain.RoleFunder})
+			}
 			req := registerPartnerRequest("prt-refused")
 			c.edit(req)
 
@@ -213,7 +215,9 @@ func TestRegisterAgreementAnswersTheRegisteredDraftAndEachRefusal(t *testing.T) 
 func TestActivateAgreementAnswersTheActivationAndEachRefusal(t *testing.T) {
 	h := newHarness(t, relations{})
 	h.seedAgreement(t, draft("agr-1"))
-	h.seedAgreement(t, draft("agr-2"))
+	other := draft("agr-2")
+	other.PartnerID = "prt-2"
+	h.seedAgreement(t, other)
 
 	var activated servicev1.ActivateAgreementResponse
 	if err := h.invoke(withTenant(t), "ActivateAgreement", activateAgreementRequest("agr-1"), &activated); err != nil {
@@ -352,7 +356,9 @@ func TestRegisterIntegrationProfileAnswersTheRegisteredProfileAndEachRefusal(t *
 func TestRaiseCertificateExpiryAlertAnswersTheAlertAndEachRefusal(t *testing.T) {
 	h := newHarness(t, relations{})
 	h.seedProfile(t, expiringIn("ipf-25", 25*day, 0))
-	h.seedProfile(t, expiringIn("ipf-90", 90*day, 0))
+	other := expiringIn("ipf-90", 90*day, 0)
+	other.Environment = domain.EnvironmentHomologation
+	h.seedProfile(t, other)
 
 	var raised servicev1.RaiseCertificateExpiryAlertResponse
 	if err := h.invoke(withTenant(t), "RaiseCertificateExpiryAlert", &servicev1.RaiseCertificateExpiryAlertRequest{ProfileId: "ipf-25", ThresholdDays: 30}, &raised); err != nil {

@@ -17,6 +17,7 @@ import (
 	"github.com/mateusmacedo/antecipa-market/apps/backend/partner/application"
 	eventv1 "github.com/mateusmacedo/antecipa-market/apps/backend/partner/contract/gen/go/company/partner/event/v1"
 	servicev1 "github.com/mateusmacedo/antecipa-market/apps/backend/partner/contract/gen/go/company/partner/service/v1"
+	"github.com/mateusmacedo/antecipa-market/apps/backend/partner/domain"
 )
 
 func productOf(productID, supersedes string) *servicev1.DefineProductRequest {
@@ -226,8 +227,8 @@ func TestTwoConcurrentFirstVersionsOfOneCodeLeaveOneProduct(t *testing.T) {
 		func(m proto.Message) bool { return m.(*servicev1.DefineProductResponse).GetDefined() != nil },
 		func() proto.Message { return &servicev1.DefineProductResponse{} })
 
-	oneAcceptedOneFailed(t, got)
-	refusedByUniqueness(t, saves, "financial_products_tenant_id_partner_id_code_idx")
+	oneAcceptedOneRejected(t, got, string(domain.CodeFinancialProductSupersedesInvalid))
+	refusedByUniqueness(t, saves, "financial_products_tenant_id_series_origin_key")
 	if rows, events := products(t, pool); rows != 1 || events != 2 {
 		t.Fatalf("financial_products = %d, outbox = %d, want one first version and its definition after the activation", rows, events)
 	}

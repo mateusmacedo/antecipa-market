@@ -26,24 +26,19 @@ func (s Service) RegisterOrganization(ctx context.Context, cmd RegisterOrganizat
 			if err != nil {
 				return fail(err)
 			}
-			registered, err := s.taxIDRegistered(ctx, protected.Hash, cmd.Jurisdiction)
-			if err != nil {
-				return fail(err)
-			}
 			outcome, err := usecase.Decide(ctx, res.Organizations, res.Outbox, origin(AggregateTypeOrganization, string(cmd.OrganizationID)), cmd.OrganizationID, identity,
 				loadAbsentOrganization,
 				func(o *domain.Organization) (kernel.Accepted[domain.RegisterOrganizationResponse], *kernel.Rejection) {
 					return o.Register(domain.RegisterOrganization{
-						Kinds:                  kinds,
-						Jurisdiction:           cmd.Jurisdiction,
-						TaxIDType:              cmd.TaxIDType,
-						TaxID:                  cmd.TaxID,
-						TaxIDHash:              protected.Hash,
-						TaxIDHashKeyVersion:    protected.KeyVersion,
-						TaxIDAlreadyRegistered: registered,
-						LegalName:              cmd.LegalName,
-						TradeName:              cmd.TradeName,
-						At:                     identity.OccurredAt,
+						Kinds:               kinds,
+						Jurisdiction:        cmd.Jurisdiction,
+						TaxIDType:           cmd.TaxIDType,
+						TaxID:               cmd.TaxID,
+						TaxIDHash:           protected.Hash,
+						TaxIDHashKeyVersion: protected.KeyVersion,
+						LegalName:           cmd.LegalName,
+						TradeName:           cmd.TradeName,
+						At:                  identity.OccurredAt,
 					})
 				})
 			if err != nil {

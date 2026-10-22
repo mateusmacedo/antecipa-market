@@ -20,3 +20,10 @@ var Grants = []postgres.Grant{
 	postgres.Mutable("capabilities"),
 	postgres.Mutable("financial_products"),
 }
+
+// Uniques is every Table that declares a business uniqueness, which the
+// composition root hands to serve.API for VerifyUniques at startup (ADR-066).
+var Uniques = []postgres.UniqueSet{
+	partnerTable.Uniques(), agreementTable.Uniques(), profileTable.Uniques(),
+	policyTable.Uniques(), capabilityTable.Uniques(), productTable.Uniques(),
+}

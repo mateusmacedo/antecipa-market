@@ -13,9 +13,8 @@ type (
 	PartnerReader     = port.Reader[domain.PartnerID, domain.PartnerSnapshot]
 )
 
-// PartnersByOrganizationReader serves the uniqueness pre-check of
-// RegisterPartner. The kernel Relation filters by one column, so it answers
-// every role of the organization and the caller refines the result in memory.
+// PartnersByOrganizationReader serves FindPartnersByOrganization: every role
+// of the organization.
 type PartnersByOrganizationReader interface {
 	LoadByOrganization(ctx context.Context, organizationID domain.OrganizationID) ([]domain.PartnerSnapshot, error)
 }

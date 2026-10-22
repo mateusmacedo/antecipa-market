@@ -37,6 +37,11 @@ var establishmentTable = postgres.Table[domain.EstablishmentID, domain.Establish
 	Name:     "establishments",
 	IDColumn: "establishment_id",
 	Columns:  []string{"organization_id", "tax_id_hash", "snapshot"},
+	Unique: []postgres.Unique{{
+		Name:      "establishments_tenant_id_organization_id_tax_id_hash_key",
+		Columns:   []string{"tenant_id", "organization_id", "tax_id_hash"},
+		Rejection: domain.RejectEstablishmentDuplicateTaxID,
+	}},
 
 	Encode: func(s domain.EstablishmentSnapshot) ([]any, error) {
 		// A nil slice would be stored as null rather than [] (armadilha 11).

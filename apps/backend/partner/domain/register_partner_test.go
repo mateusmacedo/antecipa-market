@@ -80,8 +80,6 @@ func TestRegisterRejectsEachPrecondition(t *testing.T) {
 			domain.CodePartnerOrganizationKindMismatch, []kernel.Detail{organization, funder}},
 		{"role outside the catalogue", func(c *domain.RegisterPartner) { c.Role = "acquirer" },
 			domain.CodePartnerOrganizationKindMismatch, []kernel.Detail{organization, {Key: "role", Value: "acquirer"}}},
-		{"organization and role already registered", func(c *domain.RegisterPartner) { c.AlreadyRegistered = true },
-			domain.CodePartnerAlreadyRegistered, []kernel.Detail{organization, funder}},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -102,15 +100,13 @@ func TestRegisterRejectsEachPrecondition(t *testing.T) {
 }
 
 func TestRegisterReportsThePreconditionsInTheDeclaredOrder(t *testing.T) {
-	cmd := domain.RegisterPartner{OrganizationID: organizationID, Role: domain.RoleFunder, AlreadyRegistered: true, At: at}
+	cmd := domain.RegisterPartner{OrganizationID: organizationID, Role: domain.RoleFunder, At: at}
 	want := []kernel.Code{
 		domain.CodePartnerOrganizationNotFound,
 		domain.CodePartnerOrganizationKindMismatch,
-		domain.CodePartnerAlreadyRegistered,
 	}
 	fixes := []func(*domain.RegisterPartner){
 		func(c *domain.RegisterPartner) { c.OrganizationFound = true },
-		func(c *domain.RegisterPartner) { c.OrganizationKinds = []domain.OrganizationKind{domain.KindFunder} },
 		func(*domain.RegisterPartner) {},
 	}
 	for i, code := range want {

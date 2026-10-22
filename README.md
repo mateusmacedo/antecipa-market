@@ -7,7 +7,7 @@ bounded contexts Go do DMPF no mesmo workspace.
 
 - Node.js `24` (ver `.nvmrc` / `.node-version`)
 - pnpm `11` (habilite via `corepack enable`)
-- Go na diretiva do `go.work` (`1.26.10`; o `@mateusmacedo/dmpf-plugin` `1.0.0-rc.5` exige no mínimo `1.26.9`), `bash`, `jq` e `git`
+- Go na diretiva do `go.work` (`1.26.10` com o `@mateusmacedo/dmpf-plugin` `1.0.0-rc.7`), `bash`, `jq` e `git`
 - Token do GitHub com o escopo `read:packages`, porque o `@mateusmacedo/dmpf-plugin` vem do
   GitHub Packages, que exige autenticação até para pacote público
 

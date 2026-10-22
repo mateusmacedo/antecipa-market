@@ -10,11 +10,14 @@ assinaturas no código atual antes de implementar.
 | UPR, agregado, resposta, rejeição, eventos e estado | `domainkit` | projeção observável e determinismo |
 | Caso de uso e fronteira transacional | `serviceskit` | ledger de UoW, escrita, outbox e commit |
 | Realização de UoW, Inbox ou Outbox | `providerkit` | suíte de conformidade parametrizada |
+| Parceiro externo de requisição e resposta num teste | `serviceskit.Partner` | roteiro por chave e tentativa, chaves recebidas |
+| Ledger de tentativas ou tabela de adaptador `ExternalCommand` | `providerkit` (`AttemptLedger`, `ExternalCommand`) | serialização na chave, retenção, teto e classe declarada |
 | Contrato Protobuf/CloudEvents e bytes canônicos | `golden` | duas direções e três oráculos |
 | Tempo, IDs e ordenação determinísticos | `clock`, `ids`, `stable` | seam controlável e comparação estável |
-| Consumer adapter até Postgres e gesto do broker | `appkit` (`https://github.com/mateusmacedo/dmpf/blob/b5131eea0ce4c593e11e39f339ea9daea1f53ce4/apps/backend/reservations`) | efeitos persistidos e Ack após commit |
-| Redelivery com broker e isolamento real | `distkit` (`https://github.com/mateusmacedo/dmpf/blob/b5131eea0ce4c593e11e39f339ea9daea1f53ce4/apps/backend/reservations`) sobre `tb/dist` | processos OS e `DMPF-R004` |
+| Consumer adapter até Postgres e gesto do broker | `appkit` (`https://github.com/mateusmacedo/dmpf/blob/ddd3d0c4202879f168c7f6bfafaefadd94a3a621/apps/backend/reservations`) | efeitos persistidos e Ack após commit |
+| Redelivery com broker e isolamento real | `distkit` (`https://github.com/mateusmacedo/dmpf/blob/ddd3d0c4202879f168c7f6bfafaefadd94a3a621/apps/backend/reservations`) sobre `tb/dist` | processos OS e `DMPF-R004` |
 | Supervisão de processos, harness por papel e vetor do relay | `tb/dist` | `DMPF-P001` a `DMPF-P003` |
+| Processo morto entre `Begin` e `Finish` de um comando externo | `tb/dist` | `DMPF-A001` a `DMPF-A003` |
 | Contexto de execução de teste | `tb/execctx` | subject, tenant, chave e deadline sem fixture local |
 | Caso de uso de referência para testar as libs | `tb/reference` | `CounterService` sobre a UoW real |
 | Telemetria de teste e degradação do exportador | `obstest` | manifesto por papel, coletor OTLP e coletores de falha |
@@ -53,7 +56,11 @@ Autoridade de API:
 - `serviceskit/faults.go`: `Faults`, `FaultyRepository` e `FaultyOutbox`;
 - `serviceskit/ledger.go`: gestos, posições e `Count`;
 - `serviceskit/verdict.go`: `Decide` e `Expect`;
-- `serviceskit/verdict_test.go`: composição do service real e vetores negativos.
+- `serviceskit/verdict_test.go`: composição do service real e vetores negativos;
+- `serviceskit/partner.go`: `NewPartner`, `Script`, `ScriptQuery`, `Reply`,
+  `Answer`, `LostAfterEffect`, `DuplicateNotification`, `WithoutQuery`,
+  `QueryAvailable`, `Submitted`, `Queried` e `Exhausted` — o parceiro de um comando externo
+  (`KIT-12`), que realiza `ports.ExternalCommand` e `ports.ExternalState`.
 
 Execute o application service real sobre `Fakes.UnitOfWork`. Para uma recusa,
 estabeleça o baseline imediatamente antes do comando recusado; do contrário o
@@ -68,7 +75,12 @@ primeiro nomeia o agregado, e o segundo nomearia `application`, que o
 `serviceskit`, bloco `provider`, não importa (`DMPF-D001`). Injete falha de
 carga, `Save` e `Enqueue` por `Faults`, e de registro por `FailRegister`. Os
 moldes são o `doubles_test.go` de `apps/backend/{orders,bookings}/application` e o
-`sync_doubles_test.go` de `https://github.com/mateusmacedo/dmpf/blob/b5131eea0ce4c593e11e39f339ea9daea1f53ce4/apps/backend/reservations/application`.
+`sync_doubles_test.go` de `https://github.com/mateusmacedo/dmpf/blob/ddd3d0c4202879f168c7f6bfafaefadd94a3a621/apps/backend/reservations/application`.
+
+Para um comando externo, roteirize o `Partner` por chave e por tentativa e
+prove o reenvio pela lista `Submitted`: a mesma `OutboundKey` em toda tentativa.
+Roteiro esgotado devolve `ErrScriptExhausted` e entra em `Exhausted`; confira
+que ela fica vazia. O molde é `https://github.com/mateusmacedo/dmpf/blob/ddd3d0c4202879f168c7f6bfafaefadd94a3a621/libs/backend/go/testkit/tb/reference/external_partner_cycle_test.go`.
 
 ## `providerkit`
 
@@ -79,11 +91,23 @@ Autoridade de API:
 - `providerkit/outbox.go`: `OutboxStore`, `OutboxSubject` e `Outbox`;
 - `providerkit/repository.go`: `RepositorySubject` e `Repository`, com as
   cláusulas de criação sobre agregado existente e de escritores concorrentes;
+- `providerkit/unique.go`: `UniqueSubject`, `UniqueWrites`, `UniqueConstraint`
+  e `Unique`, com as cláusulas da unicidade declarada (ADR-066): recusa na
+  criação e na atualização, isolamento por tenant, transação utilizável depois
+  da violação, guarda de escrita anterior, criações concorrentes e a mesma
+  identidade como conflito de versão;
+- `providerkit/attempt_ledger.go`: `AttemptLedgerSubject` e `AttemptLedger`,
+  com serialização na chave, retenção só de tentativa encerrada e o teto de
+  `ports.MaxAttemptEntries` (`ObserveSaturated`, `FinishSaturated`);
+- `providerkit/external_command.go`: `ExternalCommandSubject` e
+  `ExternalCommand`, que certificam a tabela de um adaptador: cada código
+  declarado cai na classe declarada e o desconhecido em `ClassUnknownAmbiguous`;
 - `providerkit/memory.go`: candidatos em memória (`MemoryUnitOfWork`,
   `MemoryInbox`), usados também por `memory/conformance_test.go`;
 - `postgres/conformance_test.go`: candidato Postgres;
 - `apps/backend/<ctx>/provider/*repository_test.go`: um `Repository` por
-  agregado do contexto, sobre `pg.Within`.
+  agregado do contexto, sobre `pg.Within`, e um `Unique` por `Table` com
+  `Unique`.
 
 A função passada à suíte cria e limpa um candidato para cada cláusula. Use
 `ArmCommitFailure` somente quando a realização realmente consegue injetar a
@@ -123,13 +147,13 @@ Confirme `clock/clock.go`, `ids/ids.go` e `stable/stable.go`. Na API atual:
 - `stable.SortStrings`, `stable.SortBy` e `stable.Sequence[T]` removem ordem
   incidental das comparações.
 
-## `appkit` (em `https://github.com/mateusmacedo/dmpf/blob/b5131eea0ce4c593e11e39f339ea9daea1f53ce4/apps/backend/reservations/appkit`)
+## `appkit` (em `https://github.com/mateusmacedo/dmpf/blob/ddd3d0c4202879f168c7f6bfafaefadd94a3a621/apps/backend/reservations/appkit`)
 
 Autoridade de API:
 
-- `https://github.com/mateusmacedo/dmpf/blob/b5131eea0ce4c593e11e39f339ea9daea1f53ce4/apps/backend/reservations/appkit/harness.go`: `Harness`, `NewReservations`,
+- `https://github.com/mateusmacedo/dmpf/blob/ddd3d0c4202879f168c7f6bfafaefadd94a3a621/apps/backend/reservations/appkit/harness.go`: `Harness`, `NewReservations`,
   `RawOrderPlaced`, `Ack` e `Effects`;
-- `https://github.com/mateusmacedo/dmpf/blob/b5131eea0ce4c593e11e39f339ea9daea1f53ce4/apps/backend/reservations/appkit/harness_test.go`: disposições, contenção,
+- `https://github.com/mateusmacedo/dmpf/blob/ddd3d0c4202879f168c7f6bfafaefadd94a3a621/apps/backend/reservations/appkit/harness_test.go`: disposições, contenção,
   reentrega e Ack após commit.
 
 O harness é uma composition root concreta do contexto `reservations` — unidade
@@ -138,17 +162,19 @@ bounded context; por isso vive com o contexto e não no `testkit` (ADR-046).
 Um contexto novo que precise do mesmo tipo de prova escreve o próprio harness
 no molde deste, sobre `tb`, `tb/pg`, `clock` e `ids` do kit.
 
-## `distkit` (em `https://github.com/mateusmacedo/dmpf/blob/b5131eea0ce4c593e11e39f339ea9daea1f53ce4/apps/backend/reservations/distkit`)
+## `distkit` (em `https://github.com/mateusmacedo/dmpf/blob/ddd3d0c4202879f168c7f6bfafaefadd94a3a621/apps/backend/reservations/distkit`)
 
 Autoridade de API:
 
-- `https://github.com/mateusmacedo/dmpf/blob/b5131eea0ce4c593e11e39f339ea9daea1f53ce4/libs/backend/go/testkit/tb/dist`: `Supervise` e `Process`, `Spec`, `RunRole`,
-  `Harness`, `CreateTopics`, `WaitFor` e o vetor do relay (`RelayVector`,
-  `DecideRelay`);
-- `https://github.com/mateusmacedo/dmpf/blob/b5131eea0ce4c593e11e39f339ea9daea1f53ce4/apps/backend/reservations/distkit/harness.go`: `New`, o `Spec` e o `RelaySpec` do contexto;
-- `https://github.com/mateusmacedo/dmpf/blob/b5131eea0ce4c593e11e39f339ea9daea1f53ce4/apps/backend/reservations/distkit/roles.go`: papéis filhos;
-- `https://github.com/mateusmacedo/dmpf/blob/b5131eea0ce4c593e11e39f339ea9daea1f53ce4/apps/backend/reservations/distkit/verdict.go`: plano, efeitos e `DMPF-R004`;
-- `https://github.com/mateusmacedo/dmpf/blob/b5131eea0ce4c593e11e39f339ea9daea1f53ce4/apps/backend/reservations/distkit/harness_test.go`: positivo e consumer
+- `https://github.com/mateusmacedo/dmpf/blob/ddd3d0c4202879f168c7f6bfafaefadd94a3a621/libs/backend/go/testkit/tb/dist`: `Supervise` e `Process`, `Spec`, `RunRole`,
+  `Harness`, `CreateTopics`, `WaitFor`, o vetor do relay (`RelayVector`,
+  `DecideRelay`) e o da tentativa externa interrompida (`Process.Kill`,
+  `NewPostgres`, `CrashBetweenBeginAndFinishVector`, `DecideCrash`,
+  `DMPF-A001` a `DMPF-A003`), rodado por `testkit:test-distributed`;
+- `https://github.com/mateusmacedo/dmpf/blob/ddd3d0c4202879f168c7f6bfafaefadd94a3a621/apps/backend/reservations/distkit/harness.go`: `New`, o `Spec` e o `RelaySpec` do contexto;
+- `https://github.com/mateusmacedo/dmpf/blob/ddd3d0c4202879f168c7f6bfafaefadd94a3a621/apps/backend/reservations/distkit/roles.go`: papéis filhos;
+- `https://github.com/mateusmacedo/dmpf/blob/ddd3d0c4202879f168c7f6bfafaefadd94a3a621/apps/backend/reservations/distkit/verdict.go`: plano, efeitos e `DMPF-R004`;
+- `https://github.com/mateusmacedo/dmpf/blob/ddd3d0c4202879f168c7f6bfafaefadd94a3a621/apps/backend/reservations/distkit/harness_test.go`: positivo e consumer
   ingênuo.
 
 Preserve `//go:build integration && distributed`. O processo pai inicia os

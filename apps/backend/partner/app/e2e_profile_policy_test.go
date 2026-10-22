@@ -16,6 +16,7 @@ import (
 	"github.com/mateusmacedo/antecipa-market/apps/backend/partner/application"
 	eventv1 "github.com/mateusmacedo/antecipa-market/apps/backend/partner/contract/gen/go/company/partner/event/v1"
 	servicev1 "github.com/mateusmacedo/antecipa-market/apps/backend/partner/contract/gen/go/company/partner/service/v1"
+	"github.com/mateusmacedo/antecipa-market/apps/backend/partner/domain"
 )
 
 const day = int64(86_400_000_000_000)
@@ -160,8 +161,8 @@ func TestTwoConcurrentFirstProfilesOfOneEnvironmentLeaveOneProfile(t *testing.T)
 		},
 		func() proto.Message { return &servicev1.RegisterIntegrationProfileResponse{} })
 
-	oneAcceptedOneFailed(t, got)
-	refusedByUniqueness(t, saves, "integration_profiles_tenant_id_partner_id_environment_idx")
+	oneAcceptedOneRejected(t, got, string(domain.CodeIntegrationProfileSupersedesInvalid))
+	refusedByUniqueness(t, saves, "integration_profiles_tenant_id_series_origin_key")
 	if profiles := count(t, pool, "SELECT count(*) FROM integration_profiles"); profiles != 1 {
 		t.Fatalf("integration_profiles = %d, want exactly one first version", profiles)
 	}
@@ -232,8 +233,8 @@ func TestTwoConcurrentFirstPoliciesOfOnePartnerLeaveOnePolicy(t *testing.T) {
 		func(m proto.Message) bool { return m.(*servicev1.DefineOperationalPolicyResponse).GetDefined() != nil },
 		func() proto.Message { return &servicev1.DefineOperationalPolicyResponse{} })
 
-	oneAcceptedOneFailed(t, got)
-	refusedByUniqueness(t, saves, "operational_policies_tenant_id_partner_id_idx")
+	oneAcceptedOneRejected(t, got, string(domain.CodeOperationalPolicySupersedesInvalid))
+	refusedByUniqueness(t, saves, "operational_policies_tenant_id_series_origin_key")
 	if policies := count(t, pool, "SELECT count(*) FROM operational_policies"); policies != 1 {
 		t.Fatalf("operational_policies = %d, want exactly one first version", policies)
 	}

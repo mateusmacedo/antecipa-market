@@ -30,7 +30,6 @@
         "tax_id": "12ABC34501DE35",
         "tax_id_hash": "4a455609da3a3d6d689b65257f38532e3868396abc39d3b92311b18489f169dc",
         "tax_id_hash_key_version": "1",
-        "tax_id_already_registered": "false",
         "legal_name": "Recebiveis Sinteticos Ltda",
         "trade_name": "Sintetica",
         "at": "1755432000000000000"
@@ -95,7 +94,6 @@
         "tax_id": "123.456.789-09",
         "tax_id_hash": "accdef5fa5a63d40218f9b3fb5abdfc9eeb4036cbdbe46cff36bff2ec9462a3d",
         "tax_id_hash_key_version": "1",
-        "tax_id_already_registered": "false",
         "legal_name": "Recebiveis Sinteticos Ltda",
         "trade_name": "",
         "at": "1755432000000000000"
@@ -160,7 +158,6 @@
         "tax_id": "12ABC34501DE35",
         "tax_id_hash": "4a455609da3a3d6d689b65257f38532e3868396abc39d3b92311b18489f169dc",
         "tax_id_hash_key_version": "1",
-        "tax_id_already_registered": "false",
         "legal_name": "Recebiveis Sinteticos Ltda",
         "trade_name": "Sintetica",
         "at": "1755432000000000000"
@@ -214,7 +211,6 @@
         "tax_id": "12ABC34501DE35",
         "tax_id_hash": "4a455609da3a3d6d689b65257f38532e3868396abc39d3b92311b18489f169dc",
         "tax_id_hash_key_version": "1",
-        "tax_id_already_registered": "false",
         "legal_name": "Recebiveis Sinteticos Ltda",
         "trade_name": "Sintetica",
         "at": "1755432000000000000"
@@ -270,7 +266,6 @@
         "tax_id": "../-",
         "tax_id_hash": "4a455609da3a3d6d689b65257f38532e3868396abc39d3b92311b18489f169dc",
         "tax_id_hash_key_version": "1",
-        "tax_id_already_registered": "false",
         "legal_name": "Recebiveis Sinteticos Ltda",
         "trade_name": "Sintetica",
         "at": "1755432000000000000"
@@ -324,7 +319,6 @@
         "tax_id": "12ABC34501DE35",
         "tax_id_hash": "4a455609da3a3d6d689b65257f38532e3868396abc39d3b92311b18489f169dc",
         "tax_id_hash_key_version": "1",
-        "tax_id_already_registered": "false",
         "legal_name": "   ",
         "trade_name": "Sintetica",
         "at": "1755432000000000000"
@@ -335,62 +329,6 @@
           "code": "identity-organization/organization/legal-name-empty",
           "message": "legal name must not be empty",
           "details": {}
-        },
-        "events": [],
-        "state_after": {
-          "organization": "org-1",
-          "kinds": "",
-          "jurisdiction": "",
-          "tax_id_type": "",
-          "tax_id": "",
-          "tax_id_hash": "",
-          "tax_id_hash_key_version": "0",
-          "tax_id_masked": "",
-          "legal_name": "",
-          "trade_name": "",
-          "status": "new",
-          "created_at": "0"
-        }
-      }
-    },
-    {
-      "name": "register-duplicate-tax-id",
-      "doc": "Ramo Rejected de Register: o caso de uso achou o mesmo hash na jurisdição do tenant; estado inalterado.",
-      "state_before": {
-        "organization": "org-1",
-        "kinds": "",
-        "jurisdiction": "",
-        "tax_id_type": "",
-        "tax_id": "",
-        "tax_id_hash": "",
-        "tax_id_hash_key_version": "0",
-        "tax_id_masked": "",
-        "legal_name": "",
-        "trade_name": "",
-        "status": "new",
-        "created_at": "0"
-      },
-      "command": {
-        "upr": "register",
-        "kinds": "client",
-        "jurisdiction": "BR",
-        "tax_id_type": "cnpj",
-        "tax_id": "12ABC34501DE35",
-        "tax_id_hash": "4a455609da3a3d6d689b65257f38532e3868396abc39d3b92311b18489f169dc",
-        "tax_id_hash_key_version": "1",
-        "tax_id_already_registered": "true",
-        "legal_name": "Recebiveis Sinteticos Ltda",
-        "trade_name": "Sintetica",
-        "at": "1755432000000000000"
-      },
-      "expected": {
-        "branch": "rejected",
-        "rejection": {
-          "code": "identity-organization/organization/duplicate-tax-id",
-          "message": "tax id already registered in the jurisdiction",
-          "details": {
-            "jurisdiction": "BR"
-          }
         },
         "events": [],
         "state_after": {

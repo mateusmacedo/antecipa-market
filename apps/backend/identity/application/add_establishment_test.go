@@ -80,7 +80,6 @@ func TestAddEstablishmentWalksTheStepsInOrder(t *testing.T) {
 		"within",
 		"commands.Register",
 		"protector.Protect",
-		"establishments.LoadByTaxIDHash",
 		"organizations.Load",
 		"establishments.Load",
 		"establishments.Save",
@@ -148,9 +147,6 @@ func TestAddEstablishmentProtectsTheTaxIDUnderTheTenantOfTheRequest(t *testing.T
 	if want := []protectCall{{tenant: "globex", kind: domain.TaxIDTypeCNPJ, value: numericCNPJ}}; !slices.Equal(h.protector.calls, want) {
 		t.Fatalf("Protect calls = %+v, want %+v", h.protector.calls, want)
 	}
-	if want := []string{fakeHash("globex", domain.TaxIDTypeCNPJ, numericCNPJ)}; !slices.Equal(h.establishmentTaxIDs.asked, want) {
-		t.Fatalf("the uniqueness read asked for %v, want the hash of the tenant %v", h.establishmentTaxIDs.asked, want)
-	}
 }
 
 func TestAddEstablishmentRejectsEachPreconditionWithoutWriting(t *testing.T) {
@@ -173,13 +169,12 @@ func TestAddEstablishmentRejectsEachPreconditionWithoutWriting(t *testing.T) {
 			if tc.seed {
 				withOrganization(t, h, tc.status)
 			}
-			if tc.held {
-				held := addedEstablishment("est-held", testOrganizationID, testTenant)
-				h.establishmentTaxIDs.hold(held.TaxIDHash, held)
-			}
 			cmd := addEstablishment()
 			tc.mutate(&cmd)
 			ctx := withExecution(t, context.Background())
+			if tc.held {
+				seed(t, h, ctx, establishmentTable, "est-held", addedEstablishment("est-held", testOrganizationID, testTenant))
+			}
 
 			outcome, err := h.service.AddEstablishment(ctx, cmd)
 
@@ -219,10 +214,10 @@ func TestAddEstablishmentToTheOrganizationOfAnotherTenantIsNotActive(t *testing.
 func TestAddEstablishmentAcceptsTheSameTaxIDInAnotherOrganization(t *testing.T) {
 	h := newHarness(t)
 	withOrganization(t, h, domain.OrganizationActive)
-	held := addedEstablishment("est-held", "org-other", testTenant)
-	h.establishmentTaxIDs.hold(held.TaxIDHash, held)
+	ctx := withExecution(t, context.Background())
+	seed(t, h, ctx, establishmentTable, "est-held", addedEstablishment("est-held", "org-other", testTenant))
 
-	outcome, err := h.service.AddEstablishment(withExecution(t, context.Background()), addEstablishment())
+	outcome, err := h.service.AddEstablishment(ctx, addEstablishment())
 
 	if err != nil {
 		t.Fatalf("AddEstablishment() error = %v, want nil", err)
@@ -232,10 +227,10 @@ func TestAddEstablishmentAcceptsTheSameTaxIDInAnotherOrganization(t *testing.T) 
 	}
 }
 
-func TestAddEstablishmentCountsACrossTenantAccessAsAbsent(t *testing.T) {
+func TestAddEstablishmentAcceptsTheSameTaxIDInAnotherTenant(t *testing.T) {
 	h := newHarness(t)
 	withOrganization(t, h, domain.OrganizationActive)
-	h.establishmentTaxIDs.err = port.CrossTenantAccess{Object: "establishments?tax_id_hash=h", ContextTenant: testTenant, DataTenant: "globex"}
+	seed(t, h, withTenant(t, context.Background(), "globex"), establishmentTable, "est-held", addedEstablishment("est-held", testOrganizationID, "globex"))
 
 	outcome, err := h.service.AddEstablishment(withExecution(t, context.Background()), addEstablishment())
 
@@ -258,7 +253,6 @@ func TestEachFailureOfAddEstablishmentCarriesTheUseCasePrefix(t *testing.T) {
 		wantMsg string
 	}{
 		{"protect", nil, func(h *harness) { h.protector.err = errBoom }, "application: add establishment est-100: boom"},
-		{"uniqueness read", nil, func(h *harness) { h.establishmentTaxIDs.err = errBoom }, "application: add establishment est-100: boom"},
 		{"organization load", []option{withLoadError(errBoom)}, nil, "application: add establishment est-100: boom"},
 		{"load", []option{withTableFaults("establishments", serviceskit.Faults{Load: errBoom})}, nil, "application: add establishment est-100: boom"},
 		{"save", []option{withTableFaults("establishments", serviceskit.Faults{Save: errBoom})}, nil, "application: add establishment est-100: boom"},

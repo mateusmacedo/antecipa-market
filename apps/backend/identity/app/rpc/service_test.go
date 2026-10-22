@@ -95,7 +95,7 @@ func TestRegisterOrganizationAnswersTheRegisteredOrganizationAndFindReadsIt(t *t
 }
 
 func TestRegisterOrganizationAnswersEachRefusalInTheBody(t *testing.T) {
-	planted := byTaxIDHash{hashOf(testTenant, domain.TaxIDTypeCPF, syntheticCPF): {{ID: "org-held", Jurisdiction: "BR"}}}
+	held := domain.OrganizationSnapshot{ID: "org-held", TaxIDHash: hashOf(testTenant, domain.TaxIDTypeCPF, syntheticCPF), Jurisdiction: "BR"}
 	cases := []struct {
 		name string
 		edit func(*servicev1.RegisterOrganizationRequest)
@@ -111,7 +111,8 @@ func TestRegisterOrganizationAnswersEachRefusalInTheBody(t *testing.T) {
 	}
 	for _, c := range cases {
 		t.Run(c.name, func(t *testing.T) {
-			h := newHarness(t, planted)
+			h := newHarness(t, nil)
+			plant(t, h, organizationsTable, held.ID, held)
 			req := registerRequest("org-refused")
 			c.edit(req)
 
@@ -340,9 +341,7 @@ func TestAddEstablishmentAnswersTheAddedEstablishmentAndEnqueuesItsEvent(t *test
 }
 
 func TestAddEstablishmentAnswersEachRefusalInTheBody(t *testing.T) {
-	planted := relations{establishments: establishmentsByTaxIDHash{
-		hashOf(testTenant, domain.TaxIDTypeCPF, syntheticCPF): {{ID: "est-held", OrganizationID: "org-1"}},
-	}}
+	held := domain.EstablishmentSnapshot{ID: "est-held", OrganizationID: "org-1", TaxIDHash: hashOf(testTenant, domain.TaxIDTypeCPF, syntheticCPF)}
 	cases := []struct {
 		name         string
 		organization bool
@@ -357,7 +356,8 @@ func TestAddEstablishmentAnswersEachRefusalInTheBody(t *testing.T) {
 	}
 	for _, c := range cases {
 		t.Run(c.name, func(t *testing.T) {
-			h := newHarnessWith(t, planted)
+			h := newHarness(t, nil)
+			plant(t, h, establishmentsTable, held.ID, held)
 			before := 0
 			if c.organization {
 				register(t, h, registerRequest("org-1"))
@@ -452,7 +452,7 @@ func TestThePersonOnTheWireDeclaresNoDocument(t *testing.T) {
 }
 
 func TestRegisterPersonAnswersEachRefusalInTheBody(t *testing.T) {
-	planted := relations{documents: personsByDocumentHash{personHash: {{ID: "per-held"}}}}
+	held := domain.PersonSnapshot{ID: "per-held", DocumentHash: personHash}
 	cases := []struct {
 		name string
 		edit func(*servicev1.RegisterPersonRequest)
@@ -464,7 +464,8 @@ func TestRegisterPersonAnswersEachRefusalInTheBody(t *testing.T) {
 	}
 	for _, c := range cases {
 		t.Run(c.name, func(t *testing.T) {
-			h := newHarnessWith(t, planted)
+			h := newHarness(t, nil)
+			plant(t, h, personsTable, held.ID, held)
 			req := personRequest("per-refused")
 			c.edit(req)
 

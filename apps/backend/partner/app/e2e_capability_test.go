@@ -13,6 +13,7 @@ import (
 	"github.com/mateusmacedo/antecipa-market/apps/backend/partner/application"
 	eventv1 "github.com/mateusmacedo/antecipa-market/apps/backend/partner/contract/gen/go/company/partner/event/v1"
 	servicev1 "github.com/mateusmacedo/antecipa-market/apps/backend/partner/contract/gen/go/company/partner/service/v1"
+	"github.com/mateusmacedo/antecipa-market/apps/backend/partner/domain"
 )
 
 var applicableCriteria = []string{"H1", "H2", "H3", "H4", "H5", "H6", "H7", "H8", "H10", "H11", "H12"}
@@ -294,8 +295,8 @@ func TestTwoConcurrentFirstVersionsOfOneCapabilitySeriesLeaveOneCapability(t *te
 		func(m proto.Message) bool { return m.(*servicev1.DeclareCapabilityResponse).GetDeclared() != nil },
 		func() proto.Message { return &servicev1.DeclareCapabilityResponse{} })
 
-	oneAcceptedOneFailed(t, got)
-	refusedByUniqueness(t, saves, "capabilities_partner_id_operation_asset_type_environment_idx")
+	oneAcceptedOneRejected(t, got, string(domain.CodeCapabilitySupersedesInvalid))
+	refusedByUniqueness(t, saves, "capabilities_tenant_id_series_origin_key")
 	if capabilities := count(t, pool, "SELECT count(*) FROM capabilities"); capabilities != 1 {
 		t.Fatalf("capabilities = %d, want exactly one first version", capabilities)
 	}

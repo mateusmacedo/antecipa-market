@@ -3,7 +3,6 @@ package application
 import (
 	"context"
 	"errors"
-	"slices"
 
 	port "github.com/mateusmacedo/dmpf/libs/backend/go/ports"
 
@@ -26,17 +25,6 @@ func (s Service) protectTaxID(ctx context.Context, kind domain.TaxIDType, value 
 		return ports.ProtectedIdentifier{}, ErrTenantUnresolved
 	}
 	return s.Protector.Protect(ctx, tenant, kind, value)
-}
-
-// taxIDRegistered is the consultative per-tenant uniqueness read: it runs on the
-// pool, apart from the command transaction, so the unique constraint stays the
-// authority and a race ends as a technical failure of the loser.
-func (s Service) taxIDRegistered(ctx context.Context, taxIDHash, jurisdiction string) (bool, error) {
-	found, err := s.TaxIDReader.LoadByTaxIDHash(ctx, taxIDHash)
-	if err != nil && !absent(err) {
-		return false, err
-	}
-	return slices.ContainsFunc(found, inJurisdiction(jurisdiction)), nil
 }
 
 func inJurisdiction(jurisdiction string) func(domain.OrganizationSnapshot) bool {
