@@ -23,6 +23,11 @@ var personTable = postgres.Table[domain.PersonID, domain.PersonSnapshot]{
 	Name:     "persons",
 	IDColumn: "person_id",
 	Columns:  []string{"document_hash", "snapshot"},
+	Unique: []postgres.Unique{{
+		Name:      "persons_tenant_id_document_hash_key",
+		Columns:   []string{"tenant_id", "document_hash"},
+		Rejection: domain.RejectPersonDuplicateDocument,
+	}},
 
 	Encode: func(s domain.PersonSnapshot) ([]any, error) {
 		raw, err := json.Marshal(personState{

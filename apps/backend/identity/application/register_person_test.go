@@ -51,7 +51,6 @@ func TestRegisterPersonWalksTheStepsInOrder(t *testing.T) {
 		"within",
 		"commands.Register",
 		"protector.Protect",
-		"persons.LoadByDocumentHash",
 		"persons.Load",
 		"persons.Save",
 		"commands.Complete",
@@ -98,9 +97,6 @@ func TestRegisterPersonProtectsTheDocumentUnderItsOwnTypeAndTheTenant(t *testing
 	if want := []protectCall{{tenant: "globex", kind: domain.TaxIDTypePersonDocument, value: testDocument}}; !slices.Equal(h.protector.calls, want) {
 		t.Fatalf("Protect calls = %+v, want %+v", h.protector.calls, want)
 	}
-	if want := []string{fakeHash("globex", domain.TaxIDTypePersonDocument, testDocument)}; !slices.Equal(h.personDocuments.asked, want) {
-		t.Fatalf("the uniqueness read asked for %v, want the hash of the tenant %v", h.personDocuments.asked, want)
-	}
 }
 
 func TestRegisterPersonRejectsEachPreconditionWithoutWriting(t *testing.T) {
@@ -116,13 +112,12 @@ func TestRegisterPersonRejectsEachPreconditionWithoutWriting(t *testing.T) {
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			h := newHarness(t)
-			if tc.held {
-				held := registeredPerson("per-held", testTenant)
-				h.personDocuments.hold(held.DocumentHash, held)
-			}
 			cmd := registerPerson()
 			tc.mutate(&cmd)
 			ctx := withExecution(t, context.Background())
+			if tc.held {
+				seed(t, h, ctx, personTable, "per-held", registeredPerson("per-held", testTenant))
+			}
 
 			outcome, err := h.service.RegisterPerson(ctx, cmd)
 
@@ -139,9 +134,9 @@ func TestRegisterPersonRejectsEachPreconditionWithoutWriting(t *testing.T) {
 	}
 }
 
-func TestRegisterPersonCountsACrossTenantAccessAsAbsent(t *testing.T) {
+func TestRegisterPersonAcceptsTheSameDocumentInAnotherTenant(t *testing.T) {
 	h := newHarness(t)
-	h.personDocuments.err = port.CrossTenantAccess{Object: "persons?document_hash=h", ContextTenant: testTenant, DataTenant: "globex"}
+	seed(t, h, withTenant(t, context.Background(), "globex"), personTable, "per-held", registeredPerson("per-held", "globex"))
 
 	outcome, err := h.service.RegisterPerson(withExecution(t, context.Background()), registerPerson())
 
@@ -161,7 +156,6 @@ func TestEachFailureOfRegisterPersonCarriesThePrefixAndNoDocument(t *testing.T) 
 		wantMsg string
 	}{
 		{"protect", nil, func(h *harness) { h.protector.err = errBoom }, "application: register person per-100: boom"},
-		{"uniqueness read", nil, func(h *harness) { h.personDocuments.err = errBoom }, "application: register person per-100: boom"},
 		{"load", []option{withTableFaults("persons", serviceskit.Faults{Load: errBoom})}, nil, "application: register person per-100: boom"},
 		{"save", []option{withTableFaults("persons", serviceskit.Faults{Save: errBoom})}, nil, "application: register person per-100: boom"},
 	} {

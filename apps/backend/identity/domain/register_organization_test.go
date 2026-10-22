@@ -132,7 +132,6 @@ func TestRegisterRejectsEachPrecondition(t *testing.T) {
 		{"tax id of punctuation alone", func(c *domain.RegisterOrganization) { c.TaxID = "../-" }, domain.CodeOrganizationTaxIDEmpty, nil},
 		{"legal name empty", func(c *domain.RegisterOrganization) { c.LegalName = "" }, domain.CodeOrganizationLegalNameEmpty, nil},
 		{"legal name of blanks", func(c *domain.RegisterOrganization) { c.LegalName = " \t " }, domain.CodeOrganizationLegalNameEmpty, nil},
-		{"tax id already registered", func(c *domain.RegisterOrganization) { c.TaxIDAlreadyRegistered = true }, domain.CodeOrganizationDuplicateTaxID, []kernel.Detail{{Key: "jurisdiction", Value: jurisdiction}}},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -153,13 +152,12 @@ func TestRegisterRejectsEachPrecondition(t *testing.T) {
 }
 
 func TestRegisterReportsThePreconditionsInTheDeclaredOrder(t *testing.T) {
-	cmd := domain.RegisterOrganization{TaxIDAlreadyRegistered: true, At: at}
+	cmd := domain.RegisterOrganization{At: at}
 	want := []kernel.Code{
 		domain.CodeOrganizationKindsEmpty,
 		domain.CodeOrganizationJurisdictionInvalid,
 		domain.CodeOrganizationTaxIDEmpty,
 		domain.CodeOrganizationLegalNameEmpty,
-		domain.CodeOrganizationDuplicateTaxID,
 	}
 	fixes := []func(*domain.RegisterOrganization){
 		func(c *domain.RegisterOrganization) { c.Kinds = domain.KindsOf(domain.KindFunder) },
@@ -167,7 +165,6 @@ func TestRegisterReportsThePreconditionsInTheDeclaredOrder(t *testing.T) {
 		func(c *domain.RegisterOrganization) {
 			c.TaxIDType, c.TaxID = domain.TaxIDTypeCNPJ, numericCNPJ
 		},
-		func(c *domain.RegisterOrganization) { c.LegalName = legalName },
 		func(*domain.RegisterOrganization) {},
 	}
 	for i, code := range want {
@@ -178,10 +175,7 @@ func TestRegisterReportsThePreconditionsInTheDeclaredOrder(t *testing.T) {
 }
 
 func TestRejectionsCarryNoTaxID(t *testing.T) {
-	cmd := registerCommand()
-	cmd.TaxIDAlreadyRegistered = true
-
-	_, rej := domain.NewOrganization(organizationID).Register(cmd)
+	rej := domain.RejectOrganizationDuplicateTaxID
 
 	printed := fmt.Sprintf("%s %v", rej.Error(), rej.Details())
 	if strings.Contains(printed, alphanumericCNPJ) || strings.Contains(printed, taxIDHash) {

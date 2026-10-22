@@ -129,7 +129,7 @@ func registerOfTenantsAtOnce(conn *grpc.ClientConn, tenants []string, perTenant 
 	return refused
 }
 
-func TestTheAPIRoleServesMoreConsultativeCommandsAtOnceThanTheDefaultPoolHolds(t *testing.T) {
+func TestTheAPIRoleServesMoreRegistrationsAtOnceThanTheDefaultPoolHolds(t *testing.T) {
 	appkit.OpenPool(t)
 	dsn := pg.DSN(t, appkit.PoolOptions.Project)
 	commands := 2 * defaultMaxConns(t, dsn)
@@ -141,7 +141,7 @@ func TestTheAPIRoleServesMoreConsultativeCommandsAtOnceThanTheDefaultPoolHolds(t
 	}
 }
 
-func TestTheAPIRoleServesTheConsultativeCommandsOfManyTenantsAtOnce(t *testing.T) {
+func TestTheAPIRoleServesTheRegistrationsOfManyTenantsAtOnce(t *testing.T) {
 	appkit.OpenPool(t)
 	dsn := pg.DSN(t, appkit.PoolOptions.Project)
 	perTenant := 2 * defaultMaxConns(t, dsn)

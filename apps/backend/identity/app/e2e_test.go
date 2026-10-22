@@ -20,7 +20,6 @@ import (
 	"time"
 
 	"github.com/jackc/pgx/v5"
-	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/jackc/pgx/v5/pgxpool"
 	usecase "github.com/mateusmacedo/dmpf/libs/backend/go/application"
 	kernelgrpc "github.com/mateusmacedo/dmpf/libs/backend/go/grpc"
@@ -72,7 +71,7 @@ func (sequenceIDs) NewMessageID() port.MessageID {
 }
 
 // barrier holds each Save until every party arrived, so the transactions are
-// all open, and every uniqueness pre-check has read, before any insert runs.
+// all open before any insert runs and the unique constraint decides the race.
 type barrier struct {
 	arrivals sync.WaitGroup
 	mu       sync.Mutex
@@ -446,19 +445,19 @@ func TestTwoConcurrentRegistrationsOfOneTaxIDInOneTenantLeaveOneOrganization(t *
 		map[string]*servicev1.RegisterOrganizationRequest{"first": registration("e2e-org-a1"), "second": registration("e2e-org-a2")},
 		map[string]string{"first": tenantA, "second": tenantA})
 
-	accepted, failed := 0, 0
+	accepted, rejected := 0, 0
 	for name, a := range got {
 		switch {
 		case a.err == nil && a.resp.GetRegistered() != nil:
 			accepted++
-		case status.Code(a.err) == codes.Internal:
-			failed++
+		case a.err == nil && a.resp.GetRejection().GetCode() == string(domain.CodeOrganizationDuplicateTaxID):
+			rejected++
 		default:
-			t.Errorf("%s = %v (%v), want either Registered or the technical failure of the loser", name, a.err, a.resp)
+			t.Errorf("%s = %v (%v), want either Registered or the duplicate-tax-id rejection of the loser", name, a.err, a.resp)
 		}
 	}
-	if accepted != 1 || failed != 1 {
-		t.Fatalf("accepted %d and failed %d, want exactly one of each", accepted, failed)
+	if accepted != 1 || rejected != 1 {
+		t.Fatalf("accepted %d and rejected %d, want exactly one of each", accepted, rejected)
 	}
 	refusedByUniqueness(t, saves, "organizations_tenant_id_tax_id_hash_jurisdiction_key")
 	if o, e := organizationRows(t, pool), outboxRows(t, pool); o != 1 || e != 1 {
@@ -1026,33 +1025,34 @@ func invokeAtOnce(t *testing.T, conn *grpc.ClientConn, method string, calls map[
 	return out
 }
 
-// oneAcceptedOneFailed holds the race to its single legal ending: the unique
-// constraint is the authority, so the loser is a technical failure.
-func oneAcceptedOneFailed(t *testing.T, calls map[string]racer, errs map[string]error, accepted func(proto.Message) bool) {
+// oneAcceptedOneRejected holds the race to its single legal ending: the unique
+// constraint decides, and the loser answers the rejection it declares (ADR-066).
+func oneAcceptedOneRejected(t *testing.T, calls map[string]racer, errs map[string]error, accepted func(proto.Message) bool, code string) {
 	t.Helper()
 	won, lost := 0, 0
 	for name, err := range errs {
+		resp := calls[name].resp
 		switch {
-		case err == nil && accepted(calls[name].resp):
+		case err == nil && accepted(resp):
 			won++
-		case status.Code(err) == codes.Internal:
+		case err == nil && resp.(refusable).GetRejection().GetCode() == code:
 			lost++
 		default:
-			t.Errorf("%s = %v (%v), want either the acceptance or the technical failure of the loser", name, err, calls[name].resp)
+			t.Errorf("%s = %v (%v), want either the acceptance or the rejection %s", name, err, resp, code)
 		}
 	}
 	if won != 1 || lost != 1 {
-		t.Fatalf("accepted %d and failed %d, want exactly one of each", won, lost)
+		t.Fatalf("accepted %d and rejected %d, want exactly one of each", won, lost)
 	}
 }
 
 // refusedByUniqueness pins the loser to the unique constraint the race is
-// about, so a technical failure from any other write cannot pass for it.
+// about, so a refusal from any other write cannot pass for it.
 func refusedByUniqueness(t *testing.T, saves *barrier, constraint string) {
 	t.Helper()
 	refused := saves.refusals()
-	var violation *pgconn.PgError
-	if len(refused) != 1 || !errors.As(refused[0], &violation) || violation.Code != "23505" || violation.ConstraintName != constraint {
+	var violation port.UniqueViolation
+	if len(refused) != 1 || !errors.As(refused[0], &violation) || violation.Constraint != constraint {
 		t.Fatalf("refused Saves = %v, want exactly one, the loser's, at %s", refused, constraint)
 	}
 }
@@ -1070,7 +1070,7 @@ func TestTwoConcurrentAdditionsOfOneTaxIDToOneOrganizationLeaveOneEstablishment(
 	errs := invokeAtOnce(t, conn, "AddEstablishment", calls)
 
 	added := func(m proto.Message) bool { return m.(*servicev1.AddEstablishmentResponse).GetAdded() != nil }
-	oneAcceptedOneFailed(t, calls, errs, added)
+	oneAcceptedOneRejected(t, calls, errs, added, string(domain.CodeEstablishmentDuplicateTaxID))
 	refusedByUniqueness(t, saves, "establishments_tenant_id_organization_id_tax_id_hash_key")
 	var winner string
 	for _, c := range calls {
@@ -1097,7 +1097,7 @@ func TestTwoConcurrentRegistrationsOfOneDocumentInOneTenantLeaveOnePerson(t *tes
 
 	errs := invokeAtOnce(t, conn, "RegisterPerson", calls)
 
-	oneAcceptedOneFailed(t, calls, errs, func(m proto.Message) bool { return m.(*servicev1.RegisterPersonResponse).GetRegistered() != nil })
+	oneAcceptedOneRejected(t, calls, errs, func(m proto.Message) bool { return m.(*servicev1.RegisterPersonResponse).GetRegistered() != nil }, string(domain.CodePersonDuplicateDocument))
 	refusedByUniqueness(t, saves, "persons_tenant_id_document_hash_key")
 	if p, o := rows(t, pool, "persons"), outboxRows(t, pool); p != 1 || o != 0 {
 		t.Fatalf("persons = %d, outbox = %d, want exactly one row and no event", p, o)

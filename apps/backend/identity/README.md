@@ -8,7 +8,7 @@ de conta bancária sob dupla aprovação.
 
 É o bounded context `identity-organization`, especificado em
 [`SPEC-7KW0HHF6`](../../../docs/specs/SPEC-7KW0HHF6-identity-organization.md) e
-construído sobre o kernel DMPF `v1.0.0-rc.5`.
+construído sobre o kernel DMPF `v1.0.0-rc.7`.
 
 ## Sumário
 
@@ -76,7 +76,7 @@ O mesmo binário roda em dois papéis, escolhidos por `--role`:
 ## Stack
 
 - **Go** `1.26.10`, a diretiva do `go.work`, que o CI usa.
-- **Kernel DMPF** `v1.0.0-rc.5`, com UoW, outbox, inbox, gRPC e observabilidade.
+- **Kernel DMPF** `v1.0.0-rc.7`, com UoW, outbox, inbox, gRPC e observabilidade.
 - **gRPC e Protobuf**, com contrato gerado pelo Buf (`buf` `v1.72.0` e
   `protoc-gen-go` `v1.36.12`).
 - **PostgreSQL**, por `pgx` v5, com persistência híbrida de colunas tipadas e
@@ -149,9 +149,9 @@ A recusa de configuração encerra com exit 2: variável obrigatória ausente
 malformado) ou papel desconhecido. A falha depois da partida encerra com exit 1.
 
 O `api` abre dois pools sobre o `PG_DSN`, um para as transações e outro para
-as leituras fora de transação, porque `RegisterOrganization`,
-`AddEstablishment` e `RegisterPerson` fazem a leitura consultiva enquanto
-seguram a transação e a admissão limita cada par (método, tenant); cada pool
+as consultas, que correm fora de transação e assim não disputam conexão com os
+comandos (a unicidade é a restrição declarada, sem leitura antes do `Save`,
+desde o kernel `1.0.0-rc.7`); cada pool
 segue o `pool_max_conns` do DSN, ou o default do pgx, `max(4, NumCPU)`, então
 o processo abre até o dobro desse valor. O kernel nomeia o pool só por
 `host:porta/banco`, então as séries `db.client.connection.*` do `api` somam os
@@ -230,7 +230,8 @@ falha do caso de uso vira status gRPC por `kernelgrpc.StatusOf`, entre eles
 `DEADLINE_EXCEEDED`, `CANCELLED` e `INTERNAL`; os de idempotência estão na
 tabela abaixo. Numa corrida pelo mesmo identificador fiscal
 ou documento no mesmo tenant, o índice único decide: uma chamada grava e a
-outra sai como `INTERNAL`, sem linha nem evento.
+outra recebe a `rejection` de duplicidade (`duplicate-tax-id` ou
+`duplicate-document`), sem linha nem evento.
 
 ### Idempotência dos comandos
 
@@ -352,13 +353,13 @@ de pessoa, só dígitos.
 
 ### Dependências
 
-O `go.mod` declara o kernel por versão (`v1.0.0-rc.5`) e o módulo de contrato
+O `go.mod` declara o kernel por versão (`v1.0.0-rc.7`) e o módulo de contrato
 irmão em `v0.1.0`. Dentro do workspace, quem resolve é o `go.work` da raiz,
 com o `replace` do contrato. O `require` do irmão é gravado pelo `modsync`, que
 deve rodar de novo a cada import novo de módulo do workspace:
 
 ```bash
-go run github.com/mateusmacedo/dmpf/tools/dmpf-conformance/cmd/modsync@v1.0.0-rc.5 --root . --write
+go run github.com/mateusmacedo/dmpf/tools/dmpf-conformance/cmd/modsync@v1.0.0-rc.7 --root . --write
 ```
 
 O target `tidy` mantém o `go.sum`, aplicando os `replace` do `go.work` só
@@ -396,7 +397,7 @@ Gates completos do contexto, os mesmos de qualquer módulo:
 ```bash
 pnpm nx run-many -t fmt-check,vet,build,lint,test-race,test-distributed,govulncheck -p identity,identity-contract
 DMPF_APPS_DIR=apps/backend bash node_modules/@mateusmacedo/dmpf-plugin/scripts/dmpf-context-check.sh --context apps/backend/identity
-go run github.com/mateusmacedo/dmpf/tools/dmpf-conformance/cmd/conformance@v1.0.0-rc.5 --root .
+go run github.com/mateusmacedo/dmpf/tools/dmpf-conformance/cmd/conformance@v1.0.0-rc.7 --root .
 ```
 
 ## Contrato
@@ -441,7 +442,7 @@ NX_BASE=origin/master pnpm nx run identity-contract:buf-breaking
   [`deploy/infra.json`](deploy/infra.json). Mudou o `infra.json`? Regrave:
 
   ```bash
-  go run github.com/mateusmacedo/dmpf/tools/dmpf-conformance/cmd/infrasync@v1.0.0-rc.5 --root . --write
+  go run github.com/mateusmacedo/dmpf/tools/dmpf-conformance/cmd/infrasync@v1.0.0-rc.7 --root . --write
   ```
 
 ## Contribuição

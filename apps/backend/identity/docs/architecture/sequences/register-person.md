@@ -10,7 +10,6 @@ sequenceDiagram
   participant UOW as DMPF Execute/UoW
   participant Inbox as Inbox identity.commands
   participant Protector as HMAC identifier protector
-  participant Reader as PersonsByDocumentReader
   participant Domain as Person.Register
   participant Repo as PersonRepository
   participant PG as PostgreSQL
@@ -27,19 +26,20 @@ sequenceDiagram
   else Comando novo
     UOW->>Protector: Normaliza documento e calcula HMAC
     Protector-->>UOW: document_hash + versão + máscara
-    UOW->>Reader: Pré-checa unicidade do hash (pool de leitura)
-    Reader->>PG: Consulta tenant-scoped
-    PG-->>Reader: Existente ou ausente
     UOW->>Repo: Carrega PersonID (deve estar ausente)
     Repo->>PG: SELECT tenant-scoped
     PG-->>Repo: Ausente
-    UOW->>Domain: Register(nome, hash, máscara, resultado da pré-checagem)
-    alt Documento já registrado ou entrada recusada
+    UOW->>Domain: Register(nome, hash, máscara)
+    alt Entrada recusada
       Domain-->>UOW: Rejection, não persiste nem emite evento
     else Aceita
       Domain-->>UOW: Snapshot sem documento em claro
       UOW->>Repo: Save(snapshot)
       Repo->>PG: Persiste hash, máscara, versão e nome
+      alt Documento já registrado no tenant
+        PG-->>Repo: persons_tenant_id_document_hash_key
+        Repo-->>UOW: Rejection declarada, sem estado nem evento
+      end
     end
     UOW->>Inbox: Registra outcome
     UOW->>PG: Commit

@@ -30,14 +30,6 @@ func (r *relation[K, S]) load(_ context.Context, key K) ([]S, error) {
 	return r.held, r.err
 }
 
-type establishmentsByTaxID struct {
-	*relation[string, domain.EstablishmentSnapshot]
-}
-
-func (r establishmentsByTaxID) LoadByTaxIDHash(ctx context.Context, taxIDHash string) ([]domain.EstablishmentSnapshot, error) {
-	return r.load(ctx, taxIDHash)
-}
-
 type establishmentsByOrganization struct {
 	*relation[domain.OrganizationID, domain.EstablishmentSnapshot]
 }
@@ -46,49 +38,12 @@ func (r establishmentsByOrganization) LoadByOrganization(ctx context.Context, or
 	return r.load(ctx, organizationID)
 }
 
-type personsByDocument struct {
-	*relation[string, domain.PersonSnapshot]
-}
-
-func (r personsByDocument) LoadByDocumentHash(ctx context.Context, documentHash string) ([]domain.PersonSnapshot, error) {
-	return r.load(ctx, documentHash)
-}
-
 type representationsByOrganization struct {
 	*relation[domain.OrganizationID, domain.RepresentationSnapshot]
 }
 
 func (r representationsByOrganization) LoadByOrganization(ctx context.Context, organizationID domain.OrganizationID) ([]domain.RepresentationSnapshot, error) {
 	return r.load(ctx, organizationID)
-}
-
-func TestLoadByTaxIDHashOfEstablishmentsAnswersEveryOrganizationOfTheHash(t *testing.T) {
-	held := []domain.EstablishmentSnapshot{
-		{ID: "est-1", OrganizationID: "org-1", TaxIDHash: "h-1"},
-		{ID: "est-2", OrganizationID: "org-2", TaxIDHash: "h-1"},
-	}
-	stub := &relation[string, domain.EstablishmentSnapshot]{held: held}
-	var reader ports.EstablishmentsByTaxIDReader = establishmentsByTaxID{stub}
-
-	got, err := reader.LoadByTaxIDHash(context.Background(), "h-1")
-
-	if err != nil || len(got) != len(held) {
-		t.Fatalf("LoadByTaxIDHash() = %v, %v; want every organization of the hash: the caller refines it", got, err)
-	}
-	if len(stub.asked) != 1 || stub.asked[0] != "h-1" {
-		t.Fatalf("the reader was keyed on %v, want the hash: the tax id in clear never reaches it", stub.asked)
-	}
-}
-
-func TestLoadByDocumentHashIsKeyedOnTheHash(t *testing.T) {
-	stub := &relation[string, domain.PersonSnapshot]{held: []domain.PersonSnapshot{{ID: "per-1", DocumentHash: "h-1"}}}
-	var reader ports.PersonsByDocumentReader = personsByDocument{stub}
-
-	got, err := reader.LoadByDocumentHash(context.Background(), "h-1")
-
-	if err != nil || len(got) != 1 || stub.asked[0] != "h-1" {
-		t.Fatalf("LoadByDocumentHash() = %v, %v after asking %v; want the person of the hash", got, err, stub.asked)
-	}
 }
 
 func TestLoadByOrganizationAnswersTheEstablishmentsAndTheRepresentationsOfIt(t *testing.T) {
@@ -108,13 +63,13 @@ func TestLoadByOrganizationAnswersTheEstablishmentsAndTheRepresentationsOfIt(t *
 }
 
 func TestTheRelationsSurfaceTheCrossTenantAccessUntranslated(t *testing.T) {
-	access := port.CrossTenantAccess{Object: "persons?document_hash=h-1", ContextTenant: "globex", DataTenant: "acme"}
-	var reader ports.PersonsByDocumentReader = personsByDocument{&relation[string, domain.PersonSnapshot]{err: access}}
+	access := port.CrossTenantAccess{Object: "establishments?organization_id=org-1", ContextTenant: "globex", DataTenant: "acme"}
+	var reader ports.EstablishmentsByOrganizationReader = establishmentsByOrganization{&relation[domain.OrganizationID, domain.EstablishmentSnapshot]{err: access}}
 
-	_, err := reader.LoadByDocumentHash(context.Background(), "h-1")
+	_, err := reader.LoadByOrganization(context.Background(), "org-1")
 
 	var got port.CrossTenantAccess
 	if !errors.As(err, &got) || got != access {
-		t.Fatalf("LoadByDocumentHash() = %v, want the CrossTenantAccess the caller reads as absent", err)
+		t.Fatalf("LoadByOrganization() = %v, want the CrossTenantAccess the caller reads as absent", err)
 	}
 }

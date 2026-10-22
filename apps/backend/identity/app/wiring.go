@@ -44,10 +44,8 @@ func RunWith(ctx context.Context, cfg Config, rt *otelboot.Runtime) error {
 	}
 }
 
-// runAPI serves the reads from a pool of their own: a command that pre-checks
-// per-tenant uniqueness reads while it holds its transaction, and admission
-// bounds each (method,
-// tenant), so no size of a shared pool keeps a connection free for the read.
+// runAPI serves the queries from a pool of their own, so a burst of them never
+// takes the connections the commands hold their transactions on.
 func runAPI(ctx context.Context, cfg Config, rt *otelboot.Runtime) error {
 	if rt == nil {
 		return serve.ErrNoRuntime
@@ -92,10 +90,8 @@ func NewService(transactions, readPool *pgxpool.Pool, protector ports.Identifier
 		IDs:         ids,
 		Authorize:   Authorization(),
 
-		EstablishmentTaxIDReader:      provider.NewEstablishmentsByTaxIDReader(reads),
 		EstablishmentsByOrganization:  provider.NewEstablishmentsByOrganizationReader(reads),
 		PersonReader:                  provider.NewPersonReader(reads),
-		DocumentReader:                provider.NewPersonsByDocumentReader(reads),
 		RepresentationReader:          provider.NewRepresentationReader(reads),
 		RepresentationsByOrganization: provider.NewRepresentationsByOrganizationReader(reads),
 		UserAccountReader:             provider.NewUserAccountReader(reads),
@@ -148,7 +144,7 @@ func NewIdentityService(transactions, reads *pgxpool.Pool, rt *otelboot.Runtime,
 
 func api(cfg Config, rt *otelboot.Runtime, reads *pgxpool.Pool) serve.API {
 	return serve.API{
-		Desc: &rpc.ServiceDesc, Commands: rpc.Commands(), Schema: provider.Schema, Grants: provider.Grants, CommandConsumer: application.CommandConsumer,
+		Desc: &rpc.ServiceDesc, Commands: rpc.Commands(), Schema: provider.Schema, Grants: provider.Grants, Uniques: provider.Uniques, CommandConsumer: application.CommandConsumer,
 		Register: func(server *grpc.Server, pool *pgxpool.Pool) error {
 			service, err := NewIdentityService(pool, reads, rt, cfg)
 			if err != nil {

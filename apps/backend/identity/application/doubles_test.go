@@ -25,7 +25,13 @@ const (
 
 var testOccurred = port.Instant(1_755_432_000_000_000_000)
 
-var organizationTable = memory.Table[domain.OrganizationID, domain.OrganizationSnapshot]{Name: "organizations"}
+var organizationTable = memory.Table[domain.OrganizationID, domain.OrganizationSnapshot]{Name: "organizations", Unique: []memory.Unique[domain.OrganizationSnapshot]{{
+	Name: "organizations_tenant_id_tax_id_hash_jurisdiction_key",
+	Key: func(s domain.OrganizationSnapshot) ([]string, bool) {
+		return []string{s.TaxIDHash, s.Jurisdiction}, true
+	},
+	Rejection: domain.RejectOrganizationDuplicateTaxID,
+}}}
 
 var (
 	establishmentTable = memory.Table[domain.EstablishmentID, domain.EstablishmentSnapshot]{
@@ -33,8 +39,19 @@ var (
 		Clone: func(s domain.EstablishmentSnapshot) domain.EstablishmentSnapshot {
 			return domain.FromEstablishmentSnapshot(s).Snapshot()
 		},
+		Unique: []memory.Unique[domain.EstablishmentSnapshot]{{
+			Name: "establishments_tenant_id_organization_id_tax_id_hash_key",
+			Key: func(s domain.EstablishmentSnapshot) ([]string, bool) {
+				return []string{string(s.OrganizationID), s.TaxIDHash}, true
+			},
+			Rejection: domain.RejectEstablishmentDuplicateTaxID,
+		}},
 	}
-	personTable         = memory.Table[domain.PersonID, domain.PersonSnapshot]{Name: "persons"}
+	personTable = memory.Table[domain.PersonID, domain.PersonSnapshot]{Name: "persons", Unique: []memory.Unique[domain.PersonSnapshot]{{
+		Name:      "persons_tenant_id_document_hash_key",
+		Key:       func(s domain.PersonSnapshot) ([]string, bool) { return []string{s.DocumentHash}, true },
+		Rejection: domain.RejectPersonDuplicateDocument,
+	}}}
 	representationTable = memory.Table[domain.RepresentationID, domain.RepresentationSnapshot]{
 		Name: "representations",
 		Clone: func(s domain.RepresentationSnapshot) domain.RepresentationSnapshot {
@@ -55,9 +72,7 @@ type harness struct {
 	taxIDs    *stubTaxIDReader
 	service   application.Service
 
-	establishmentTaxIDs  *stubRelation[string, domain.EstablishmentSnapshot]
 	establishmentsByOrg  *stubRelation[domain.OrganizationID, domain.EstablishmentSnapshot]
-	personDocuments      *stubRelation[string, domain.PersonSnapshot]
 	representationsByOrg *stubRelation[domain.OrganizationID, domain.RepresentationSnapshot]
 	memberships          *trackedMemberships
 	accounts             *recordingReader[domain.UserID, domain.UserAccountSnapshot]
@@ -108,28 +123,12 @@ func (r *stubRelation[K, S]) hold(key K, snapshots ...S) {
 	r.byKey[key] = append(r.byKey[key], snapshots...)
 }
 
-type establishmentTaxIDs struct {
-	*stubRelation[string, domain.EstablishmentSnapshot]
-}
-
-func (r establishmentTaxIDs) LoadByTaxIDHash(_ context.Context, taxIDHash string) ([]domain.EstablishmentSnapshot, error) {
-	return r.query(taxIDHash)
-}
-
 type establishmentsOfOrganization struct {
 	*stubRelation[domain.OrganizationID, domain.EstablishmentSnapshot]
 }
 
 func (r establishmentsOfOrganization) LoadByOrganization(_ context.Context, id domain.OrganizationID) ([]domain.EstablishmentSnapshot, error) {
 	return r.query(id)
-}
-
-type personDocuments struct {
-	*stubRelation[string, domain.PersonSnapshot]
-}
-
-func (r personDocuments) LoadByDocumentHash(_ context.Context, documentHash string) ([]domain.PersonSnapshot, error) {
-	return r.query(documentHash)
 }
 
 type representationsOfOrganization struct {
@@ -301,9 +300,7 @@ func newHarness(t *testing.T, options ...option) *harness {
 	h := &harness{fakes: fakes, store: fakes.Store, rec: fakes.Steps}
 	h.protector = &fakeProtector{rec: h.rec}
 	h.taxIDs = &stubTaxIDReader{rec: h.rec, byHash: map[string][]domain.OrganizationSnapshot{}}
-	h.establishmentTaxIDs = newStubRelation[string, domain.EstablishmentSnapshot](h.rec, "establishments.LoadByTaxIDHash")
 	h.establishmentsByOrg = newStubRelation[domain.OrganizationID, domain.EstablishmentSnapshot](h.rec, "establishments.LoadByOrganization")
-	h.personDocuments = newStubRelation[string, domain.PersonSnapshot](h.rec, "persons.LoadByDocumentHash")
 	h.representationsByOrg = newStubRelation[domain.OrganizationID, domain.RepresentationSnapshot](h.rec, "representations.LoadByOrganization")
 	h.memberships = &trackedMemberships{rec: h.rec, store: h.store}
 	h.accounts = &recordingReader[domain.UserID, domain.UserAccountSnapshot]{step: "user_accounts.Read", rec: h.rec, inner: userAccountTable.Reader(h.store)}
@@ -351,10 +348,8 @@ func newHarness(t *testing.T, options ...option) *harness {
 		Reader:      organizationTable.Reader(h.store),
 		TaxIDReader: h.taxIDs,
 
-		EstablishmentTaxIDReader:      establishmentTaxIDs{h.establishmentTaxIDs},
 		EstablishmentsByOrganization:  establishmentsOfOrganization{h.establishmentsByOrg},
 		PersonReader:                  personTable.Reader(h.store),
-		DocumentReader:                personDocuments{h.personDocuments},
 		RepresentationReader:          representationTable.Reader(h.store),
 		RepresentationsByOrganization: representationsOfOrganization{h.representationsByOrg},
 		UserAccountReader:             h.accounts,

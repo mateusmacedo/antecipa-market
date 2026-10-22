@@ -128,8 +128,8 @@ func TestEstablishmentRoundTripsTheWholeState(t *testing.T) {
 	}
 }
 
-// The unique constraint is the authority the pre-check of the use case only
-// anticipates: it fails as a technical error, never a conflict.
+// The unique constraint is the authority: it fails the Save with the declared
+// violation, never a conflict.
 func TestTheSameTaxIDHashInTheOrganizationIsRefusedInTheTenant(t *testing.T) {
 	pool := appkit.OpenPool(t)
 	ctx := withExecution(t, context.Background())
@@ -140,7 +140,7 @@ func TestTheSameTaxIDHashInTheOrganizationIsRefusedInTheTenant(t *testing.T) {
 	err := saveEstablishment(ctx, pool, "est-b", establishment(1))
 
 	if err == nil || errors.Is(err, port.ErrVersionConflict) {
-		t.Fatalf("Save(second) = %v, want the unique violation as a technical error", err)
+		t.Fatalf("Save(second) = %v, want the declared unique violation", err)
 	}
 	if got := pg.Counts(t, pool, establishmentsTable)[establishmentsTable]; got != 1 {
 		t.Fatalf("establishments = %d rows, want 1", got)
@@ -205,41 +205,6 @@ func establishmentIDs(snapshots []domain.EstablishmentSnapshot) []string {
 	}
 	slices.Sort(out)
 	return out
-}
-
-func TestLoadByTaxIDHashReturnsEveryOrganizationOfTheHashInTheTenant(t *testing.T) {
-	pool := appkit.OpenPool(t)
-	ctx := withExecution(t, context.Background())
-	elsewhere := establishment(1)
-	elsewhere.OrganizationID = "org-other"
-	for id, s := range map[domain.EstablishmentID]domain.EstablishmentSnapshot{
-		"est-a": establishment(1), "est-b": elsewhere, "est-c": establishment(2),
-	} {
-		if err := saveEstablishment(ctx, pool, id, s); err != nil {
-			t.Fatalf("save %s: %v", id, err)
-		}
-	}
-
-	found, err := provider.NewEstablishmentsByTaxIDReader(postgres.NewReadPool(pool)).LoadByTaxIDHash(ctx, "hash-1")
-
-	if got, want := establishmentIDs(found), []string{"est-a", "est-b"}; err != nil || !slices.Equal(got, want) {
-		t.Fatalf("LoadByTaxIDHash() = %v, %v; want %v", got, err, want)
-	}
-}
-
-func TestLoadByTaxIDHashOfEstablishmentsHeldOnlyByAnotherTenantIsACrossTenantAccess(t *testing.T) {
-	pool := appkit.OpenPool(t)
-	if err := saveEstablishment(withExecution(t, context.Background()), pool, "est-a", establishment(1)); err != nil {
-		t.Fatalf("save: %v", err)
-	}
-
-	found, err := provider.NewEstablishmentsByTaxIDReader(postgres.NewReadPool(pool)).
-		LoadByTaxIDHash(withTenant(t, context.Background(), "globex"), "hash-1")
-
-	var access port.CrossTenantAccess
-	if !errors.As(err, &access) || access.DataTenant != "acme" || len(found) != 0 {
-		t.Fatalf("LoadByTaxIDHash() from another tenant = %v, %v; want a CrossTenantAccess and no row", found, err)
-	}
 }
 
 func TestLoadByOrganizationReturnsTheEstablishmentsOfTheOrganization(t *testing.T) {

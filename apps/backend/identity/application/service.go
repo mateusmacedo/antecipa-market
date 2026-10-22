@@ -255,10 +255,8 @@ type Service struct {
 	Authorize   usecase.Authorize[Operation]
 	Idempotency usecase.IdempotencyPolicy
 
-	EstablishmentTaxIDReader      ports.EstablishmentsByTaxIDReader
 	EstablishmentsByOrganization  ports.EstablishmentsByOrganizationReader
 	PersonReader                  ports.PersonReader
-	DocumentReader                ports.PersonsByDocumentReader
 	RepresentationReader          ports.RepresentationReader
 	RepresentationsByOrganization ports.RepresentationsByOrganizationReader
 	UserAccountReader             ports.UserAccountReader

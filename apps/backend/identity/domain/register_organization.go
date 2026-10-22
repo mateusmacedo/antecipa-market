@@ -20,11 +20,6 @@ func (o *Organization) Register(cmd RegisterOrganization) (kernel.Accepted[Regis
 			return kernel.Refuse[RegisterOrganizationResponse](CodeOrganizationTaxIDEmpty, "tax id must not be empty")
 		case strings.TrimSpace(cmd.LegalName) == "":
 			return kernel.Refuse[RegisterOrganizationResponse](CodeOrganizationLegalNameEmpty, "legal name must not be empty")
-		case cmd.TaxIDAlreadyRegistered:
-			return kernel.Refuse[RegisterOrganizationResponse](CodeOrganizationDuplicateTaxID,
-				"tax id already registered in the jurisdiction",
-				kernel.Detail{Key: "jurisdiction", Value: cmd.Jurisdiction},
-			)
 		}
 		masked := MaskTaxID(cmd.TaxIDType, cmd.TaxID)
 		next.kinds = cmd.Kinds

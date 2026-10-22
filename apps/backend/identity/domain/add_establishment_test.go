@@ -153,7 +153,6 @@ func TestAddRejectsEachPrecondition(t *testing.T) {
 		{"tax id empty", func(c *domain.AddEstablishment) { c.TaxID = "" }, domain.CodeEstablishmentTaxIDEmpty, nil},
 		{"tax id of blanks", func(c *domain.AddEstablishment) { c.TaxID = "   " }, domain.CodeEstablishmentTaxIDEmpty, nil},
 		{"tax id of punctuation alone", func(c *domain.AddEstablishment) { c.TaxID = "../-" }, domain.CodeEstablishmentTaxIDEmpty, nil},
-		{"tax id already registered in the organization", func(c *domain.AddEstablishment) { c.TaxIDAlreadyRegistered = true }, domain.CodeEstablishmentDuplicateTaxID, organization},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -176,15 +175,13 @@ func TestAddRejectsEachPrecondition(t *testing.T) {
 }
 
 func TestAddReportsThePreconditionsInTheDeclaredOrder(t *testing.T) {
-	cmd := domain.AddEstablishment{OrganizationID: organizationID, TaxIDAlreadyRegistered: true, At: at}
+	cmd := domain.AddEstablishment{OrganizationID: organizationID, At: at}
 	want := []kernel.Code{
 		domain.CodeEstablishmentOrganizationNotActive,
 		domain.CodeEstablishmentTaxIDEmpty,
-		domain.CodeEstablishmentDuplicateTaxID,
 	}
 	fixes := []func(*domain.AddEstablishment){
 		func(c *domain.AddEstablishment) { c.OrganizationStatus = domain.OrganizationActive },
-		func(c *domain.AddEstablishment) { c.TaxIDType, c.TaxID = domain.TaxIDTypeCNPJ, numericCNPJ },
 		func(*domain.AddEstablishment) {},
 	}
 	for i, code := range want {

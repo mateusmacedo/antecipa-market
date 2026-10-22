@@ -13,7 +13,7 @@ import (
 
 func TestPersonsMatchTheProjectionFixture(t *testing.T) {
 	f := projectionFixture(t, "person.golden")
-	if f.Identity.Context != "identity" || f.Identity.Aggregate != "person" || len(f.Cases) != 4 {
+	if f.Identity.Context != "identity" || f.Identity.Aggregate != "person" || len(f.Cases) != 3 {
 		t.Fatalf("fixture identity/cases = %+v/%d", f.Identity, len(f.Cases))
 	}
 	tb.RunProjection(t, f, runPerson)
@@ -39,12 +39,11 @@ func runPerson(t *testing.T, c tb.ProjectionCase) (domainkit.Projection, domaink
 		t.Fatalf("unknown upr %q in case %s", c.Command["upr"], c.Name)
 	}
 	s := registerPersonSubject(domain.RegisterPerson{
-		FullName:                  c.Command["full_name"],
-		Document:                  c.Command["document"],
-		DocumentHash:              c.Command["document_hash"],
-		DocumentHashKeyVersion:    int(integer(t, c.Command["document_hash_key_version"])),
-		DocumentAlreadyRegistered: boolean(t, c.Command["document_already_registered"]),
-		At:                        kernel.Instant(integer(t, c.Command["at"])),
+		FullName:               c.Command["full_name"],
+		Document:               c.Command["document"],
+		DocumentHash:           c.Command["document_hash"],
+		DocumentHashKeyVersion: int(integer(t, c.Command["document_hash_key_version"])),
+		At:                     kernel.Instant(integer(t, c.Command["at"])),
 	})
 	return domainkit.Run(personFromState(t, c.StateBefore), s), domainkit.ReadTwice(personFromState(t, c.StateBefore), s)
 }

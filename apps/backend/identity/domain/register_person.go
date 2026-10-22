@@ -13,8 +13,6 @@ func (p *Person) Register(cmd RegisterPerson) (kernel.Accepted[RegisterPersonRes
 			return kernel.Refuse[RegisterPersonResponse](CodePersonFullNameEmpty, "full name must not be empty")
 		case NormalizeDocument(cmd.Document) == "":
 			return kernel.Refuse[RegisterPersonResponse](CodePersonDocumentEmpty, "document must not be empty")
-		case cmd.DocumentAlreadyRegistered:
-			return kernel.Refuse[RegisterPersonResponse](CodePersonDuplicateDocument, "document already registered")
 		}
 		next.fullName = cmd.FullName
 		next.documentHash = cmd.DocumentHash

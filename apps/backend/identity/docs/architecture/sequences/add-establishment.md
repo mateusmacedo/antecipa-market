@@ -10,7 +10,6 @@ sequenceDiagram
   participant UOW as DMPF Execute/UoW
   participant Inbox as Inbox identity.commands
   participant Protector as HMAC identifier protector
-  participant Reader as EstablishmentsByTaxIDReader
   participant OrgRepo as OrganizationRepository
   participant Domain as Establishment.Add
   participant Repo as EstablishmentRepository
@@ -29,9 +28,6 @@ sequenceDiagram
   else Comando novo
     UOW->>Protector: Calcula HMAC do tax_id
     Protector-->>UOW: hash + key version
-    UOW->>Reader: Pré-checa unicidade no par org/hash
-    Reader->>PG: SELECT pelo hash (pool de leitura)
-    PG-->>Reader: Existente ou ausente
     UOW->>OrgRepo: Carrega organização
     OrgRepo->>PG: SELECT tenant-scoped
     PG-->>OrgRepo: Status da organização
@@ -39,11 +35,16 @@ sequenceDiagram
     Repo->>PG: SELECT tenant-scoped
     PG-->>Repo: Ausente
     UOW->>Domain: Add(org status, hash, receiver, referências)
-    alt Organização inativa ou identificador duplicado
+    alt Organização inativa
       Domain-->>UOW: Rejection, sem mudança nem evento
     else Aceita
       Domain-->>UOW: Snapshot + EstablishmentAdded
       UOW->>Repo: Save(snapshot)
+      Repo->>PG: Persiste snapshot, organização e hash tipados
+      alt Hash já registrado na organização do tenant
+        PG-->>Repo: establishments_tenant_id_organization_id_tax_id_hash_key
+        Repo-->>UOW: Rejection declarada, sem estado nem evento
+      end
       UOW->>Outbox: Enqueue(EstablishmentAdded)
       Outbox->>PG: Persiste na transação atual
     end

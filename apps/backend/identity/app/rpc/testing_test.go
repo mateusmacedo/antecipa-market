@@ -28,14 +28,31 @@ import (
 )
 
 var (
-	organizationsTable  = memory.Table[domain.OrganizationID, domain.OrganizationSnapshot]{Name: "organizations"}
+	organizationsTable = memory.Table[domain.OrganizationID, domain.OrganizationSnapshot]{Name: "organizations", Unique: []memory.Unique[domain.OrganizationSnapshot]{{
+		Name: "organizations_tenant_id_tax_id_hash_jurisdiction_key",
+		Key: func(s domain.OrganizationSnapshot) ([]string, bool) {
+			return []string{s.TaxIDHash, s.Jurisdiction}, true
+		},
+		Rejection: domain.RejectOrganizationDuplicateTaxID,
+	}}}
 	establishmentsTable = memory.Table[domain.EstablishmentID, domain.EstablishmentSnapshot]{
 		Name: "establishments",
 		Clone: func(s domain.EstablishmentSnapshot) domain.EstablishmentSnapshot {
 			return domain.FromEstablishmentSnapshot(s).Snapshot()
 		},
+		Unique: []memory.Unique[domain.EstablishmentSnapshot]{{
+			Name: "establishments_tenant_id_organization_id_tax_id_hash_key",
+			Key: func(s domain.EstablishmentSnapshot) ([]string, bool) {
+				return []string{string(s.OrganizationID), s.TaxIDHash}, true
+			},
+			Rejection: domain.RejectEstablishmentDuplicateTaxID,
+		}},
 	}
-	personsTable         = memory.Table[domain.PersonID, domain.PersonSnapshot]{Name: "persons"}
+	personsTable = memory.Table[domain.PersonID, domain.PersonSnapshot]{Name: "persons", Unique: []memory.Unique[domain.PersonSnapshot]{{
+		Name:      "persons_tenant_id_document_hash_key",
+		Key:       func(s domain.PersonSnapshot) ([]string, bool) { return []string{s.DocumentHash}, true },
+		Rejection: domain.RejectPersonDuplicateDocument,
+	}}}
 	userAccountsTable    = memory.Table[domain.UserID, domain.UserAccountSnapshot]{Name: "user_accounts"}
 	membershipsTable     = memory.Table[domain.MembershipID, domain.MembershipSnapshot]{Name: "memberships"}
 	representationsTable = memory.Table[domain.RepresentationID, domain.RepresentationSnapshot]{
@@ -70,22 +87,10 @@ func (r byTaxIDHash) LoadByTaxIDHash(_ context.Context, taxIDHash string) ([]dom
 	return r[taxIDHash], nil
 }
 
-type establishmentsByTaxIDHash map[string][]domain.EstablishmentSnapshot
-
-func (r establishmentsByTaxIDHash) LoadByTaxIDHash(_ context.Context, taxIDHash string) ([]domain.EstablishmentSnapshot, error) {
-	return r[taxIDHash], nil
-}
-
 type establishmentsByOrganization map[domain.OrganizationID][]domain.EstablishmentSnapshot
 
 func (r establishmentsByOrganization) LoadByOrganization(_ context.Context, id domain.OrganizationID) ([]domain.EstablishmentSnapshot, error) {
 	return r[id], nil
-}
-
-type personsByDocumentHash map[string][]domain.PersonSnapshot
-
-func (r personsByDocumentHash) LoadByDocumentHash(_ context.Context, documentHash string) ([]domain.PersonSnapshot, error) {
-	return r[documentHash], nil
 }
 
 type representationsByOrganization map[domain.OrganizationID][]domain.RepresentationSnapshot
@@ -116,9 +121,7 @@ func (r bankAccountChangesByOrganization) LoadByOrganization(_ context.Context, 
 // store.go:27-33), so a test plants every relation keyed otherwise here.
 type relations struct {
 	organizations   byTaxIDHash
-	establishments  establishmentsByTaxIDHash
 	byOrganization  establishmentsByOrganization
-	documents       personsByDocumentHash
 	representations representationsByOrganization
 	byUser          membershipsByUser
 	members         membershipsByOrganization
@@ -128,6 +131,19 @@ type relations struct {
 type harness struct {
 	store *memory.Store
 	conn  *grpc.ClientConn
+}
+
+// plant writes a snapshot straight to the store, without an outbox entry, so a
+// refusal test can start from a key that a unique constraint already holds.
+func plant[ID comparable, S any](t *testing.T, h *harness, table memory.Table[ID, S], id ID, s S) {
+	t.Helper()
+	uow := memory.NewUnitOfWork(h.store, func(tx *memory.Tx) port.Repository[ID, S] { return table.Repository(tx) })
+	err := uow.Within(inTenant(t), func(ctx context.Context, repo port.Repository[ID, S]) error {
+		return repo.Save(ctx, id, s, 0)
+	})
+	if err != nil {
+		t.Fatalf("plant %s %v: %v", table.Name, id, err)
+	}
 }
 
 func newHarness(t *testing.T, planted byTaxIDHash) *harness {
@@ -166,10 +182,8 @@ func newHarnessWith(t *testing.T, planted relations) *harness {
 		Authorize:   usecase.AllowAll[application.Operation](),
 		Idempotency: policy,
 
-		EstablishmentTaxIDReader:      planted.establishments,
 		EstablishmentsByOrganization:  planted.byOrganization,
 		PersonReader:                  personsTable.Reader(store),
-		DocumentReader:                planted.documents,
 		RepresentationReader:          representationsTable.Reader(store),
 		RepresentationsByOrganization: planted.representations,
 		UserAccountReader:             userAccountsTable.Reader(store),

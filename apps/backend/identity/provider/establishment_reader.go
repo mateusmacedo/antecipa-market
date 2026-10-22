@@ -9,20 +9,7 @@ import (
 	"github.com/mateusmacedo/antecipa-market/apps/backend/identity/ports"
 )
 
-var (
-	establishmentsByTaxIDHash    = establishmentTable.Relation("tax_id_hash")
-	establishmentsByOrganization = establishmentTable.Relation("organization_id")
-)
-
-type EstablishmentsByTaxIDReader struct{ pool postgres.ReadPool }
-
-func NewEstablishmentsByTaxIDReader(pool postgres.ReadPool) *EstablishmentsByTaxIDReader {
-	return &EstablishmentsByTaxIDReader{pool: pool}
-}
-
-func (r *EstablishmentsByTaxIDReader) LoadByTaxIDHash(ctx context.Context, taxIDHash string) ([]domain.EstablishmentSnapshot, error) {
-	return establishmentsByTaxIDHash.Query(ctx, r.pool, taxIDHash)
-}
+var establishmentsByOrganization = establishmentTable.Relation("organization_id")
 
 type EstablishmentsByOrganizationReader struct{ pool postgres.ReadPool }
 
@@ -34,7 +21,4 @@ func (r *EstablishmentsByOrganizationReader) LoadByOrganization(ctx context.Cont
 	return establishmentsByOrganization.Query(ctx, r.pool, string(organizationID))
 }
 
-var (
-	_ ports.EstablishmentsByTaxIDReader        = (*EstablishmentsByTaxIDReader)(nil)
-	_ ports.EstablishmentsByOrganizationReader = (*EstablishmentsByOrganizationReader)(nil)
-)
+var _ ports.EstablishmentsByOrganizationReader = (*EstablishmentsByOrganizationReader)(nil)

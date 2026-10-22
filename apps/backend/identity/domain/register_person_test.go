@@ -91,7 +91,6 @@ func TestRegisterPersonRejectsEachPrecondition(t *testing.T) {
 		{"document empty", func(c *domain.RegisterPerson) { c.Document = "" }, domain.CodePersonDocumentEmpty},
 		{"document of blanks", func(c *domain.RegisterPerson) { c.Document = "   " }, domain.CodePersonDocumentEmpty},
 		{"document without a digit", func(c *domain.RegisterPerson) { c.Document = "abc.-/" }, domain.CodePersonDocumentEmpty},
-		{"document already registered", func(c *domain.RegisterPerson) { c.DocumentAlreadyRegistered = true }, domain.CodePersonDuplicateDocument},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -114,15 +113,13 @@ func TestRegisterPersonRejectsEachPrecondition(t *testing.T) {
 }
 
 func TestRegisterPersonReportsThePreconditionsInTheDeclaredOrder(t *testing.T) {
-	cmd := domain.RegisterPerson{DocumentAlreadyRegistered: true, At: at}
+	cmd := domain.RegisterPerson{At: at}
 	want := []kernel.Code{
 		domain.CodePersonFullNameEmpty,
 		domain.CodePersonDocumentEmpty,
-		domain.CodePersonDuplicateDocument,
 	}
 	fixes := []func(*domain.RegisterPerson){
 		func(c *domain.RegisterPerson) { c.FullName = fullName },
-		func(c *domain.RegisterPerson) { c.Document = syntheticCPF },
 		func(*domain.RegisterPerson) {},
 	}
 	for i, code := range want {
@@ -133,10 +130,7 @@ func TestRegisterPersonReportsThePreconditionsInTheDeclaredOrder(t *testing.T) {
 }
 
 func TestRegisterPersonRejectionsCarryNoDocument(t *testing.T) {
-	cmd := registerPersonCommand()
-	cmd.DocumentAlreadyRegistered = true
-
-	_, rej := domain.NewPerson(personID).Register(cmd)
+	rej := domain.RejectPersonDuplicateDocument
 
 	printed := fmt.Sprintf("%s %v", rej.Error(), rej.Details())
 	if strings.Contains(printed, syntheticCPF) || strings.Contains(printed, "123.456.789-09") || strings.Contains(printed, documentHash) {
