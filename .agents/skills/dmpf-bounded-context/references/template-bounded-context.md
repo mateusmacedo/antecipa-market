@@ -14,7 +14,7 @@ título, que começa com `Bounded context —`, e pela seção **Identidade**.
 A spec preenchida vive em `docs/specs/`, como as demais.
 
 Preencha as instruções entre colchetes e apague os colchetes. Regras e limiares
-citam a norma (`https://github.com/mateusmacedo/dmpf/blob/b5131eea0ce4c593e11e39f339ea9daea1f53ce4/docs/dmpf/`, ADRs) — nunca são reescritos aqui. Exemplo
+citam a norma (`https://github.com/mateusmacedo/dmpf/blob/ddd3d0c4202879f168c7f6bfafaefadd94a3a621/docs/dmpf/`, ADRs) — nunca são reescritos aqui. Exemplo
 preenchido: a spec do golden `bookings`.
 
 ```markdown
@@ -52,6 +52,9 @@ created: AAAA-MM-DD
 - **Transições permitidas**: [origem → destino, uma por linha]
 - **Invariantes de estado**: [o que é sempre verdadeiro do agregado, com a
   rejeição que cada violação produz]
+- **Unicidade de negócio**: [nenhuma | campos únicos por tenant, cada conjunto
+  com o código de rejeição `<ctx>/<agregado>/<rejeicao>` (ADR-066); a
+  unicidade de identidade é a PK e não entra aqui]
 
 ## Comandos (UPRs)
 
@@ -102,7 +105,8 @@ quando não existe (`inicializa se ausente`); os demais o exigem existente.]
 - **Borda**: [serviço gRPC `company.<name>.service.v1.<Name>Service`, um RPC por
   comando e por consulta; as rotas REST ficam no `bff`]
 - **Banco**: [tabelas no plural; quais campos viram coluna tipada, e qual
-  consulta filtra por cada um]
+  consulta filtra por cada um; a `CONSTRAINT <tabela>_<colunas>_key` de cada
+  unicidade de negócio, com `tenant_id` à frente]
 
 ## Políticas transversais
 

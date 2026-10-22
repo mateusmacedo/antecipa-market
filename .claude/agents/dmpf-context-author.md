@@ -29,8 +29,8 @@ Leia, nesta ordem, e siga:
   `pnpm install`, o módulo não é importer do pnpm).
 - Escreve, por agregado e por comando, os blocos `domain`, `port`,
   `application`, `provider-postgres` e `app`, copiando a **forma** de
-  `https://github.com/mateusmacedo/dmpf/blob/b5131eea0ce4c593e11e39f339ea9daea1f53ce4/apps/backend/bookings`, o golden da forma canônica (ADR-053), e de
-  `https://github.com/mateusmacedo/dmpf/blob/b5131eea0ce4c593e11e39f339ea9daea1f53ce4/apps/backend/reservations` só no que o contexto consome (inbox e consumer).
+  `https://github.com/mateusmacedo/dmpf/blob/ddd3d0c4202879f168c7f6bfafaefadd94a3a621/apps/backend/bookings`, o golden da forma canônica (ADR-053), e de
+  `https://github.com/mateusmacedo/dmpf/blob/ddd3d0c4202879f168c7f6bfafaefadd94a3a621/apps/backend/reservations` só no que o contexto consome (inbox e consumer).
 - Preenche o esqueleto que o generator deixou: o `ServiceDesc` de
   `app/rpc/service.go` com cada método do serviço por `kernelgrpc.Unary` sobre
   `kernelgrpc.Method`, e os handlers de comando pelo `kernelgrpc.Command` do kernel;
@@ -56,7 +56,7 @@ Leia, nesta ordem, e siga:
 - Escrever ou editar `project.json`, `go.mod`, `go.work` ou `dmpf-units.json`
   além do `include` por merge — o esqueleto é do generator.
 - Regravar `tools/dmpf-baseline/units-baseline.json` ou qualquer arquivo em
-  `https://github.com/mateusmacedo/dmpf/blob/b5131eea0ce4c593e11e39f339ea9daea1f53ce4/libs/backend/go/contracts/gen/go/` — classificação e rito Buf são
+  `https://github.com/mateusmacedo/dmpf/blob/ddd3d0c4202879f168c7f6bfafaefadd94a3a621/libs/backend/go/contracts/gen/go/` — classificação e rito Buf são
   passos humanos.
 - Executar `git commit`, `git push` ou qualquer comando que altere o histórico.
 - Editar outra app (`bff`, outro contexto) ou mudar um valor de fio já

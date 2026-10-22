@@ -6,7 +6,7 @@ paths:
 # Bounded context sobre o kernel DMPF
 
 Normas que quem escreve um bounded context — pessoa ou agente — obedece. Cada
-regra é curta e aponta a fonte; a norma mora em `https://github.com/mateusmacedo/dmpf/blob/b5131eea0ce4c593e11e39f339ea9daea1f53ce4/docs/dmpf/` e nos ADRs, e
+regra é curta e aponta a fonte; a norma mora em `https://github.com/mateusmacedo/dmpf/blob/ddd3d0c4202879f168c7f6bfafaefadd94a3a621/docs/dmpf/` e nos ADRs, e
 quando este texto divergir dela, a fonte vence. Complementa as demais rules de
 `.claude/rules/`, não as repete. O passo a passo com os arquivos-molde está na
 skill `.agents/skills/dmpf-bounded-context/`.
@@ -35,7 +35,7 @@ skill `.agents/skills/dmpf-bounded-context/`.
   do generator `bounded-context`; à mão só o `include` de packages novos, por
   merge, com `exceptions` e `public_integration_surface` preservados.
 - Regravar o baseline (`--write-baseline`) é passo executado por pessoa
-  (`DMPF-T001`; `https://github.com/mateusmacedo/dmpf/blob/b5131eea0ce4c593e11e39f339ea9daea1f53ce4/docs/guides/dmpf-manifesto.md`).
+  (`DMPF-T001`; `https://github.com/mateusmacedo/dmpf/blob/ddd3d0c4202879f168c7f6bfafaefadd94a3a621/docs/guides/dmpf-manifesto.md`).
 
 ## Domínio (ADR-032; FND-04)
 
@@ -55,7 +55,10 @@ skill `.agents/skills/dmpf-bounded-context/`.
 ## Unit of Work e outbox (ADR-034, ADR-035)
 
 - Um caso de uso é um `Within` sobre `UnitOfWork[R]`; quem monta `R` é o
-  composition root, pelo `bind` (ADR-034). Consultas correm fora da UoW.
+  composition root, pelo `bind` (ADR-034). Consultas (`usecase.Query`) correm
+  fora da UoW. A pré-condição relacional de um comando, sem id conhecido, lê
+  na UoW pela guarda: `Guard` no `Table` e `Relation(Guard).QueryWithin` sobre a
+  `*Tx` do `bind` (ADR-067).
 - O caso de uso produtor percorre os nove passos de FND-04 §3.2, na ordem —
   identidade antes da transação, autorização pelo gancho, evento para a outbox
   na **mesma** transação do estado, por `usecase.Enqueue` (ADR-035). Os passos
@@ -100,7 +103,7 @@ skill `.agents/skills/dmpf-bounded-context/`.
   nunca à mão.
 - Contrato publicado é imutável: `.proto` existente não é regravado; evolução
   é rito próprio. Cada contexto tem o seu `contract/buf.yaml`, e o kernel tem
-  o dele em `https://github.com/mateusmacedo/dmpf/blob/b5131eea0ce4c593e11e39f339ea9daea1f53ce4/libs/backend/go/contracts`.
+  o dele em `https://github.com/mateusmacedo/dmpf/blob/ddd3d0c4202879f168c7f6bfafaefadd94a3a621/libs/backend/go/contracts`.
 - A unidade `<ctx>/contract` fica no `dmpf-units.json` do módulo `contract/`
   e entra **antes** do `generate`; sem ela o gerado cai em `DMPF-U001`. O
   generator já a declara.
@@ -146,6 +149,28 @@ skill `.agents/skills/dmpf-bounded-context/`.
   resto do estado vai em `snapshot` `jsonb`, por um struct de estado privado
   do provider com tags JSON estáveis. Quando o estado inteiro vive no
   `snapshot`, a tabela sai de `postgres.SnapshotTable`.
+- Unicidade de negócio por tenant (ADR-066): a
+  `CONSTRAINT <tabela>_<colunas>_key UNIQUE (tenant_id, ...)` fica no
+  `CREATE TABLE` do `schema.sql`, com `tenant_id` à frente; o `Table` do
+  provider a declara em `Unique` (`postgres.Unique{Name, Columns, Rejection}`),
+  com a rejeição estática declarada no `domain`, e entra em `provider.Uniques`
+  como `<var>.Uniques()`, que o wiring passa a `serve.API.Uniques` para a
+  partida conferir no catálogo. O `Save` traduz a violação na rejeição
+  declarada, e o `usecase.Decide` a devolve como recusa. Os dublês em
+  `memory.Table` declaram o mesmo nome em `memory.Unique`, e o teste do
+  provider prova a declaração por `providerkit.Unique`. Constraint sem
+  `postgres.Unique` de mesmo `Name`, ou `Table` com `Unique` fora de
+  `provider.Uniques`, reprova no `node_modules/@mateusmacedo/dmpf-plugin/scripts/dmpf-context-check.sh`. Tabela com `UNIQUE` não
+  é particionada, partição nem herdeira, nem mãe delas: o `23505` da partição
+  cita a partição folha, e a partida e o gate reprovam. A unicidade de
+  identidade (a PK) continua `Conflict`.
+- Leitura entre tenants e projeção (IDN-14, ADR-068): só os arquivos
+  `provider/platform_*.go` do provider usam `Table.PlatformReader` e
+  `Table.Projector`; o alcance (`ports.WithPlatformReach`) só o kernel monta,
+  na borda verificada (`http.WithVerifiedPlatformReach` e os métodos de
+  plataforma do `grpc`), nunca o código do contexto. Uso fora disso reprova no
+  `forbidigo` do `.golangci.yml` e, por padrão de chamada, no
+  `node_modules/@mateusmacedo/dmpf-plugin/scripts/dmpf-context-check.sh`.
 - Cada teste roda num banco `<projeto>_test_<id>`, que o `tb/pg` cria no
   servidor de `PG_DSN` (a infra de testes, `cluster_name=test`) e apaga ao
   fim; suítes de projetos distintos rodam em paralelo.
@@ -174,5 +199,8 @@ skill `.agents/skills/dmpf-bounded-context/`.
 - Afrouxar um gate para o contexto passar — o contexto passa pelos mesmos
   gates de qualquer módulo.
 - Servir REST no contexto ou dividir um banco entre apps.
+- Checar unicidade entre agregados na UPR ou por leitura antes do `Save`: a
+  UPR não lê outros agregados, nenhuma leitura vê a inserção concorrente, e
+  só o índice declarado garante a unicidade (ADR-066).
 - Mudar um valor de fio já publicado (código de rejeição, enum, nome de
   evento) por causa de um rename no Go.

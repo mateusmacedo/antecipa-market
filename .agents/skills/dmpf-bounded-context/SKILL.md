@@ -14,7 +14,7 @@ Esta skill é o golden path de quem escreve um contexto de negócio — pessoa o
 o agente `dmpf-context-author`. A entrada é uma spec no template
 [`references/template-bounded-context.md`](./references/template-bounded-context.md);
 a saída é um módulo Go em `apps/backend/<name>` — um contexto de negócio é uma
-app, `type:app`; em `https://github.com/mateusmacedo/dmpf/blob/b5131eea0ce4c593e11e39f339ea9daea1f53ce4/libs/backend/go` fica só o kernel de reuso —, com um
+app, `type:app`; em `https://github.com/mateusmacedo/dmpf/blob/ddd3d0c4202879f168c7f6bfafaefadd94a3a621/libs/backend/go` fica só o kernel de reuso —, com um
 package por bloco (`domain`, `ports`, `application`, `provider`, `app`), um
 contrato e um OpenAPI que passam pelos mesmos gates de qualquer módulo do
 workspace (ADR-045). Não existe DSL: a spec é a única fonte
@@ -67,7 +67,12 @@ não executa — ele **para e imprime** o rito restante.
    consulta filtra, o resto em `snapshot` `jsonb`, com `postgres.SnapshotTable`
    quando o estado inteiro vive no snapshot), repositórios com optimistic
    locking, `Reader`, mapper para o payload do contrato; `Tables` do `appkit`
-   com as tabelas do contexto.
+   com as tabelas do contexto. Unicidade de negócio que a spec declara
+   (ADR-066): `CONSTRAINT <tabela>_<colunas>_key UNIQUE (tenant_id, ...)` no
+   `schema.sql`, `postgres.Unique` no `Table` com a rejeição estática do
+   `domain`, a tabela em `provider.Uniques` (o wiring gerado já a passa ao
+   `serve`), `memory.Unique` de mesmo nome nos dublês e `providerkit.Unique`
+   no teste do provider. A UPR não checa unicidade entre agregados.
 7. **`app`**: o `ServiceDesc` de `app/rpc/service.go` com um método por
    comando e por consulta, cada um por
    `kernelgrpc.Unary(ServiceName, kernelgrpc.Method(descriptor, "<Método>"), <Ctx>Server.<Método>)`,
@@ -96,8 +101,8 @@ não executa — ele **para e imprime** o rito restante.
 
 ## Forma do código
 
-Copie a forma, não o conteúdo: `https://github.com/mateusmacedo/dmpf/blob/b5131eea0ce4c593e11e39f339ea9daea1f53ce4/apps/backend/bookings`, o golden da forma
-canônica (ADR-053), e `https://github.com/mateusmacedo/dmpf/blob/b5131eea0ce4c593e11e39f339ea9daea1f53ce4/apps/backend/reservations` só no que o contexto
+Copie a forma, não o conteúdo: `https://github.com/mateusmacedo/dmpf/blob/ddd3d0c4202879f168c7f6bfafaefadd94a3a621/apps/backend/bookings`, o golden da forma
+canônica (ADR-053), e `https://github.com/mateusmacedo/dmpf/blob/ddd3d0c4202879f168c7f6bfafaefadd94a3a621/apps/backend/reservations` só no que o contexto
 consome. Testes antes do código de
 cada UPR, caso de uso, repositório e rota — um cenário de aceite e um por
 rejeição, como a spec declara. Prosa em PT-BR; código, godoc e identificadores
@@ -110,5 +115,5 @@ pnpm nx run-many -t fmt-check,vet,build,lint -p <name>
 PG_DSN='postgres://postgres:postgres@localhost:5432/postgres?sslmode=disable' \
   pnpm nx run-many -t test-race,test-distributed -p <name>
 DMPF_APPS_DIR=apps/backend bash node_modules/@mateusmacedo/dmpf-plugin/scripts/dmpf-context-check.sh --context apps/backend/<name>
-go run github.com/mateusmacedo/dmpf/tools/dmpf-conformance/cmd/conformance@v1.0.0-rc.5 --root .
+go run github.com/mateusmacedo/dmpf/tools/dmpf-conformance/cmd/conformance@v1.0.0-rc.7 --root .
 ```
