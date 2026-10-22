@@ -922,7 +922,7 @@ components:
       enum: [declared]
     MembershipRole:
       type: string
-      enum: [operator, auditor]
+      enum: [operator, auditor, platform_ops]
     VerificationLevel:
       type: string
       enum: [channel_ownership, personal_data_checked]
