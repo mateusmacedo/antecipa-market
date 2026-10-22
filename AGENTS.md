@@ -143,7 +143,7 @@ Nenhuma. `apps/backend`, `apps/frontend` e `apps/serverless` são diretórios de
 
 ### Libs
 
-Nenhuma. `libs/backend`, `libs/frontend` e `libs/shared` são diretórios de destino, sem projeto Nx registrado. Para criar a primeira lib compartilhada, use o generator do Nx (`pnpm nx g @nx/js:lib libs/shared/<name>`), com as três tags 3D e `--linter=none`; o passo a passo com todas as flags está em `docs/nx-reference/tasks.md`. O `go.work` declara `go 1.26.9` (diretiva do `@mateusmacedo/dmpf-plugin`), mas não há módulos nem arquivos `.go` no workspace até o primeiro bounded context (ver `docs/guides/primeiro-bounded-context.md`).
+Nenhuma. `libs/backend`, `libs/frontend` e `libs/shared` são diretórios de destino, sem projeto Nx registrado. Para criar a primeira lib compartilhada, use o generator do Nx (`pnpm nx g @nx/js:lib libs/shared/<name>`), com as três tags 3D e `--linter=none`; o passo a passo com todas as flags está em `docs/nx-reference/tasks.md`. O `go.work` declara `go 1.26.10`, acima da diretiva `1.26.9` do `@mateusmacedo/dmpf-plugin` por causa da GO-2026-6809 em `crypto/x509`, mas não há módulos nem arquivos `.go` no workspace até o primeiro bounded context (ver `docs/guides/primeiro-bounded-context.md`).
 
 Sem nenhum projeto com a tag `type:lib`, o `nx release` sai com erro (`Release group "__default__" matches no projects`) em vez de concluir vazio. Por isso o `nx-release.yml` tem o step `Detect lib release candidates`, que pula o versionamento e o push enquanto não houver lib — mesmo padrão do step de candidatos Docker. O pipeline fica armado e ocioso, não vermelho.
 

@@ -234,6 +234,7 @@ func TestMapperMapsEachRoleAndEachVerificationLevel(t *testing.T) {
 	}{
 		{domain.RoleOperator, domain.VerificationPersonalDataChecked, eventv1.MembershipRole_MEMBERSHIP_ROLE_OPERATOR, eventv1.VerificationLevel_VERIFICATION_LEVEL_PERSONAL_DATA_CHECKED},
 		{domain.RoleAuditor, domain.VerificationChannelOwnership, eventv1.MembershipRole_MEMBERSHIP_ROLE_AUDITOR, eventv1.VerificationLevel_VERIFICATION_LEVEL_CHANNEL_OWNERSHIP},
+		{domain.RolePlatformOps, domain.VerificationPersonalDataChecked, eventv1.MembershipRole_MEMBERSHIP_ROLE_PLATFORM_OPS, eventv1.VerificationLevel_VERIFICATION_LEVEL_PERSONAL_DATA_CHECKED},
 		{"approver", "document_and_liveness", eventv1.MembershipRole_MEMBERSHIP_ROLE_UNSPECIFIED, eventv1.VerificationLevel_VERIFICATION_LEVEL_UNSPECIFIED},
 	} {
 		mapped, err := provider.Mapper{}.Map(domain.MembershipGranted{MembershipID: "mbr-1", Role: tc.role, VerificationLevel: tc.level, At: 1})
@@ -280,6 +281,20 @@ func TestMapperMapsMembershipRevokedWithTheReason(t *testing.T) {
 	}
 	if mapped.Type != membershipRevokedType {
 		t.Errorf("Map().Type = %q, want %q (PTB-03)", mapped.Type, membershipRevokedType)
+	}
+}
+
+func TestMapperMapsTheRevocationOfPlatformOps(t *testing.T) {
+	t.Parallel()
+
+	mapped, err := provider.Mapper{}.Map(domain.MembershipRevoked{MembershipID: "mbr-100", Role: domain.RolePlatformOps, Reason: "rotated", At: 1})
+
+	if err != nil {
+		t.Fatalf("Map() = %v, want nil", err)
+	}
+	got, ok := mapped.Message.(*eventv1.MembershipRevoked)
+	if !ok || got.GetRole() != eventv1.MembershipRole_MEMBERSHIP_ROLE_PLATFORM_OPS {
+		t.Fatalf("Map().Message = %v, want a MembershipRevoked of MEMBERSHIP_ROLE_PLATFORM_OPS", mapped.Message)
 	}
 }
 

@@ -843,6 +843,22 @@ func TestInviteUserInvitesWithoutAnEvent(t *testing.T) {
 	}
 }
 
+func TestInviteUserInvitesPlatformOpsIntoAPlatformOrganization(t *testing.T) {
+	h := newHarness(t, nil)
+	platform := registerRequest("org-1")
+	platform.Kinds = []servicev1.OrganizationKind{servicev1.OrganizationKind_ORGANIZATION_KIND_PLATFORM}
+	register(t, h, platform)
+	req := inviteRequest("mbr-1")
+	req.Role = servicev1.MembershipRole_MEMBERSHIP_ROLE_PLATFORM_OPS
+
+	invokeOK(t, h, "InviteUser", req, &servicev1.InviteUserResponse{})
+
+	stored, _, err := membershipsTable.Reader(h.store).Load(inTenant(t), "mbr-1")
+	if err != nil || stored.Role != domain.RolePlatformOps {
+		t.Fatalf("stored %+v (%v), want an invitation of platform_ops", stored, err)
+	}
+}
+
 func TestInviteUserAnswersEachRefusalInTheBody(t *testing.T) {
 	funder := registerRequest("org-1")
 	funder.Kinds = []servicev1.OrganizationKind{servicev1.OrganizationKind_ORGANIZATION_KIND_FUNDER}
@@ -974,6 +990,21 @@ func TestRevokeMembershipRefusesAnInvitationInTheBody(t *testing.T) {
 	}
 	if n := len(h.store.Entries()); n != 1 {
 		t.Fatalf("outbox holds %d entries after a refusal, want only the organization's", n)
+	}
+}
+
+func TestFindMembershipsAnswersThePlatformOpsRole(t *testing.T) {
+	held := domain.MembershipSnapshot{
+		ID: "mbr-1", OrganizationID: "org-1", InviteeEmail: inviteeEmail, Role: domain.RolePlatformOps, Status: domain.MembershipStatusInvited,
+		InvitedByUserID: "sub-admin", InvitedAt: 10, InvitationExpiresAt: 20,
+	}
+	h := newHarnessWith(t, relations{members: membershipsByOrganization{"org-1": {held}}})
+
+	resp := invokeOK(t, h, "FindMembershipsByOrganization",
+		&servicev1.FindMembershipsByOrganizationRequest{OrganizationId: "org-1"}, &servicev1.FindMembershipsByOrganizationResponse{})
+
+	if got := resp.GetMemberships(); len(got) != 1 || got[0].GetRole() != servicev1.MembershipRole_MEMBERSHIP_ROLE_PLATFORM_OPS {
+		t.Fatalf("Memberships = %v, want one of MEMBERSHIP_ROLE_PLATFORM_OPS", got)
 	}
 }
 

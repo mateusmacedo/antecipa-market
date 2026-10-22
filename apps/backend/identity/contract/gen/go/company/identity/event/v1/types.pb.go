@@ -130,9 +130,10 @@ func (TaxIdType) EnumDescriptor() ([]byte, []int) {
 type MembershipRole int32
 
 const (
-	MembershipRole_MEMBERSHIP_ROLE_UNSPECIFIED MembershipRole = 0
-	MembershipRole_MEMBERSHIP_ROLE_OPERATOR    MembershipRole = 1
-	MembershipRole_MEMBERSHIP_ROLE_AUDITOR     MembershipRole = 2
+	MembershipRole_MEMBERSHIP_ROLE_UNSPECIFIED  MembershipRole = 0
+	MembershipRole_MEMBERSHIP_ROLE_OPERATOR     MembershipRole = 1
+	MembershipRole_MEMBERSHIP_ROLE_AUDITOR      MembershipRole = 2
+	MembershipRole_MEMBERSHIP_ROLE_PLATFORM_OPS MembershipRole = 3
 )
 
 // Enum value maps for MembershipRole.
@@ -141,11 +142,13 @@ var (
 		0: "MEMBERSHIP_ROLE_UNSPECIFIED",
 		1: "MEMBERSHIP_ROLE_OPERATOR",
 		2: "MEMBERSHIP_ROLE_AUDITOR",
+		3: "MEMBERSHIP_ROLE_PLATFORM_OPS",
 	}
 	MembershipRole_value = map[string]int32{
-		"MEMBERSHIP_ROLE_UNSPECIFIED": 0,
-		"MEMBERSHIP_ROLE_OPERATOR":    1,
-		"MEMBERSHIP_ROLE_AUDITOR":     2,
+		"MEMBERSHIP_ROLE_UNSPECIFIED":  0,
+		"MEMBERSHIP_ROLE_OPERATOR":     1,
+		"MEMBERSHIP_ROLE_AUDITOR":      2,
+		"MEMBERSHIP_ROLE_PLATFORM_OPS": 3,
 	}
 )
 
@@ -240,11 +243,12 @@ const file_company_identity_event_v1_types_proto_rawDesc = "" +
 	"\tTaxIdType\x12\x1b\n" +
 	"\x17TAX_ID_TYPE_UNSPECIFIED\x10\x00\x12\x14\n" +
 	"\x10TAX_ID_TYPE_CNPJ\x10\x01\x12\x13\n" +
-	"\x0fTAX_ID_TYPE_CPF\x10\x02*l\n" +
+	"\x0fTAX_ID_TYPE_CPF\x10\x02*\x8e\x01\n" +
 	"\x0eMembershipRole\x12\x1f\n" +
 	"\x1bMEMBERSHIP_ROLE_UNSPECIFIED\x10\x00\x12\x1c\n" +
 	"\x18MEMBERSHIP_ROLE_OPERATOR\x10\x01\x12\x1b\n" +
-	"\x17MEMBERSHIP_ROLE_AUDITOR\x10\x02*\x8f\x01\n" +
+	"\x17MEMBERSHIP_ROLE_AUDITOR\x10\x02\x12 \n" +
+	"\x1cMEMBERSHIP_ROLE_PLATFORM_OPS\x10\x03*\x8f\x01\n" +
 	"\x11VerificationLevel\x12\"\n" +
 	"\x1eVERIFICATION_LEVEL_UNSPECIFIED\x10\x00\x12(\n" +
 	"$VERIFICATION_LEVEL_CHANNEL_OWNERSHIP\x10\x01\x12,\n" +

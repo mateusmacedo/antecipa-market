@@ -44,6 +44,33 @@ var auditorPermissions = []domain.Permission{
 	"portfolio:list-assets-by-snapshot",
 }
 
+var platformOpsPermissions = []domain.Permission{
+	"partner:activate-agreement",
+	"partner:change-partner-stage",
+	"partner:change-rollout",
+	"partner:declare-capability",
+	"partner:define-operational-policy",
+	"partner:define-product",
+	"partner:enable-capability",
+	"partner:find-agreements-by-partner",
+	"partner:find-capabilities-by-partner",
+	"partner:find-certificates-expiring",
+	"partner:find-effective-capability",
+	"partner:find-eligible-partners",
+	"partner:find-integration-profile",
+	"partner:find-operational-policy",
+	"partner:find-partner",
+	"partner:find-partners-by-organization",
+	"partner:find-products-by-partner",
+	"partner:raise-certificate-expiry-alert",
+	"partner:record-homologation",
+	"partner:register-agreement",
+	"partner:register-integration-profile",
+	"partner:register-partner",
+	"partner:retire-product",
+	"partner:suspend-capability",
+}
+
 // The catalogue is what the backend-for-frontend checks on every route: a
 // permission renamed or dropped here reaches the wire, so the frozen table of
 // the spec is pinned.
@@ -55,6 +82,7 @@ func TestTheRolesKeepTheFrozenPermissionsOfTheSpec(t *testing.T) {
 	}{
 		{domain.RoleOperator, operatorPermissions, 17},
 		{domain.RoleAuditor, auditorPermissions, 14},
+		{domain.RolePlatformOps, platformOpsPermissions, 24},
 	} {
 		got := tc.role.Permissions()
 		if len(got) != tc.count || !slices.Equal(got, tc.want) {
@@ -67,7 +95,7 @@ func TestTheRolesKeepTheFrozenPermissionsOfTheSpec(t *testing.T) {
 }
 
 func TestARoleOutsideTheCatalogueHasNoPermission(t *testing.T) {
-	for _, role := range []domain.Role{"", "approver", "org_admin", "platform_ops"} {
+	for _, role := range []domain.Role{"", "approver", "org_admin", "platform_risk"} {
 		if got := role.Permissions(); len(got) != 0 {
 			t.Errorf("%q.Permissions() = %v, want none", role, got)
 		}
@@ -128,6 +156,16 @@ func TestEffectivePermissionsIsTheSortedUnionWithoutRepetition(t *testing.T) {
 	}
 	if got := len(union); got != 20 {
 		t.Fatalf("the union of operator and auditor has %d permissions, want 20", got)
+	}
+}
+
+func TestEffectivePermissionsOfAnOperatorWhoIsAlsoPlatformOps(t *testing.T) {
+	want := slices.Sorted(slices.Values(append(slices.Clone(operatorPermissions), platformOpsPermissions...)))
+
+	got := domain.EffectivePermissions(domain.RoleOperator, domain.RolePlatformOps)
+
+	if len(got) != 41 || !slices.Equal(got, want) {
+		t.Fatalf("EffectivePermissions(operator, platform_ops) = %v (%d), want the 41 of %v", got, len(got), want)
 	}
 }
 

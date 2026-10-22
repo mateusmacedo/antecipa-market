@@ -53,6 +53,7 @@ const (
 	tenantB          = "globex"
 	e2eCNPJ          = "12ABC34501DE35"
 	e2eCNPJFormatted = "12.abc.345/01de-35"
+	e2ePlatformCNPJ  = "11222333000181"
 )
 
 type fixedClock struct{}
@@ -1171,6 +1172,32 @@ var (
 		"portfolio:group-assets-by-snapshot",
 		"portfolio:list-assets-by-snapshot",
 	}
+	platformOpsPermissions = []string{
+		"partner:activate-agreement",
+		"partner:change-partner-stage",
+		"partner:change-rollout",
+		"partner:declare-capability",
+		"partner:define-operational-policy",
+		"partner:define-product",
+		"partner:enable-capability",
+		"partner:find-agreements-by-partner",
+		"partner:find-capabilities-by-partner",
+		"partner:find-certificates-expiring",
+		"partner:find-effective-capability",
+		"partner:find-eligible-partners",
+		"partner:find-integration-profile",
+		"partner:find-operational-policy",
+		"partner:find-partner",
+		"partner:find-partners-by-organization",
+		"partner:find-products-by-partner",
+		"partner:raise-certificate-expiry-alert",
+		"partner:record-homologation",
+		"partner:register-agreement",
+		"partner:register-integration-profile",
+		"partner:register-partner",
+		"partner:retire-product",
+		"partner:suspend-capability",
+	}
 )
 
 func provisionOver(subject string) *servicev1.ProvisionUserAccountRequest {
@@ -1304,6 +1331,64 @@ func TestEffectivePermissionsFollowTheMembershipsEndToEndOverGRPC(t *testing.T) 
 	}
 	if !maps.Equal(types, want) {
 		t.Fatalf("outbox types = %v, want %v", types, want)
+	}
+}
+
+func TestPlatformOpsHoldsThePartnerPermissionsEndToEndOverGRPC(t *testing.T) {
+	pool := appkit.OpenPool(t)
+	conn := dial(t, pool, nil)
+	registerOver(t, conn, call(t, tenantA), registration("e2e-org-client"))
+	platform := &servicev1.RegisterOrganizationRequest{
+		OrganizationId: "e2e-org-platform",
+		Kinds:          []servicev1.OrganizationKind{servicev1.OrganizationKind_ORGANIZATION_KIND_PLATFORM},
+		Jurisdiction:   "BR",
+		TaxIdType:      servicev1.TaxIdType_TAX_ID_TYPE_CNPJ,
+		TaxId:          e2ePlatformCNPJ,
+		LegalName:      "Plataforma Sintetica Ltda",
+		TradeName:      "Plataforma",
+	}
+	if resp := registerOver(t, conn, call(t, tenantA), platform); resp.GetRejection() != nil {
+		t.Fatalf("RegisterOrganization(platform) = %v, want registered", resp)
+	}
+	for _, subject := range []string{"sub-ops", "sub-op-ops"} {
+		invokeOver(t, conn, call(t, tenantA), "ProvisionUserAccount", provisionOver(subject), &servicev1.ProvisionUserAccountResponse{})
+	}
+	admit(t, conn, "e2e-mbr-ops", "e2e-org-platform", "sub-ops", servicev1.MembershipRole_MEMBERSHIP_ROLE_PLATFORM_OPS)
+	admit(t, conn, "e2e-mbr-oo1", "e2e-org-client", "sub-op-ops", servicev1.MembershipRole_MEMBERSHIP_ROLE_OPERATOR)
+	admit(t, conn, "e2e-mbr-oo2", "e2e-org-platform", "sub-op-ops", servicev1.MembershipRole_MEMBERSHIP_ROLE_PLATFORM_OPS)
+	both := slices.Sorted(slices.Values(append(slices.Clone(operatorPermissions), platformOpsPermissions...)))
+
+	if got := permissionsOf(t, conn, tenantA, "sub-ops"); !slices.Equal(got, platformOpsPermissions) {
+		t.Fatalf("FindEffectivePermissions(platform_ops) = %v, want the 24 of the table in order", got)
+	}
+	if got := permissionsOf(t, conn, tenantA, "sub-op-ops"); len(both) != 41 || !slices.Equal(got, both) {
+		t.Fatalf("FindEffectivePermissions(operator and platform_ops) = %v, want the union of 41 %v", got, both)
+	}
+
+	var misplaced servicev1.InviteUserResponse
+	invokeOver(t, conn, call(t, tenantA), "InviteUser",
+		inviteOver("e2e-mbr-misplaced", "e2e-org-client", servicev1.MembershipRole_MEMBERSHIP_ROLE_PLATFORM_OPS), &misplaced)
+	if got := misplaced.GetRejection().GetCode(); got != "identity-organization/membership/role-kind-mismatch" {
+		t.Fatalf("InviteUser(platform_ops into a client) rejection = %q, want role-kind-mismatch (response %v)", got, &misplaced)
+	}
+
+	granted := 0
+	for _, record := range outbox(t, pool) {
+		if record.messageType != "com.company.identity.membership-granted.v1" || record.partitionKey != "e2e-mbr-ops" {
+			continue
+		}
+		var event eventv1.MembershipGranted
+		if err := proto.Unmarshal(record.payload, &event); err != nil {
+			t.Fatalf("payload does not decode: %v", err)
+		}
+		if event.GetUserId() != "sub-ops" || event.GetRole() != eventv1.MembershipRole_MEMBERSHIP_ROLE_PLATFORM_OPS ||
+			event.GetVerificationLevel() != eventv1.VerificationLevel_VERIFICATION_LEVEL_PERSONAL_DATA_CHECKED {
+			t.Fatalf("MembershipGranted of e2e-mbr-ops = %v, want sub-ops as MEMBERSHIP_ROLE_PLATFORM_OPS at VERIFICATION_LEVEL_PERSONAL_DATA_CHECKED", &event)
+		}
+		granted++
+	}
+	if granted != 1 {
+		t.Fatalf("outbox holds %d grants of e2e-mbr-ops, want 1", granted)
 	}
 }
 

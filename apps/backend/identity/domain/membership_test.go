@@ -110,6 +110,20 @@ func TestInviteUserAcceptsEachClientRoleInAClientOrganization(t *testing.T) {
 	}
 }
 
+func TestInviteUserAcceptsPlatformOpsInAPlatformOrganization(t *testing.T) {
+	for _, kinds := range []domain.OrganizationKinds{
+		domain.KindsOf(domain.KindPlatform),
+		domain.KindsOf(domain.KindPartner, domain.KindPlatform),
+	} {
+		cmd := inviteCommand()
+		cmd.Role, cmd.OrganizationKinds = domain.RolePlatformOps, kinds
+
+		_, rej := domain.NewMembership(membershipID).Invite(cmd)
+
+		tb.RequireAccepted(t, rej)
+	}
+}
+
 func TestInviteUserRejectsEachPrecondition(t *testing.T) {
 	organization := kernel.Detail{Key: "organization", Value: string(organizationID)}
 	for _, tc := range []struct {
@@ -130,6 +144,11 @@ func TestInviteUserRejectsEachPrecondition(t *testing.T) {
 		{"auditor in a partner and platform", func(c *domain.InviteUser) {
 			c.Role, c.OrganizationKinds = domain.RoleAuditor, domain.KindsOf(domain.KindPartner, domain.KindPlatform)
 		}, domain.CodeMembershipRoleKindMismatch, []kernel.Detail{{Key: "role", Value: "auditor"}, organization}},
+		{"platform ops in a client", func(c *domain.InviteUser) { c.Role = domain.RolePlatformOps }, domain.CodeMembershipRoleKindMismatch,
+			[]kernel.Detail{{Key: "role", Value: "platform_ops"}, organization}},
+		{"platform ops in a funder and partner", func(c *domain.InviteUser) {
+			c.Role, c.OrganizationKinds = domain.RolePlatformOps, domain.KindsOf(domain.KindFunder, domain.KindPartner)
+		}, domain.CodeMembershipRoleKindMismatch, []kernel.Detail{{Key: "role", Value: "platform_ops"}, organization}},
 		{"a role outside the catalogue", func(c *domain.InviteUser) { c.Role = "approver" }, domain.CodeMembershipRoleKindMismatch,
 			[]kernel.Detail{{Key: "role", Value: "approver"}, organization}},
 	} {
@@ -206,6 +225,7 @@ func TestGrantMembershipAcceptsTheMinimumLevelOfEachRoleOrAbove(t *testing.T) {
 		{domain.RoleOperator, domain.VerificationPersonalDataChecked},
 		{domain.RoleAuditor, domain.VerificationChannelOwnership},
 		{domain.RoleAuditor, domain.VerificationPersonalDataChecked},
+		{domain.RolePlatformOps, domain.VerificationPersonalDataChecked},
 	} {
 		invited := invitedMembership()
 		invited.Role = tc.role
@@ -221,6 +241,8 @@ func TestGrantMembershipAcceptsTheMinimumLevelOfEachRoleOrAbove(t *testing.T) {
 func TestGrantMembershipRejectsEachPrecondition(t *testing.T) {
 	invitedAuditor := invitedMembership()
 	invitedAuditor.Role = domain.RoleAuditor
+	invitedPlatformOps := invitedMembership()
+	invitedPlatformOps.Role = domain.RolePlatformOps
 	for _, tc := range []struct {
 		name    string
 		held    domain.MembershipSnapshot
@@ -240,6 +262,9 @@ func TestGrantMembershipRejectsEachPrecondition(t *testing.T) {
 			domain.CodeMembershipVerificationInsufficient, []kernel.Detail{{Key: "role", Value: "operator"}}},
 		{"auditor with a level outside the catalogue", invitedAuditor, func(c *domain.GrantMembership) { c.VerificationLevel = "document_and_liveness" },
 			domain.CodeMembershipVerificationInsufficient, []kernel.Detail{{Key: "role", Value: "auditor"}}},
+		{"platform ops with channel ownership only", invitedPlatformOps, func(c *domain.GrantMembership) {
+			c.VerificationLevel = domain.VerificationChannelOwnership
+		}, domain.CodeMembershipVerificationInsufficient, []kernel.Detail{{Key: "role", Value: "platform_ops"}}},
 		{"user suspended", invitedMembership(), func(c *domain.GrantMembership) { c.UserStatus = domain.UserAccountSuspended },
 			domain.CodeMembershipUserNotActive, []kernel.Detail{{Key: "user", Value: string(subject)}}},
 		{"user not found", invitedMembership(), func(c *domain.GrantMembership) { c.UserStatus = domain.UserAccountNew },
@@ -383,6 +408,7 @@ func TestEachRoleAndLevelKeepsItsValue(t *testing.T) {
 	values := map[string]string{
 		string(domain.RoleOperator):                    "operator",
 		string(domain.RoleAuditor):                     "auditor",
+		string(domain.RolePlatformOps):                 "platform_ops",
 		string(domain.VerificationChannelOwnership):    "channel_ownership",
 		string(domain.VerificationPersonalDataChecked): "personal_data_checked",
 	}

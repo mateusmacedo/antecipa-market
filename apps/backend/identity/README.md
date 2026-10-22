@@ -55,7 +55,7 @@ nele, a cada requisição, o que cada usuário pode fazer.
 | `Person` | Registra pessoas naturais por hash e máscara do documento, sem guardar o documento |
 | `Representation` | Registra poderes de representação com fonte, evidência, alçada e vigência |
 | `UserAccount` | Provisiona a conta do usuário autenticado (inicializa se ausente) e a suspende |
-| `Membership` | Convida, concede e revoga o vínculo do usuário com a organização, com os papéis `operator` e `auditor` |
+| `Membership` | Convida, concede e revoga o vínculo do usuário com a organização, com os papéis `operator` e `auditor` (organização cliente) e `platform_ops` (organização de plataforma) |
 | `BankAccountChange` | Propõe e aprova a troca de conta bancária, com aprovador distinto do proponente |
 
 `FindEffectivePermissions` devolve, a cada requisição do `bff`, as permissões
@@ -75,7 +75,7 @@ O mesmo binário roda em dois papéis, escolhidos por `--role`:
 
 ## Stack
 
-- **Go** `1.26.9`, a diretiva do `go.work`, que o CI usa.
+- **Go** `1.26.10`, a diretiva do `go.work`, que o CI usa.
 - **Kernel DMPF** `v1.0.0-rc.5`, com UoW, outbox, inbox, gRPC e observabilidade.
 - **gRPC e Protobuf**, com contrato gerado pelo Buf (`buf` `v1.72.0` e
   `protoc-gen-go` `v1.36.12`).
@@ -89,8 +89,8 @@ O mesmo binário roda em dois papéis, escolhidos por `--role`:
 
 - Node.js `^24` e pnpm `^11`. A versão exata vem do campo `packageManager` da
   raiz e é ativada pelo `corepack enable`.
-- Go `1.26.9`. Se o seu Go local for mais novo, rode os gates com
-  `GOTOOLCHAIN=go1.26.9` para reproduzir o CI.
+- Go `1.26.10`. Se o seu Go local for mais novo, rode os gates com
+  `GOTOOLCHAIN=go1.26.10` para reproduzir o CI.
 - Docker com o plugin Compose (`docker compose`) 2.20 ou mais novo, por causa
   do `include:` do compose local, para a infra local e a de testes.
 

@@ -352,6 +352,12 @@ segregação sem definir o conteúdo de cada papel.
 | Reenviar comando externo | não | não | não | não | não | não | sim | não |
 | Suspender operação por risco | não | não | não | não | não | não | não | sim |
 | Emitir dossiê de auditoria | não | não | não | solicita | não | não | aprova | não |
+| Administrar parceiros (cadastro, contrato, capacidade, produto, integração e política) | não | não | não | não | não | não | sim | leitura |
+
+**Administração de parceiros**: das colunas desta matriz, só `PLATFORM_OPS` está
+no catálogo do `identity-organization` nesta versão, com as 24 permissões
+`partner:*` do `PartnerService`; `PLATFORM_RISK` segue reservado e a leitura dele
+fica só nesta matriz.
 
 **Invariante derivada**: nenhum papel acumula proposição e aprovação da mesma
 ação sensível. `OPERATOR` propõe alteração bancária, `APPROVER` aprova.

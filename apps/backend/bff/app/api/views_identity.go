@@ -53,8 +53,9 @@ var (
 		servicev1.ExternalReferenceType_EXTERNAL_REFERENCE_TYPE_SETTLEMENT:    "settlement",
 	}
 	membershipRoles = map[servicev1.MembershipRole]string{
-		servicev1.MembershipRole_MEMBERSHIP_ROLE_OPERATOR: "operator",
-		servicev1.MembershipRole_MEMBERSHIP_ROLE_AUDITOR:  "auditor",
+		servicev1.MembershipRole_MEMBERSHIP_ROLE_OPERATOR:     "operator",
+		servicev1.MembershipRole_MEMBERSHIP_ROLE_AUDITOR:      "auditor",
+		servicev1.MembershipRole_MEMBERSHIP_ROLE_PLATFORM_OPS: "platform_ops",
 	}
 	membershipStatuses = map[servicev1.MembershipStatus]string{
 		servicev1.MembershipStatus_MEMBERSHIP_STATUS_INVITED: "invited",

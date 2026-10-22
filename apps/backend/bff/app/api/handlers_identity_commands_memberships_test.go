@@ -173,6 +173,10 @@ func TestTheBodyOfAnInvitedUserIsBoundByTheSchema(t *testing.T) {
 			invitation(func(r *servicev1.InviteUserRequest) bool {
 				return r.GetRole() == servicev1.MembershipRole_MEMBERSHIP_ROLE_AUDITOR
 			})},
+		{"a platform ops", body(with("role", "platform_ops")),
+			invitation(func(r *servicev1.InviteUserRequest) bool {
+				return r.GetRole() == servicev1.MembershipRole_MEMBERSHIP_ROLE_PLATFORM_OPS
+			})},
 		{"an empty email goes to the domain", body(with("inviteeEmail", "")),
 			invitation(func(r *servicev1.InviteUserRequest) bool { return r.GetInviteeEmail() == "" })},
 		{"an email of 254 non-ASCII characters", body(with("inviteeEmail", strings.Repeat("é", 254))), reaches},
@@ -185,6 +189,7 @@ func TestTheBodyOfAnInvitedUserIsBoundByTheSchema(t *testing.T) {
 		{"an email with a control character", body(with("inviteeEmail", "ana@acme\r")), nil},
 		{"no role", body(without("role")), nil},
 		{"an unknown role", body(with("role", "admin")), nil},
+		{"a reserved role", body(with("role", "platform_risk")), nil},
 		{"no expiry", body(without("invitationExpiresAt")), nil},
 		{"a null expiry", body(with("invitationExpiresAt", nil)), nil},
 		{"an expiry as text", body(with("invitationExpiresAt", "tomorrow")), nil},

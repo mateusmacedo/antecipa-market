@@ -515,7 +515,7 @@ func (s Server) InviteUser(ctx context.Context, req *servicev1.InviteUserRequest
 	if err != nil {
 		return nil, err
 	}
-	role, err := known(rolesOnTheWire, req.GetRole(), "role must be operator or auditor")
+	role, err := known(rolesOnTheWire, req.GetRole(), "role must be operator, auditor or platform_ops")
 	if err != nil {
 		return nil, err
 	}
@@ -850,8 +850,9 @@ var sourceTypesOnTheWire = map[servicev1.SourceType]domain.SourceType{
 }
 
 var rolesOnTheWire = map[servicev1.MembershipRole]domain.Role{
-	servicev1.MembershipRole_MEMBERSHIP_ROLE_OPERATOR: domain.RoleOperator,
-	servicev1.MembershipRole_MEMBERSHIP_ROLE_AUDITOR:  domain.RoleAuditor,
+	servicev1.MembershipRole_MEMBERSHIP_ROLE_OPERATOR:     domain.RoleOperator,
+	servicev1.MembershipRole_MEMBERSHIP_ROLE_AUDITOR:      domain.RoleAuditor,
+	servicev1.MembershipRole_MEMBERSHIP_ROLE_PLATFORM_OPS: domain.RolePlatformOps,
 }
 
 var verificationLevelsOnTheWire = map[servicev1.VerificationLevel]domain.VerificationLevel{

@@ -3,7 +3,7 @@
 # Contexto de build na raiz: o go.work resolve os módulos do workspace e o kernel vem do
 # proxy Go. Fora do release Docker (nx-release.yml filtra `tag:type:app,!tag:stack:go`).
 
-FROM golang:1.26.9-alpine AS build
+FROM golang:1.26.10-alpine AS build
 WORKDIR /src
 
 COPY go.work go.work.sum ./
