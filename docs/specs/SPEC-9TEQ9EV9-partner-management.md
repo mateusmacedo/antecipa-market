@@ -32,10 +32,10 @@ created: 2026-10-12
 ## Origem e bloqueios externos
 
 - **Fontes**: `docs/prd/13-prd-partner-management.md`; `docs/design/13-design-partner-management.md` §2 (homologação), §3 (regra comercial), §4 (capacidade efetiva), §5 (suspensão), §6 (rollout), §7 (mudança de contrato de integração), §8 (descontinuidade); `docs/design/04-design-receivables-gateway.md` §2 (`CapabilityProfile`); `docs/design/02-design-kyb-kyc.md` §4; `docs/design/92-schemas-eventos.md` §4; `docs/prd/14-catalogo-contratos-eventos.md`; `docs/adr/013-multi-tenancy-por-execution-context.md`, `docs/adr/015-kafka-como-broker.md`, `docs/adr/020-expurgo-do-inbox.md` e `docs/adr/022-precedencia-dmpf-sobre-design.md` (linhas 2, 3, 5, 6, 9, 12 e 15); ADR-063 do DMPF (role migradora e role de runtime); `docs/specs/SPEC-N1X148AW-receivables-gateway.md:62` (enum de ambiente).
-- **Situação**: `parcial` — o núcleo é construível no kernel `1.0.0-rc.5`: cadastro, estágios, acordo, capacidade, homologação, suspensão, rollout, produto, perfil de integração e política operacional. Ficam no Escopo fora: `CommercialRule`, consumo de eventos, `inactive`, cliente gRPC real do Identity e disparo agendado.
+- **Situação**: `parcial` — o núcleo é construível no kernel `1.0.0-rc.7`: cadastro, estágios, acordo, capacidade, homologação, suspensão, rollout, produto, perfil de integração e política operacional. Ficam no Escopo fora: `CommercialRule`, consumo de eventos, `inactive`, cliente gRPC real do Identity e disparo agendado.
 - **Fase de entrega**: 1; primeira fatia em tenant único da plataforma.
 - **Dependências**: `depends_on` declara só a fundação (`SPEC-GXGASP24`) e a aresta dura reduzida (`SPEC-7KW0HHF6`, Identity: a organização do parceiro); a cadeia transitiva fica implícita. Brandas: nenhuma nesta versão; o consumo de `ExternalSchemaMismatchDetected` (Receivables Gateway) e de `FundingRequestOpened` (Marketplace) está no Escopo fora. A retroalimentação — Gateway, Eligibility e Marketplace consomem os eventos de capacidade deste contexto — nunca entra em `depends_on`. Extensões do kernel que tocam este contexto, nenhuma bloqueando a construção desta versão:
-  - SPEC-QVDGV6J0 (DEVS-100) - leitura de plataforma e projeção entre tenants (K4), entregue no `1.0.0-rc.6` (ADR-068 do DMPF); o uso aqui depende da adoção da rc.6 (DEVS-136);
+  - SPEC-QVDGV6J0 (DEVS-100) - leitura de plataforma e projeção entre tenants (K4), entregue no `1.0.0-rc.6` (ADR-068 do DMPF) e presente no kernel `1.0.0-rc.7` adotado na DEVS-136; o uso aqui segue no Escopo fora;
   - SPEC-CWBA4BPV (DEVS-95) - object storage das evidências;
   - SPEC-7SRQ3RPK (DEVS-103) - violação de unicidade traduzida em rejeição;
   - SPEC-QPRR24C4 (DEVS-94) - role migradora separada da role de runtime, entregue no `1.0.0-rc.5` (ADR-063).
@@ -48,12 +48,12 @@ created: 2026-10-12
 | B17, 13:N8 | ambiente de homologação e critérios acordáveis com cada parceiro | H1 a H12 aplicados a todo parceiro; critérios por parceiro fora desta versão |
 | 13:N10 | situação regulatória a verificar por tipo de parceiro | H16 declarado pelo operador em `ActivateAgreement` |
 | 13:N11 | cláusula de acesso residual no contrato de saída | `inactive` fora desta versão |
-| K4 (SPEC-QVDGV6J0, DEVS-100, entregue na `1.0.0-rc.6`; adoção na DEVS-136) | leitura e projeção entre tenants | consultas servidas a outros tenants; nesta versão, a configuração vive num tenant único da plataforma |
+| K4 (SPEC-QVDGV6J0, DEVS-100, entregue na `1.0.0-rc.6`; kernel adotado na DEVS-136, uso no Escopo fora) | leitura e projeção entre tenants | consultas servidas a outros tenants; nesta versão, a configuração vive num tenant único da plataforma |
 | Effects (SPEC-ZFDEPFWC) | consulta de efeitos vigentes por parceiro, ausente da spec de Effects | pré-condição de `inactive`, fora desta versão |
 
 - **Decisões registradas nesta spec (2026-10-17)**:
   1. *Idempotência*: todo comando exige chave de idempotência na metadata gRPC (FND-04; ADR-056 do DMPF); o replay com a mesma chave devolve a resposta registrada.
-  2. *Tenant único*: nesta versão, a configuração de parceiros vive num tenant único da plataforma, e o `tenantId` dos filtros é o tenant avaliado no rollout; leitura entre tenants espera a adoção da `1.0.0-rc.6` (DEVS-136), que traz o K4 (SPEC-QVDGV6J0).
+  2. *Tenant único*: nesta versão, a configuração de parceiros vive num tenant único da plataforma, e o `tenantId` dos filtros é o tenant avaliado no rollout; leitura entre tenants espera o uso do K4 (SPEC-QVDGV6J0), que o kernel `1.0.0-rc.7` adotado na DEVS-136 já traz.
   3. *Enum de ambiente*: `environment` é `development | integration | homologation | production`, igual ao Gateway (SPEC-N1X148AW:62), em `Capability`, `IntegrationProfile`, eventos e consultas.
   4. *Eventos de produto por fato*: `PartnerProductChanged` com `changeKind` dá lugar a `PartnerProductDefined`, `PartnerProductChanged`, `PartnerProductExpired` e `PartnerProductRetired` (`docs/design/92-schemas-eventos.md` §5.3).
   5. *Rollout notificado e determinístico*: `ChangeRollout` emite `CapabilityRolloutChanged`; o bucket do tenant vem de sha256 pela porta da Nota (§); a dimensão de produto do rollout está no Escopo fora.
@@ -75,9 +75,9 @@ created: 2026-10-12
 
 ## Agregados
 
-Nota (†): pré-condição sobre outro agregado é lida no `Run` do caso de uso por `Load` de outro repositório da mesma UoW, antes de `usecase.Decide`; `ErrNotFound` vira a rejeição declarada. Nesta versão, a pré-condição relacional sem id (acordo ativo e vigente, perfil vigente para o ambiente, capacidade habilitada) é lida pela `Relation` do kernel, que no rc.5 só opera sobre o pool de leitura, fora da UoW; a corrida com um comando concorrente sobre o outro agregado é aceita até o kernel oferecer leitura relacional na transação (DEVS-132).
+Nota (†): pré-condição sobre outro agregado é lida no `Run` do caso de uso por `Load` de outro repositório da mesma UoW, antes de `usecase.Decide`; `ErrNotFound` vira a rejeição declarada. A pré-condição relacional sem id (acordo ativo e vigente, perfil vigente para o ambiente, capacidade habilitada) é lida na mesma UoW, sob a guarda declarada do kernel (SPEC-HFDSHFR1, ADR-067 do kernel; DEVS-136). As tabelas `partner_agreements`, `integration_profiles` e `capabilities` declaram `Guard: partner_id`, e a série do parceiro é lida por `Relation(partner_id).QueryWithin` sobre a `*Tx` do `bind`. A leitura toma um lock compartilhado por tenant e parceiro, e todo `Save` dessas tabelas toma o exclusivo da mesma chave, inclusive o `INSERT` de uma versão nova. Assim, nenhum comando concorrente sobre a série commita entre a leitura e a decisão: quem lê espera a escrita em curso e decide sobre a série que ela commitou. A corrida deixa de ser aceita. Em `DefineProduct`, o acordo vem da própria série lida sob a guarda, não de um `Load` separado. Um ciclo de leitura e escrita sobre a mesma série termina em deadlock (`40P01`), que o kernel entrega como `ErrVersionConflict` e a borda gRPC como `Aborted`; nenhum comando desta versão lê e escreve a mesma série guardada. O papel `api` limita a espera por lock (`lock_timeout`, 2s) e a transação parada (`idle_in_transaction_session_timeout`, 30s) na própria DSN, com o valor do ambiente prevalecendo; um `lock_timeout` estourado chega como `ABORTED`, o mesmo conflito do deadlock: o kernel `rc.7` deixa o `55P03` sem classificação, e o composition root o classifica até o kernel corrigir (DEVS-157). A pré-leitura da cabeça da série (††) não passa pela guarda.
 
-Nota (††): unicidade e série de versões são verificadas por pré-leitura em autocommit, separada da UoW do comando, com índice único de salvaguarda e `tenant_id` à frente (ADR-013). Numa corrida, o índice decide: exatamente uma requisição grava, e a perdedora sai como erro técnico, sem linha nem evento (ADR-022, linha 15, até a SPEC-7SRQ3RPK).
+Nota (††): unicidade e série de versões são garantidas por restrição única declarada, com `tenant_id` à frente (ADR-013), a partir do kernel `1.0.0-rc.7` (SPEC-7SRQ3RPK, ADR-066 do kernel; DEVS-136). Cada `CONSTRAINT <tabela>_<colunas>_key UNIQUE` do `schema.sql` tem um `postgres.Unique` de mesmo nome no provider, com a rejeição estática do `domain`, e a partida confere a declaração no catálogo (`VerifyUniques`). Em `partners`, a chave é `(organization_id, role)`. Nas cinco tabelas versionadas, `UNIQUE (tenant_id, supersedes_id)` impede dois sucessores da mesma versão, e a coluna gerada `series_origin`, que leva a chave da série na v1 e `NULL` nas demais, com `UNIQUE (tenant_id, series_origin)`, impede duas v1 da mesma série. O `Save` traduz a violação na rejeição declarada (`already-registered` ou o `supersedes-invalid` do agregado), e o `usecase.Decide` a devolve como recusa: numa corrida, exatamente uma requisição grava e a outra recebe a rejeição, sem linha nem evento. Não há leitura de unicidade antes do `Save`. A pré-leitura em autocommit da cabeça da série segue só para validar que o `supersedesId` aponta a última versão; a restrição é a autoridade. A rejeição estática não leva detalhe do comando.
 
 Nota (‡): `FindOrganization` é chamada pela porta `OrganizationDirectory`, no `Run` do caso de uso, antes de `usecase.Decide`. Em produção, o provider falha fechado com erro técnico ("diretório de organizações não configurado"); o fake existe só em testes. O provider gRPC real está fora desta versão e reavalia a chamada antes da transação.
 
@@ -179,7 +179,7 @@ Os agregados versionados (`FinancialProduct`, `IntegrationProfile`, `Operational
 
 ## Comandos (UPRs)
 
-(†) marca pré-condição que depende de outro agregado do contexto: o caso de uso a verifica por leitura na mesma UoW antes de decidir, conforme a Nota (†); a organização do parceiro vem pela porta da Nota (‡). Ver Relações entre agregados.
+(†) marca pré-condição que depende de outro agregado do contexto: o caso de uso a verifica por leitura na mesma UoW antes de decidir, sob a guarda quando a leitura é relacional, conforme a Nota (†); a organização do parceiro vem pela porta da Nota (‡). Ver Relações entre agregados.
 
 ### RegisterPartner
 
@@ -461,19 +461,19 @@ As relações são só por identidade. A verificação (†) de existência e vi
 
 - **Borda**: só gRPC, `company.partner.service.v1.PartnerService`, com 24 RPCs atrás da cadeia de interceptors do kernel: um por comando (14: `RegisterPartner`, `ChangePartnerStage`, `RegisterAgreement`, `ActivateAgreement`, `DeclareCapability`, `RecordHomologation`, `EnableCapability`, `SuspendCapability`, `ChangeRollout`, `DefineProduct`, `RetireProduct`, `RegisterIntegrationProfile`, `RaiseCertificateExpiryAlert`, `DefineOperationalPolicy`), declarados em `rpc.Commands()`, e um por consulta (10). O OpenAPI v1 fica em `contract/openapi/v1`. A administração por backoffice e a Partner API são REST do `bff`.
 - **Banco**: database `partner`, schema `public`; a role migradora `partner_migrator` é dona do banco, e a role de runtime `partner` tem só os privilégios declarados por tabela (ADR-063 do DMPF). Seis tabelas, `partners`, `partner_agreements`, `capabilities`, `financial_products`, `integration_profiles` e `operational_policies`, com `tenant_id` à frente da chave. Persistência híbrida, com colunas tipadas só para o que uma consulta filtra:
-  - `partners`: `organization_id`, `role`, `status`, com índice único `(tenant_id, organization_id, role)` de salvaguarda (††)
+  - `partners`: `organization_id`, `role`, `status`, com a restrição única `(tenant_id, organization_id, role)` declarada (††)
   - `partner_agreements`: `partner_id`, `status`
   - `capabilities`: `partner_id`, `operation`, `asset_type`, `environment`, `status` (`FindEffectiveCapability`, `FindEligiblePartners`)
   - `financial_products`: `partner_id`, `status`, `valid_until` — `valid_until` é tipada, sem filtro SQL; a vigência é avaliada em memória pela regra de Agregados
   - `integration_profiles`: `partner_id`, `environment` (`FindCertificatesExpiring`), `certificate_expires_at` — tipada, sem filtro SQL; o refino por vencimento é em memória
   - `operational_policies`: `partner_id`
-  - nas cinco tabelas versionadas (`partner_agreements`, `capabilities`, `financial_products`, `integration_profiles` e `operational_policies`), `supersedes_id` tipada, com `UNIQUE (tenant_id, supersedes_id)` e índice único parcial da v1 por série (††)
+  - nas cinco tabelas versionadas (`partner_agreements`, `capabilities`, `financial_products`, `integration_profiles` e `operational_policies`), `supersedes_id` tipada, com `UNIQUE (tenant_id, supersedes_id)`, e a coluna gerada `series_origin`, com `UNIQUE (tenant_id, series_origin)`, que admite uma v1 por série (††)
   - o resto de cada agregado vai em `snapshot` `jsonb`. As versões anteriores permanecem como linhas.
 - Diverge do design (ADR-022, linha 2): o isolamento por tenant é `tenant_id` injetado pelo `ExecutionContext` no `postgres.Table` (ADR-051 DMPF), não RLS como mecanismo primário (`docs/design/00` §4.1); `tenantId` não é campo do agregado.
 - Diverge do design (ADR-022, linha 6): eventos são Protobuf com CloudEvents montado pelo relay; o envelope JSON e o `schemaUri` do doc 92 §1 não se aplicam.
 - Diverge do design (ADR-022, linha 9): `instant` é inteiro de nanossegundos no domínio.
-- Diverge do design (ADR-022, linha 15): a unicidade por tenant é verificada por pré-leitura, com o índice como salvaguarda (††), até a SPEC-7SRQ3RPK.
-- Nesta versão, a configuração de parceiros vive num tenant único da plataforma, e o rollout avalia o `tenantId` dos filtros (decisão de tenant único); leitura e projeção entre tenants esperam a adoção do K4 (`1.0.0-rc.6`, DEVS-136), no Escopo fora.
+- Diverge do design (ADR-022, linha 15) até o kernel `1.0.0-rc.7`: a unicidade por tenant era verificada por pré-leitura, com o índice como salvaguarda. Desde a DEVS-136, é a restrição declarada que decide (††).
+- Nesta versão, a configuração de parceiros vive num tenant único da plataforma, e o rollout avalia o `tenantId` dos filtros (decisão de tenant único); leitura e projeção entre tenants esperam o uso do K4, que o kernel `1.0.0-rc.7` já traz, no Escopo fora.
 - Segredos são referenciados por `secretRef`; nenhum valor entra no domínio, em evento ou em log.
 
 ## Políticas transversais
@@ -498,7 +498,15 @@ ENTÃO o parceiro nasce prospect, com registeredAt = at, e PartnerRegistered vai
 
 DADO uma organização com kind funder em Identity e nenhum parceiro dessa organização com role funder
 QUANDO dois RegisterPartner concorrentes chegam com a mesma organização, role funder e chaves de idempotência distintas
-ENTÃO exatamente um grava, com uma linha e um PartnerRegistered, e o outro sai como erro técnico, sem linha nem evento
+ENTÃO exatamente um grava, com uma linha e um PartnerRegistered, e o outro recebe `partner-management/partner/already-registered`, sem linha nem evento
+
+DADO um parceiro homologating com acordo ativo e vigente e uma capacidade enabled, e um SuspendCapability dessa capacidade com o Save feito e a transação aberta
+QUANDO ChangePartnerStage chega com target active
+ENTÃO ChangePartnerStage espera o commit da suspensão (†) e rejeita com `partner-management/partner/no-enabled-capability`, sem mudar o parceiro
+
+DADO um acordo v1 ativo e vigente, a v2 em draft e um ActivateAgreement da v2 com o Save feito e a transação aberta
+QUANDO DefineProduct chega sobre a v1
+ENTÃO DefineProduct espera o commit da ativação (†) e rejeita com `partner-management/financial-product/agreement-not-active`, sem linha nem evento
 
 DADO um parceiro homologating com acordo ativo e vigente e uma capacidade enabled
 QUANDO ChangePartnerStage chega com target active
@@ -677,7 +685,7 @@ DADO uma política na version 1 de um parceiro QUANDO DefineOperationalPolicy ch
 - **Cofre de segredos e emissão de certificado**: o contexto guarda a referência (`secretRef`, `certificateRef`), não o valor nem o ciclo de vida do segredo.
 - **Procedimento humano de offboarding**: inventário de operações em curso, tratamento caso a caso e cláusula de acesso residual são do Backoffice e do contrato de saída (13:N11).
 - **Comandos de suspensão por produto, tipo de ativo e parceiro inteiro**: nesta versão, a suspensão é por capacidade (`SuspendCapability`), e a do parceiro muda só o `Partner` (`ChangePartnerStage`).
-- **Leitura e projeção entre tenants**: K4 (SPEC-QVDGV6J0, DEVS-100), entregue na `1.0.0-rc.6` (ADR-068 do DMPF) e dependente da adoção da rc.6 (DEVS-136); nesta versão, a configuração vive num tenant único da plataforma.
+- **Leitura e projeção entre tenants**: K4 (SPEC-QVDGV6J0, DEVS-100), entregue na `1.0.0-rc.6` (ADR-068 do DMPF) e presente no kernel `1.0.0-rc.7` adotado na DEVS-136; nesta versão, a configuração vive num tenant único da plataforma.
 - **Armazenamento de evidência de homologação e de contrato**: porta de object storage da SPEC-CWBA4BPV (DEVS-95); o contexto guarda só ids opacos.
 - **Composition root**: o esqueleto de `app/` e o `cmd/` com `--role` nascem do generator; o harness escreve o conteúdo de domínio dentro deles.
 - **`CommercialRule` e `FindCommercialRule`**: agregado, comando de definição, consulta e tabela saem desta versão, com os três códigos de regra comercial (`commercial-rule/validity-invalid`, `commercial-rule/sponsored-positions-invalid` e `commercial-rule/rates-invalid`) **[ABERTA: #7 (D1–D3; 13:N9) — o modelo de monetização trava o agregado e o comando; `canOverrideMerit` depende de docs/design/07-design-marketplace.md §3.3 R6; docs/design/92-schemas-eventos.md §4 não traz evento de `CommercialRule`, embora Billing dependa dela (docs/design/18)]**. A verificação de H17 contra a regra comercial entra com ela.
