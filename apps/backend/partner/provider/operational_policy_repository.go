@@ -27,6 +27,10 @@ var policyTable = postgres.Table[domain.PolicyID, domain.OperationalPolicySnapsh
 	Name:     "operational_policies",
 	IDColumn: "operational_policy_id",
 	Columns:  []string{"partner_id", "supersedes_id", "snapshot"},
+	Unique: []postgres.Unique{
+		{Name: "operational_policies_tenant_id_supersedes_id_key", Columns: []string{"tenant_id", "supersedes_id"}, Rejection: domain.RejectOperationalPolicySupersedesInvalid},
+		{Name: "operational_policies_tenant_id_series_origin_key", Columns: []string{"tenant_id", "series_origin"}, Rejection: domain.RejectOperationalPolicySupersedesInvalid},
+	},
 
 	Encode: func(s domain.OperationalPolicySnapshot) ([]any, error) {
 		raw, err := json.Marshal(policyState{

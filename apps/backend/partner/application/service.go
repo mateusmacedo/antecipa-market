@@ -50,6 +50,13 @@ type Resources struct {
 	Capabilities        ports.CapabilityRepository
 	FinancialProducts   ports.FinancialProductRepository
 
+	// The series a relational precondition (†) reads, inside the transaction
+	// and under the guard on the partner, so no concurrent Save of that series
+	// commits between the read and the decision (ADR-067).
+	AgreementsByPartner   ports.AgreementsByPartnerReader
+	ProfilesByPartner     ports.IntegrationProfilesByPartnerReader
+	CapabilitiesByPartner ports.CapabilitiesByPartnerReader
+
 	Outbox   port.Outbox
 	Commands port.Inbox
 }

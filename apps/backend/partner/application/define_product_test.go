@@ -30,7 +30,6 @@ func TestDefineProductWalksTheStepsInOrder(t *testing.T) {
 		"within",
 		"commands.Register",
 		"financial_products.LoadByPartner",
-		"partner_agreements.Load",
 		"partner_agreements.LoadByPartner",
 		"financial_products.Load",
 		"financial_products.Save",
@@ -207,6 +206,25 @@ func TestDefineProductRejectsEachPreconditionWithoutWriting(t *testing.T) {
 	}
 }
 
+// The agreement comes from the series read under the guard, never from a Load
+// of its own: the stored row and the series could stand on either side of a
+// concurrent ActivateAgreement, and the decision has to see one moment only.
+func TestDefineProductTakesTheAgreementFromTheSeriesItReads(t *testing.T) {
+	h := newHarness(t)
+	ctx := withExecution(t, context.Background())
+	seed(t, h, ctx, agreementTable, testAgreementID, draftAgreement(testAgreementID, 1, ""))
+	h.agreements.hold(testPartnerID, activeAgreement(testAgreementID, kernel.Instant(testOccurred)+365*day))
+
+	outcome, err := h.service.DefineProduct(ctx, defineProduct())
+
+	if err != nil {
+		t.Fatalf("DefineProduct() error = %v, want nil", err)
+	}
+	if rej, refused := outcome.Rejection(); refused {
+		t.Fatalf("DefineProduct() rejected with %s: the series holds the agreement active", rej.Code())
+	}
+}
+
 func TestEachFailureOfDefineProductCarriesTheUseCasePrefix(t *testing.T) {
 	for _, tc := range []struct {
 		name    string
@@ -215,8 +233,6 @@ func TestEachFailureOfDefineProductCarriesTheUseCasePrefix(t *testing.T) {
 		wantMsg string
 	}{
 		{"series read", nil, func(h *harness) { h.products.err = errBoom }, "application: define product fpr-100: boom"},
-		{"agreement read", []option{withTableFaults("partner_agreements", serviceskit.Faults{Load: errBoom})}, nil,
-			"application: define product fpr-100: boom"},
 		{"agreement series read", nil, func(h *harness) { h.agreements.err = errBoom }, "application: define product fpr-100: boom"},
 		{"save", []option{withTableFaults("financial_products", serviceskit.Faults{Save: errBoom})}, nil,
 			"application: define product fpr-100: boom"},

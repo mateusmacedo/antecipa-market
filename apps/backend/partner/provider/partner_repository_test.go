@@ -96,7 +96,7 @@ func TestTheSameOrganizationAndRoleIsRefusedInTheTenantForAnyStatus(t *testing.T
 	err := savePartner(ctx, pool, "prt-b", prospect)
 
 	if err == nil || errors.Is(err, port.ErrVersionConflict) {
-		t.Fatalf("Save(second) = %v, want the unique violation as a technical error", err)
+		t.Fatalf("Save(second) = %v, want the unique violation, declared to the Save (ADR-066)", err)
 	}
 	if got := pg.Counts(t, pool, partnersTable)[partnersTable]; got != 1 {
 		t.Fatalf("partners = %d rows, want 1", got)

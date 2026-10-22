@@ -53,9 +53,9 @@ func (s Service) enablementFacts(ctx context.Context, res Resources, id domain.C
 	if err != nil || !found {
 		return facts, err
 	}
-	if facts.effectiveAgreement, err = s.agreementInEffect(ctx, capability.PartnerID, at); err != nil {
+	if facts.effectiveAgreement, err = agreementInEffect(ctx, res, capability.PartnerID, at); err != nil {
 		return facts, err
 	}
-	facts.effectiveProfile, err = s.profileInEffect(ctx, capability.PartnerID, capability.Environment, at)
+	facts.effectiveProfile, err = profileInEffect(ctx, res, capability.PartnerID, capability.Environment, at)
 	return facts, err
 }

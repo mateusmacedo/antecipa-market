@@ -13,7 +13,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/jackc/pgx/v5/pgxpool"
 	kernelapp "github.com/mateusmacedo/dmpf/libs/backend/go/app"
 	kernelgrpc "github.com/mateusmacedo/dmpf/libs/backend/go/grpc"
@@ -155,12 +154,22 @@ func dial(t *testing.T, pool *pgxpool.Pool, saves *barrier) *grpc.ClientConn {
 				Capabilities:        held(provider.NewCapabilityRepository(tx), saves),
 				FinancialProducts:   held(provider.NewFinancialProductRepository(tx), saves),
 
+				AgreementsByPartner:   provider.NewAgreementsByPartnerWithin(tx),
+				ProfilesByPartner:     provider.NewIntegrationProfilesByPartnerWithin(tx),
+				CapabilitiesByPartner: provider.NewCapabilitiesByPartnerWithin(tx),
+
 				Outbox:   tx.Outbox(provider.Mapper{}),
 				Commands: tx.CommandInbox(application.CommandConsumer, time.Second),
 			}
 		})
 	}
+	return serveOver(t, service)
+}
 
+// serveOver puts a service behind the gRPC edge of the context, with the
+// interceptor chain of the kernel, and dials it.
+func serveOver(t *testing.T, service application.Service) *grpc.ClientConn {
+	t.Helper()
 	limit := admission.Limit{PerSecond: 1000, Burst: 1000, Concurrency: 64}
 	ctrl, err := admission.New(admission.Config{Limits: kernelgrpc.MethodLimits(rpc.ServiceName, rpc.Methods(), limit), MaxKeys: 16, Clock: obsclock.System()})
 	if err != nil {
@@ -341,8 +350,13 @@ func TestEachRefusalOfRegisterPartnerWritesNothing(t *testing.T) {
 }
 
 type attempt struct {
-	ok  bool
-	err error
+	ok        bool
+	rejection string
+	err       error
+}
+
+type refusable interface {
+	GetRejection() *servicev1.Rejection
 }
 
 func invokeAtOnce(t *testing.T, conn *grpc.ClientConn, method string, calls map[string]proto.Message, accepted func(proto.Message) bool, response func() proto.Message) map[string]attempt {
@@ -359,36 +373,42 @@ func invokeAtOnce(t *testing.T, conn *grpc.ClientConn, method string, calls map[
 			err := conn.Invoke(ctx, rpc.FullMethod(method), req, resp)
 			mu.Lock()
 			defer mu.Unlock()
-			out[name] = attempt{ok: err == nil && accepted(resp), err: err}
+			a := attempt{ok: err == nil && accepted(resp), err: err}
+			if r, refused := resp.(refusable); refused && err == nil {
+				a.rejection = r.GetRejection().GetCode()
+			}
+			out[name] = a
 		})
 	}
 	group.Wait()
 	return out
 }
 
-func oneAcceptedOneFailed(t *testing.T, got map[string]attempt) {
+// oneAcceptedOneRejected holds the race to its single legal ending: the unique
+// constraint decides, and the loser answers the rejection it declares (ADR-066).
+func oneAcceptedOneRejected(t *testing.T, got map[string]attempt, code string) {
 	t.Helper()
-	accepted, failed := 0, 0
+	accepted, rejected := 0, 0
 	for name, a := range got {
 		switch {
 		case a.ok:
 			accepted++
-		case status.Code(a.err) == codes.Internal:
-			failed++
+		case a.err == nil && a.rejection == code:
+			rejected++
 		default:
-			t.Errorf("%s = %v, want either accepted or the technical failure of the loser", name, a.err)
+			t.Errorf("%s = %v (rejection %q), want either accepted or the rejection %s", name, a.err, a.rejection, code)
 		}
 	}
-	if accepted != 1 || failed != 1 {
-		t.Fatalf("accepted %d and failed %d, want exactly one of each", accepted, failed)
+	if accepted != 1 || rejected != 1 {
+		t.Fatalf("accepted %d and rejected %d, want exactly one of each", accepted, rejected)
 	}
 }
 
 func refusedByUniqueness(t *testing.T, saves *barrier, constraint string) {
 	t.Helper()
 	refused := saves.refusals()
-	var violation *pgconn.PgError
-	if len(refused) != 1 || !errors.As(refused[0], &violation) || violation.Code != "23505" || violation.ConstraintName != constraint {
+	var violation port.UniqueViolation
+	if len(refused) != 1 || !errors.As(refused[0], &violation) || violation.Constraint != constraint {
 		t.Fatalf("refused Saves = %v, want exactly one, the loser's, at %s", refused, constraint)
 	}
 }
@@ -403,7 +423,7 @@ func TestTwoConcurrentRegistrationsOfOneOrganizationAndRoleLeaveOnePartner(t *te
 		func(m proto.Message) bool { return m.(*servicev1.RegisterPartnerResponse).GetRegistered() != nil },
 		func() proto.Message { return &servicev1.RegisterPartnerResponse{} })
 
-	oneAcceptedOneFailed(t, got)
+	oneAcceptedOneRejected(t, got, string(domain.CodePartnerAlreadyRegistered))
 	refusedByUniqueness(t, saves, "partners_tenant_id_organization_id_role_key")
 	if p, _, e := rows(t, pool); p != 1 || e != 1 {
 		t.Fatalf("partners = %d, outbox = %d, want exactly one row and one PartnerRegistered", p, e)
@@ -464,8 +484,8 @@ func TestTwoConcurrentFirstVersionsOfOneSeriesLeaveOneAgreement(t *testing.T) {
 		func(m proto.Message) bool { return m.(*servicev1.RegisterAgreementResponse).GetRegistered() != nil },
 		func() proto.Message { return &servicev1.RegisterAgreementResponse{} })
 
-	oneAcceptedOneFailed(t, got)
-	refusedByUniqueness(t, saves, "partner_agreements_tenant_id_partner_id_idx")
+	oneAcceptedOneRejected(t, got, string(domain.CodePartnerAgreementSupersedesInvalid))
+	refusedByUniqueness(t, saves, "partner_agreements_tenant_id_series_origin_key")
 	if _, a, _ := rows(t, pool); a != 1 {
 		t.Fatalf("partner_agreements = %d, want exactly one first version", a)
 	}

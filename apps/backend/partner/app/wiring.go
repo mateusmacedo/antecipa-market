@@ -75,6 +75,10 @@ func bind(waits Waits) func(*postgres.Tx) application.Resources {
 			Capabilities:        provider.NewCapabilityRepository(tx),
 			FinancialProducts:   provider.NewFinancialProductRepository(tx),
 
+			AgreementsByPartner:   provider.NewAgreementsByPartnerWithin(tx),
+			ProfilesByPartner:     provider.NewIntegrationProfilesByPartnerWithin(tx),
+			CapabilitiesByPartner: provider.NewCapabilitiesByPartnerWithin(tx),
+
 			Outbox:   tx.Outbox(provider.Mapper{}),
 			Commands: tx.CommandInbox(application.CommandConsumer, waits.Command),
 		}
@@ -84,7 +88,7 @@ func bind(waits Waits) func(*postgres.Tx) application.Resources {
 func NewService(transactions, readPool *pgxpool.Pool, directory ports.OrganizationDirectory, rollout ports.RolloutBucket, clock port.Clock, ids port.IDGenerator, waits Waits) application.Service {
 	reads := postgres.NewReadPool(readPool)
 	return application.Service{
-		UoW:                    postgres.NewUnitOfWork(transactions, bind(waits)),
+		UoW:                    unitOfWork(transactions, bind(waits)),
 		Directory:              directory,
 		PartnersByOrganization: provider.NewPartnersByOrganizationReader(reads),
 		AgreementsByPartner:    provider.NewAgreementsByPartnerReader(reads),
@@ -115,7 +119,7 @@ func NewPartnerService(transactions, reads *pgxpool.Pool, rt *otelboot.Runtime, 
 
 func api(cfg Config, rt *otelboot.Runtime, reads *pgxpool.Pool, directory ports.OrganizationDirectory) serve.API {
 	return serve.API{
-		Desc: &rpc.ServiceDesc, Commands: rpc.Commands(), Schema: provider.Schema, Grants: provider.Grants, CommandConsumer: application.CommandConsumer,
+		Desc: &rpc.ServiceDesc, Commands: rpc.Commands(), Schema: provider.Schema, Grants: provider.Grants, Uniques: provider.Uniques, CommandConsumer: application.CommandConsumer,
 		Register: func(server *grpc.Server, pool *pgxpool.Pool) error {
 			service, err := NewPartnerService(pool, reads, rt, cfg, directory)
 			if err != nil {

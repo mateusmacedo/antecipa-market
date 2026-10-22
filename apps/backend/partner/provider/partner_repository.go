@@ -23,6 +23,11 @@ var partnerTable = postgres.Table[domain.PartnerID, domain.PartnerSnapshot]{
 	Name:     "partners",
 	IDColumn: "partner_id",
 	Columns:  []string{"organization_id", "role", "status", "snapshot"},
+	Unique: []postgres.Unique{{
+		Name:      "partners_tenant_id_organization_id_role_key",
+		Columns:   []string{"tenant_id", "organization_id", "role"},
+		Rejection: domain.RejectPartnerAlreadyRegistered,
+	}},
 
 	Encode: func(s domain.PartnerSnapshot) ([]any, error) {
 		raw, err := json.Marshal(partnerState{

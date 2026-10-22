@@ -25,7 +25,22 @@ func (r *IntegrationProfilesByPartnerReader) LoadByPartner(ctx context.Context, 
 	return profilesByPartner.Query(ctx, r.pool, string(partnerID))
 }
 
-var _ ports.IntegrationProfilesByPartnerReader = (*IntegrationProfilesByPartnerReader)(nil)
+// IntegrationProfilesByPartnerWithin reads the series inside the command
+// transaction, under the guard on partner_id (ADR-067).
+type IntegrationProfilesByPartnerWithin struct{ tx *postgres.Tx }
+
+func NewIntegrationProfilesByPartnerWithin(tx *postgres.Tx) *IntegrationProfilesByPartnerWithin {
+	return &IntegrationProfilesByPartnerWithin{tx: tx}
+}
+
+func (r *IntegrationProfilesByPartnerWithin) LoadByPartner(ctx context.Context, partnerID domain.PartnerID) ([]domain.IntegrationProfileSnapshot, error) {
+	return profilesByPartner.QueryWithin(ctx, r.tx, string(partnerID))
+}
+
+var (
+	_ ports.IntegrationProfilesByPartnerReader = (*IntegrationProfilesByPartnerReader)(nil)
+	_ ports.IntegrationProfilesByPartnerReader = (*IntegrationProfilesByPartnerWithin)(nil)
+)
 
 var profilesByEnvironment = profileTable.Relation("environment")
 

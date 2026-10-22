@@ -26,6 +26,11 @@ var agreementTable = postgres.Table[domain.AgreementID, domain.PartnerAgreementS
 	Name:     "partner_agreements",
 	IDColumn: "partner_agreement_id",
 	Columns:  []string{"partner_id", "status", "supersedes_id", "snapshot"},
+	Guard:    "partner_id",
+	Unique: []postgres.Unique{
+		{Name: "partner_agreements_tenant_id_supersedes_id_key", Columns: []string{"tenant_id", "supersedes_id"}, Rejection: domain.RejectPartnerAgreementSupersedesInvalid},
+		{Name: "partner_agreements_tenant_id_series_origin_key", Columns: []string{"tenant_id", "series_origin"}, Rejection: domain.RejectPartnerAgreementSupersedesInvalid},
+	},
 
 	Encode: func(s domain.PartnerAgreementSnapshot) ([]any, error) {
 		raw, err := json.Marshal(agreementState{
@@ -78,9 +83,9 @@ func NewAgreementRepository(tx *postgres.Tx) ports.AgreementRepository {
 	return agreementTable.Repository(tx)
 }
 
-// nullable stores the first version of a series as NULL: the partial unique
-// index of the first versions and the unique supersedes_id both skip NULLs,
-// which an empty string would not.
+// nullable stores the first version of a series as NULL: series_origin keys
+// the series only where supersedes_id is NULL, and the unique supersedes_id
+// skips NULLs, which an empty string would not.
 func nullable(value string) *string {
 	if value == "" {
 		return nil

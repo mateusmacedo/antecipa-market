@@ -29,6 +29,10 @@ var productTable = postgres.Table[domain.ProductID, domain.FinancialProductSnaps
 	Name:     "financial_products",
 	IDColumn: "financial_product_id",
 	Columns:  []string{"partner_id", "code", "status", "valid_until", "supersedes_id", "snapshot"},
+	Unique: []postgres.Unique{
+		{Name: "financial_products_tenant_id_supersedes_id_key", Columns: []string{"tenant_id", "supersedes_id"}, Rejection: domain.RejectFinancialProductSupersedesInvalid},
+		{Name: "financial_products_tenant_id_series_origin_key", Columns: []string{"tenant_id", "series_origin"}, Rejection: domain.RejectFinancialProductSupersedesInvalid},
+	},
 
 	Encode: func(s domain.FinancialProductSnapshot) ([]any, error) {
 		raw, err := json.Marshal(productState{

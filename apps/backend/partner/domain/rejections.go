@@ -53,3 +53,20 @@ const (
 	CodeFinancialProductNotActive          kernel.Code = "partner-management/financial-product/not-active"
 	CodeFinancialProductNotYetExpired      kernel.Code = "partner-management/financial-product/not-yet-expired"
 )
+
+// The rejections the unique constraints raise are static: the Save raises them,
+// where no command value is at hand to detail (ADR-066).
+var (
+	RejectPartnerAlreadyRegistered = kernel.Reject(CodePartnerAlreadyRegistered, "organization already registered under the role")
+
+	RejectPartnerAgreementSupersedesInvalid = kernel.Reject(CodePartnerAgreementSupersedesInvalid,
+		"supersedes must name the last version of the series of the partner, and a series holds one first version")
+	RejectIntegrationProfileSupersedesInvalid = kernel.Reject(CodeIntegrationProfileSupersedesInvalid,
+		"supersedes must name the last version of the series of the partner and environment, and a series holds one first version")
+	RejectOperationalPolicySupersedesInvalid = kernel.Reject(CodeOperationalPolicySupersedesInvalid,
+		"supersedes must name the last version of the series of the partner, and a series holds one first version")
+	RejectCapabilitySupersedesInvalid = kernel.Reject(CodeCapabilitySupersedesInvalid,
+		"supersedes must name the last version of the series of the partner, operation, asset type and environment, and a series holds one first version")
+	RejectFinancialProductSupersedesInvalid = kernel.Reject(CodeFinancialProductSupersedesInvalid,
+		"supersedes must name the last version of the series of the partner and code, and a series holds one first version")
+)

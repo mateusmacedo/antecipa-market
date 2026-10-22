@@ -57,13 +57,14 @@ func TestAgreementRepositoryConformsToTheKit(t *testing.T) {
 			Within: func(ctx context.Context, fn func(context.Context, port.Repository[domain.AgreementID, domain.PartnerAgreementSnapshot]) error) error {
 				return pg.Within(ctx, pool, provider.NewAgreementRepository, fn)
 			},
-			Reader:   provider.NewAgreementReader(postgres.NewReadPool(pool)),
-			NewID:    func(n int) domain.AgreementID { return domain.AgreementID("kit-" + strconv.Itoa(n)) },
-			NewState: agreement,
-			Marker: func(s domain.PartnerAgreementSnapshot) int {
-				n, _ := strconv.Atoi(string(s.PartnerID)[len("prt-"):])
-				return n
+			Reader: provider.NewAgreementReader(postgres.NewReadPool(pool)),
+			NewID:  func(n int) domain.AgreementID { return domain.AgreementID("kit-" + strconv.Itoa(n)) },
+			NewState: func(marker int) domain.PartnerAgreementSnapshot {
+				s := agreement(marker)
+				s.PartnerID = kitPartner
+				return s
 			},
+			Marker:           func(s domain.PartnerAgreementSnapshot) int { return int(s.ActivatedAt - 1_755_518_400_000_000_000) },
 			TenantUnresolved: postgres.ErrTenantUnresolved,
 			Concurrent:       true,
 		}
@@ -116,7 +117,7 @@ func TestTheSeriesHoldsOneFirstVersionAndOneSuccessorOfEachVersion(t *testing.T)
 			err := saveAgreement(ctx, pool, tc.second)
 
 			if err == nil || errors.Is(err, port.ErrVersionConflict) {
-				t.Fatalf("Save(%s) = %v, want the unique violation as a technical error", tc.second.ID, err)
+				t.Fatalf("Save(%s) = %v, want the unique violation, declared to the Save (ADR-066)", tc.second.ID, err)
 			}
 			if got := pg.Counts(t, pool, agreementsTable)[agreementsTable]; got != int64(len(tc.held)) {
 				t.Fatalf("partner_agreements = %d rows, want %d", got, len(tc.held))
