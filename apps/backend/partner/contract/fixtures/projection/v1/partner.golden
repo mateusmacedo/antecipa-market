@@ -24,7 +24,6 @@
         "role": "funder",
         "organization_found": "true",
         "organization_kinds": "funder",
-        "already_registered": "false",
         "at": "1755432000000000000"
       },
       "expected": {
@@ -74,7 +73,6 @@
         "role": "funder",
         "organization_found": "false",
         "organization_kinds": "",
-        "already_registered": "false",
         "at": "1755432000000000000"
       },
       "expected": {
@@ -108,7 +106,6 @@
         "role": "registry",
         "organization_found": "true",
         "organization_kinds": "funder",
-        "already_registered": "false",
         "at": "1755432000000000000"
       },
       "expected": {
@@ -119,41 +116,6 @@
           "details": {
             "organization": "org-1",
             "role": "registry"
-          }
-        },
-        "events": []
-      }
-    },
-    {
-      "name": "register-already-registered",
-      "doc": "Ramo Rejected de Register: a organização já tem parceiro com o mesmo papel no tenant.",
-      "state_before": {
-        "partner": "prt-1",
-        "organization": "",
-        "role": "",
-        "status": "",
-        "registered_at": "0",
-        "stage_changed_at": "0",
-        "stage_reason": "",
-        "offboarding_started_at": "0"
-      },
-      "command": {
-        "upr": "register",
-        "organization": "org-1",
-        "role": "funder",
-        "organization_found": "true",
-        "organization_kinds": "funder",
-        "already_registered": "true",
-        "at": "1755432000000000000"
-      },
-      "expected": {
-        "branch": "rejected",
-        "rejection": {
-          "code": "partner-management/partner/already-registered",
-          "message": "organization already registered under the role",
-          "details": {
-            "organization": "org-1",
-            "role": "funder"
           }
         },
         "events": []
