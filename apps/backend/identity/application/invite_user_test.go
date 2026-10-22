@@ -116,6 +116,24 @@ func TestInviteUserInvitesWithoutAnEvent(t *testing.T) {
 	}
 }
 
+func TestInviteUserInvitesPlatformOpsIntoAPlatformOrganization(t *testing.T) {
+	h := newHarness(t)
+	withOrganizationOfKinds(t, h, domain.OrganizationActive, domain.KindPlatform)
+	ctx := withExecution(t, context.Background())
+	cmd := invite()
+	cmd.Role = domain.RolePlatformOps
+
+	outcome, err := h.service.InviteUser(ctx, cmd)
+
+	if err != nil || outcome.Response() != (domain.InviteUserResponse{MembershipID: testMembershipID}) {
+		t.Fatalf("InviteUser() = %+v, %v; want accepted", outcome, err)
+	}
+	stored, version, err := membershipTable.Reader(h.store).Load(ctx, testMembershipID)
+	if err != nil || version != 1 || !stored.Equal(invitedMembership(testMembershipID, domain.RolePlatformOps)) {
+		t.Fatalf("Load() = %+v v%d, %v; want the invited platform ops at v1", stored, version, err)
+	}
+}
+
 func TestInviteUserRejectsEachPreconditionWithoutWriting(t *testing.T) {
 	for _, tc := range []struct {
 		name    string
@@ -132,6 +150,8 @@ func TestInviteUserRejectsEachPreconditionWithoutWriting(t *testing.T) {
 			withOrganizationOfKinds(t, h, domain.OrganizationActive, domain.KindFunder)
 		},
 			func(*application.InviteUser) {}, domain.CodeMembershipRoleKindMismatch},
+		{"platform ops in a client", activeClient, func(c *application.InviteUser) { c.Role = domain.RolePlatformOps },
+			domain.CodeMembershipRoleKindMismatch},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			h := newHarness(t)

@@ -109,6 +109,8 @@ func TestGrantMembershipRejectsEachPreconditionWithoutWriting(t *testing.T) {
 			func(c *application.GrantMembership) { c.ChannelConfirmed = false }, domain.CodeMembershipChannelNotConfirmed},
 		{"operator with channel ownership", invitedMembership(testMembershipID, domain.RoleOperator), ptr(activeAccount(testSubject)),
 			func(c *application.GrantMembership) { c.VerificationLevel = domain.VerificationChannelOwnership }, domain.CodeMembershipVerificationInsufficient},
+		{"platform ops with channel ownership", invitedMembership(testMembershipID, domain.RolePlatformOps), ptr(activeAccount(testSubject)),
+			func(c *application.GrantMembership) { c.VerificationLevel = domain.VerificationChannelOwnership }, domain.CodeMembershipVerificationInsufficient},
 		{"user suspended", invitedMembership(testMembershipID, domain.RoleOperator), ptr(suspendedAccount(testSubject)),
 			func(*application.GrantMembership) {}, domain.CodeMembershipUserNotActive},
 		{"user not found", invitedMembership(testMembershipID, domain.RoleOperator), nil,

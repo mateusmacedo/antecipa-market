@@ -55,7 +55,7 @@ nele, a cada requisição, o que cada usuário pode fazer.
 | `Person` | Registra pessoas naturais por hash e máscara do documento, sem guardar o documento |
 | `Representation` | Registra poderes de representação com fonte, evidência, alçada e vigência |
 | `UserAccount` | Provisiona a conta do usuário autenticado (inicializa se ausente) e a suspende |
-| `Membership` | Convida, concede e revoga o vínculo do usuário com a organização, com os papéis `operator` e `auditor` |
+| `Membership` | Convida, concede e revoga o vínculo do usuário com a organização, com os papéis `operator` e `auditor` (organização cliente) e `platform_ops` (organização de plataforma) |
 | `BankAccountChange` | Propõe e aprova a troca de conta bancária, com aprovador distinto do proponente |
 
 `FindEffectivePermissions` devolve, a cada requisição do `bff`, as permissões

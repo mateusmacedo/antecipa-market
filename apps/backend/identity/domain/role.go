@@ -3,8 +3,9 @@ package domain
 type Role string
 
 const (
-	RoleOperator Role = "operator"
-	RoleAuditor  Role = "auditor"
+	RoleOperator    Role = "operator"
+	RoleAuditor     Role = "auditor"
+	RolePlatformOps Role = "platform_ops"
 )
 
 type VerificationLevel string
@@ -20,13 +21,15 @@ var verificationRanks = map[VerificationLevel]int{
 }
 
 var minimumVerification = map[Role]VerificationLevel{
-	RoleOperator: VerificationPersonalDataChecked,
-	RoleAuditor:  VerificationChannelOwnership,
+	RoleOperator:    VerificationPersonalDataChecked,
+	RoleAuditor:     VerificationChannelOwnership,
+	RolePlatformOps: VerificationPersonalDataChecked,
 }
 
 var requiredKind = map[Role]OrganizationKind{
-	RoleOperator: KindClient,
-	RoleAuditor:  KindClient,
+	RoleOperator:    KindClient,
+	RoleAuditor:     KindClient,
+	RolePlatformOps: KindPlatform,
 }
 
 // admits answers false for a role outside the catalogue, so an unknown role is

@@ -140,6 +140,8 @@ func roleOf(role domain.Role) eventv1.MembershipRole {
 		return eventv1.MembershipRole_MEMBERSHIP_ROLE_OPERATOR
 	case domain.RoleAuditor:
 		return eventv1.MembershipRole_MEMBERSHIP_ROLE_AUDITOR
+	case domain.RolePlatformOps:
+		return eventv1.MembershipRole_MEMBERSHIP_ROLE_PLATFORM_OPS
 	default:
 		return eventv1.MembershipRole_MEMBERSHIP_ROLE_UNSPECIFIED
 	}

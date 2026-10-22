@@ -13,12 +13,14 @@ import (
 )
 
 var (
-	operatorCatalogue = domain.RoleOperator.Permissions()
-	auditorCatalogue  = domain.RoleAuditor.Permissions()
+	operatorCatalogue    = domain.RoleOperator.Permissions()
+	auditorCatalogue     = domain.RoleAuditor.Permissions()
+	platformOpsCatalogue = domain.RolePlatformOps.Permissions()
 )
 
 func TestFindEffectivePermissionsAnswersTheUnionOfTheActiveMemberships(t *testing.T) {
 	union := domain.EffectivePermissions(domain.RoleOperator, domain.RoleAuditor)
+	operatorAndPlatformOps := domain.EffectivePermissions(domain.RoleOperator, domain.RolePlatformOps)
 	for _, tc := range []struct {
 		name        string
 		memberships []domain.MembershipSnapshot
@@ -31,6 +33,11 @@ func TestFindEffectivePermissionsAnswersTheUnionOfTheActiveMemberships(t *testin
 			activeMembership("mem-a", domain.RoleOperator, testSubject),
 			activeMembership("mem-b", domain.RoleAuditor, testSubject),
 		}, union, 20},
+		{"a platform ops", []domain.MembershipSnapshot{activeMembership("mem-a", domain.RolePlatformOps, testSubject)}, platformOpsCatalogue, 24},
+		{"an operator and a platform ops", []domain.MembershipSnapshot{
+			activeMembership("mem-a", domain.RoleOperator, testSubject),
+			activeMembership("mem-b", domain.RolePlatformOps, testSubject),
+		}, operatorAndPlatformOps, 41},
 		{"an operator with a revoked auditor", []domain.MembershipSnapshot{
 			activeMembership("mem-a", domain.RoleOperator, testSubject),
 			revokedMembership("mem-b", domain.RoleAuditor, testSubject),
