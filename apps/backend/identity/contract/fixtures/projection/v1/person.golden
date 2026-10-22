@@ -22,7 +22,6 @@
         "document": "123.456.789-09",
         "document_hash": "5b2d0f0e4c8f1a9e7d36c2b4a1f0e9d8c7b6a5f4e3d2c1b0a9f8e7d6c5b4a392",
         "document_hash_key_version": "1",
-        "document_already_registered": "false",
         "at": "1755432000000000000"
       },
       "expected": {
@@ -58,7 +57,6 @@
         "document": "123.456.789-09",
         "document_hash": "5b2d0f0e4c8f1a9e7d36c2b4a1f0e9d8c7b6a5f4e3d2c1b0a9f8e7d6c5b4a392",
         "document_hash_key_version": "1",
-        "document_already_registered": "false",
         "at": "1755432000000000000"
       },
       "expected": {
@@ -96,7 +94,6 @@
         "document": "..-",
         "document_hash": "",
         "document_hash_key_version": "1",
-        "document_already_registered": "false",
         "at": "1755432000000000000"
       },
       "expected": {
@@ -104,44 +101,6 @@
         "rejection": {
           "code": "identity-organization/person/document-empty",
           "message": "document must not be empty",
-          "details": {}
-        },
-        "events": [],
-        "state_after": {
-          "person": "per-1",
-          "full_name": "",
-          "document_hash": "",
-          "document_hash_key_version": "0",
-          "document_masked": "",
-          "created_at": "0"
-        }
-      }
-    },
-    {
-      "name": "register-duplicate-document",
-      "doc": "Ramo Rejected de Register: o hash do documento já está registrado no tenant (nota ††).",
-      "state_before": {
-        "person": "per-1",
-        "full_name": "",
-        "document_hash": "",
-        "document_hash_key_version": "0",
-        "document_masked": "",
-        "created_at": "0"
-      },
-      "command": {
-        "upr": "register",
-        "full_name": "Ana Sintetica",
-        "document": "123.456.789-09",
-        "document_hash": "5b2d0f0e4c8f1a9e7d36c2b4a1f0e9d8c7b6a5f4e3d2c1b0a9f8e7d6c5b4a392",
-        "document_hash_key_version": "1",
-        "document_already_registered": "true",
-        "at": "1755432000000000000"
-      },
-      "expected": {
-        "branch": "rejected",
-        "rejection": {
-          "code": "identity-organization/person/duplicate-document",
-          "message": "document already registered",
           "details": {}
         },
         "events": [],

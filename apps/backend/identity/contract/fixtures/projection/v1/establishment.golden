@@ -29,7 +29,6 @@
         "tax_id": "12ABC34501DE35",
         "tax_id_hash": "9c1185a5c5e9fc54612808977ee8f548b2258d31b6e2e9a4e5a3ab4c2c4e0f11",
         "tax_id_hash_key_version": "1",
-        "tax_id_already_registered": "false",
         "trade_name": "Loja Sintetica",
         "receiver": "true",
         "external_references": "partner-registry|registry|asset|AST-0001/A|1755431000000000000|v3",
@@ -92,7 +91,6 @@
         "tax_id": "123.456.789-09",
         "tax_id_hash": "5b2d0f0e4c8f1a9e7d36c2b4a1f0e9d8c7b6a5f4e3d2c1b0a9f8e7d6c5b4a392",
         "tax_id_hash_key_version": "1",
-        "tax_id_already_registered": "false",
         "trade_name": "",
         "receiver": "false",
         "external_references": "",
@@ -155,7 +153,6 @@
         "tax_id": "12ABC34501DE35",
         "tax_id_hash": "9c1185a5c5e9fc54612808977ee8f548b2258d31b6e2e9a4e5a3ab4c2c4e0f11",
         "tax_id_hash_key_version": "1",
-        "tax_id_already_registered": "false",
         "trade_name": "Loja Sintetica",
         "receiver": "true",
         "external_references": "partner-registry|registry|asset|AST-0001/A|1755431000000000000|v3",
@@ -210,7 +207,6 @@
         "tax_id": "12ABC34501DE35",
         "tax_id_hash": "9c1185a5c5e9fc54612808977ee8f548b2258d31b6e2e9a4e5a3ab4c2c4e0f11",
         "tax_id_hash_key_version": "1",
-        "tax_id_already_registered": "false",
         "trade_name": "Loja Sintetica",
         "receiver": "true",
         "external_references": "partner-registry|registry|asset|AST-0001/A|1755431000000000000|v3",
@@ -265,7 +261,6 @@
         "tax_id": "./-",
         "tax_id_hash": "",
         "tax_id_hash_key_version": "1",
-        "tax_id_already_registered": "false",
         "trade_name": "Loja Sintetica",
         "receiver": "true",
         "external_references": "partner-registry|registry|asset|AST-0001/A|1755431000000000000|v3",
@@ -277,61 +272,6 @@
           "code": "identity-organization/establishment/tax-id-empty",
           "message": "tax id must not be empty",
           "details": {}
-        },
-        "events": [],
-        "state_after": {
-          "establishment": "est-1",
-          "organization": "",
-          "tax_id_type": "",
-          "tax_id": "",
-          "tax_id_hash": "",
-          "tax_id_hash_key_version": "0",
-          "tax_id_masked": "",
-          "trade_name": "",
-          "receiver": "false",
-          "external_references": "",
-          "created_at": "0"
-        }
-      }
-    },
-    {
-      "name": "add-duplicate-tax-id",
-      "doc": "Ramo Rejected de Add: o par (organização, hash) já está registrado no tenant (nota ††).",
-      "state_before": {
-        "establishment": "est-1",
-        "organization": "",
-        "tax_id_type": "",
-        "tax_id": "",
-        "tax_id_hash": "",
-        "tax_id_hash_key_version": "0",
-        "tax_id_masked": "",
-        "trade_name": "",
-        "receiver": "false",
-        "external_references": "",
-        "created_at": "0"
-      },
-      "command": {
-        "upr": "add",
-        "organization": "org-1",
-        "organization_status": "active",
-        "tax_id_type": "cnpj",
-        "tax_id": "12ABC34501DE35",
-        "tax_id_hash": "9c1185a5c5e9fc54612808977ee8f548b2258d31b6e2e9a4e5a3ab4c2c4e0f11",
-        "tax_id_hash_key_version": "1",
-        "tax_id_already_registered": "true",
-        "trade_name": "Loja Sintetica",
-        "receiver": "true",
-        "external_references": "partner-registry|registry|asset|AST-0001/A|1755431000000000000|v3",
-        "at": "1755432000000000000"
-      },
-      "expected": {
-        "branch": "rejected",
-        "rejection": {
-          "code": "identity-organization/establishment/duplicate-tax-id",
-          "message": "tax id already registered in the organization",
-          "details": {
-            "organization": "org-1"
-          }
         },
         "events": [],
         "state_after": {
