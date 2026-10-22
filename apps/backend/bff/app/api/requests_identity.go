@@ -260,7 +260,7 @@ type inviteUserBody struct {
 }
 
 const invalidInviteUser = "membershipId must be an identifier; inviteeEmail must have at most 254 characters, none of them a control character; " +
-	"role must be operator or auditor; invitationExpiresAt must be present"
+	"role must be operator, auditor or platform_ops; invitationExpiresAt must be present"
 
 func validInviteUser(b inviteUserBody) bool {
 	return given(b.MembershipID, validIdentifier) &&

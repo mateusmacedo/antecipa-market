@@ -514,6 +514,20 @@ func TestAValidAtOutsideTheContractIs400WithoutCallingTheContext(t *testing.T) {
 	}
 }
 
+func TestAPlatformOpsMembershipIsAnsweredWithItsRole(t *testing.T) {
+	fake := (&fakeIdentity{}).grant("identity:find-memberships-by-organization").replying(methodMembershipsByOrganization,
+		answer(&servicev1.FindMembershipsByOrganizationResponse{Memberships: []*servicev1.Membership{{
+			MembershipId: "m-1", OrganizationId: "org-1", InviteeEmail: "ops@platform.test", Role: servicev1.MembershipRole_MEMBERSHIP_ROLE_PLATFORM_OPS,
+			Status: servicev1.MembershipStatus_MEMBERSHIP_STATUS_INVITED, InvitedByUserId: "u-1", InvitedAt: 1, InvitationExpiresAt: 2,
+		}}}))
+	f := identityEdge(t, fake)
+
+	rec := f.do(t, http.MethodGet, "/identity/organizations/org-1/memberships", nil)
+
+	requireJSON(t, rec, `[{"membershipId":"m-1","organizationId":"org-1","inviteeEmail":"ops@platform.test","role":"platform_ops",
+		"status":"invited","invitedByUserId":"u-1","invitedAt":1,"invitationExpiresAt":2}]`)
+}
+
 func TestAnElementTheContractCannotRepresentFailsTheWholeListing(t *testing.T) {
 	fake := (&fakeIdentity{}).grant("identity:find-memberships-by-organization").replying(methodMembershipsByOrganization,
 		answer(&servicev1.FindMembershipsByOrganizationResponse{Memberships: []*servicev1.Membership{{
