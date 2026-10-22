@@ -6,7 +6,7 @@ description: >
   correção ou regressão. Cobre: isolamento de escopo, correção mínima, teste de regressão e
   validação pós-fix. Para debugging/investigação inicial, ver o agente `debug`; para refatoração,
   ver `skill-clean-code`; para testes em geral, ver `skill-unit-integration-testing`.
-model: sonnet
+model: opus
 ---
 
 # Bug Fix

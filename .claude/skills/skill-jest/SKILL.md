@@ -9,7 +9,7 @@ description: >
   controllers e repositórios (pg-mem), mock patterns (jest-mock-extended, manual mocks,
   module mocking) e async testing.
   Para testes E2E de API, ver uso direto de supertest.
-model: sonnet
+model: opus
 ---
 
 # Jest (backend)

@@ -6,7 +6,7 @@ description: |
   ou mencionar arquitetura, dependências entre camadas, limites de módulos e trade-offs.
   Cobre estrutura de pastas, separação de responsabilidades, dependências e modularização.
   Para evolução de arquitetura existente, ver `skill-evolutionary-architecture`.
-model: sonnet
+model: opus
 ---
 
 # Architecture Patterns (Backend)

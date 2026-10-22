@@ -7,7 +7,7 @@ description: >
   Cobre hierarquia de erros customizados, middleware de erro (Express), exception filters (NestJS),
   HTTP response helpers, Result pattern, logging estruturado e timeouts em chamadas externas.
   Para validação de input, ver `skill-validation`.
-model: sonnet
+model: opus
 ---
 
 # Error Handling

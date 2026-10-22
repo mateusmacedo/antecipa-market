@@ -5,7 +5,7 @@ description: |
   Cobre setup de queues, workers, tipagem de jobs, retry, dead-letter, monitoramento e
   graceful shutdown. Os padrões aplicam-se a sistemas baseados em Redis (asynq), Postgres
   (river) ou message brokers genéricos (watermill).
-model: sonnet
+model: opus
 ---
 
 # Go queues — padrões

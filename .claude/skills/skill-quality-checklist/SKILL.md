@@ -6,7 +6,7 @@ description: |
   ou mencionar validação pré-release, quality gates ou revisão completa.
   Cobre verificações de segurança, robustez, performance, banco de dados, APIs, filas e código.
   Para review detalhado de PR, ver `skill-code-review`.
-model: sonnet
+model: opus
 ---
 
 # Checklist de qualidade

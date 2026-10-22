@@ -7,7 +7,7 @@ description: |
   Cobre queries ORM, cache Redis, filas, connection pooling, operações assíncronas,
   memória/event loop e monitoramento.
   Para padrões de arquitetura, ver `skill-architecture-patterns`.
-model: sonnet
+model: opus
 ---
 
 # Performance (backend)

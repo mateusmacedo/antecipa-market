@@ -4,7 +4,7 @@ description: |
   Use esta skill ao trabalhar com banco em Go: database/sql, sqlx, sqlc, GORM, ent.
   Cobre repository pattern, query builders, migrations (golang-migrate, atlas, goose),
   relations, transações, paginação, índices e otimização de queries.
-model: sonnet
+model: opus
 ---
 
 # Go DB — padrões

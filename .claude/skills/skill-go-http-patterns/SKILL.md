@@ -5,7 +5,7 @@ description: |
   Cobre roteamento, dependency injection (constructor + Wire/Fx), middleware, validação,
   autenticação JWT, autorização baseada em role, recover, structured errors, request lifecycle,
   graceful shutdown, structured logging com slog.
-model: sonnet
+model: opus
 ---
 
 # Go HTTP — padrões

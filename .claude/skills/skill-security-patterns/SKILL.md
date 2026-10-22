@@ -5,7 +5,7 @@ description: |
   "validar input", "configurar CSP", "headers de segurança", "autenticação segura",
   ou mencionar vulnerabilidades, XSS, CSRF, SQL injection ou proteção de dados.
   Cobre OWASP Top 10, validação de input, autenticação, headers de segurança, CSP.
-model: sonnet
+model: opus
 ---
 
 # Padrões de segurança

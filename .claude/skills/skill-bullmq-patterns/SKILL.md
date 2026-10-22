@@ -4,7 +4,7 @@ description: |
   Use esta skill ao trabalhar com BullMQ: queues, workers, consumers, jobs, retry e error handling.
   Os padrões descritos são aplicáveis a qualquer backend Node.js que use BullMQ; muitos também
   se aplicam, com ajustes, a outras bibliotecas de filas.
-model: sonnet
+model: opus
 ---
 
 # BullMQ Patterns

@@ -5,7 +5,7 @@ description: |
   schemas, inferência de tipos, validação de request, tratamento de erros
   de validação e classes de erro tipadas. Exemplos usam Zod como referência;
   o princípio se aplica a qualquer biblioteca de validação equivalente.
-model: sonnet
+model: opus
 ---
 
 # Validação

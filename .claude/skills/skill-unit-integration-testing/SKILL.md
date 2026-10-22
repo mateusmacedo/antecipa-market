@@ -4,7 +4,7 @@ description: |
   Orientação para testes unitários e de integração: estrutura, nomenclatura,
   escolha entre tipos, isolamento e boas práticas. Framework-agnóstica.
   Referências específicas de Jest/RTL ficam em skill-jest.
-model: sonnet
+model: opus
 ---
 
 # Testes Unitários e de Integração

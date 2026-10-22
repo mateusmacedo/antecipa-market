@@ -8,7 +8,7 @@ description: >-
   tipagem, discriminated union, type guard, utility types (Record, Partial, Omit, Pick, Extract,
   Exclude), keyof, typeof, satisfies, readonly, z.infer, ReturnType ou `as const`, ou ao tipar
   entities, repositories, DTOs, use cases ou respostas de API.
-model: sonnet
+model: opus
 ---
 
 # TypeScript — padrões e convenções

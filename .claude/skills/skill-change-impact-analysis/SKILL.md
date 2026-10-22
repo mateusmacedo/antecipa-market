@@ -8,7 +8,7 @@ description: |
   - Refatorar código entre camadas (domain → infra, service → controller)
   - Alterar schemas de banco (entities de ORM, migrations)
   Faz sentido ser sugerida automaticamente quando for detectada alteração que afeta múltiplas camadas.
-model: sonnet
+model: opus
 user-invocable: true
 argument-hint: <descrição da alteração planejada>
 ---

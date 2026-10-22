@@ -9,7 +9,7 @@ description: >
   table-driven tests, testes de use cases, handlers e repositórios (testcontainers-go),
   mock patterns (gomock, mockery, fakes manuais) e async/concurrent testing.
   Para padrões agnósticos, ver skill-unit-integration-testing.
-model: sonnet
+model: opus
 ---
 
 # Go testing (backend)

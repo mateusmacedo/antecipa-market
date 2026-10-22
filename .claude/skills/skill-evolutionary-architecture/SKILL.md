@@ -8,7 +8,7 @@ description: >
   Cobre refatoração incremental, fitness functions (lint/typecheck/test), migração local→compartilhada,
   trade-offs, YAGNI e Last Responsible Moment.
   Para estrutura de pastas, ver `skill-architecture-patterns`; para refatoração de código limpo, ver `skill-clean-code`.
-model: sonnet
+model: opus
 ---
 
 # Arquitetura evolutiva

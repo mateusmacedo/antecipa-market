@@ -6,7 +6,7 @@ description: |
   ou mencionar SOLID, tamanho de funções, naming ou legibilidade.
   Cobre naming, funções pequenas, SOLID, code smells e refatoração segura.
   Para convenções específicas de projeto, ver `skill-code-standards`.
-model: sonnet
+model: opus
 ---
 
 # Clean Code

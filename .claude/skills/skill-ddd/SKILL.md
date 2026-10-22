@@ -5,7 +5,7 @@ description: |
   "value object", "agregado", "bounded context", "linguagem ubíqua" ou mencionar
   Domain-Driven Design, modelagem de domínio ou regras de negócio complexas.
   Cobre entidades, value objects, agregados, repositórios, domain services, use cases e bounded contexts.
-model: sonnet
+model: opus
 ---
 
 # Domain-Driven Design (DDD)

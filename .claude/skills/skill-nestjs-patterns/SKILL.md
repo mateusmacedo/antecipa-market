@@ -3,7 +3,7 @@ name: skill-nestjs-patterns
 description: |
   Use esta skill ao trabalhar com NestJS: modules, DI, decorators, pipes,
   guards, interceptors e exception filters.
-model: sonnet
+model: opus
 ---
 
 # NestJS — padrões

@@ -6,7 +6,7 @@ description: |
   padrões TypeScript, formatação, convenções backend e padrões internos.
   Cobre padrões TypeScript, formatação, imports, DTOs, decorators e convenções.
   Para princípios gerais (SOLID, code smells), ver `skill-clean-code`.
-model: sonnet
+model: opus
 ---
 
 # Padrões de código

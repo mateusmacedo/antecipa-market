@@ -3,7 +3,7 @@ name: skill-typeorm-patterns
 description: |
   Use esta skill ao trabalhar com TypeORM: entities, repositories, migrations,
   query builder e relations.
-model: sonnet
+model: opus
 ---
 
 # TypeORM — padrões

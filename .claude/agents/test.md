@@ -15,7 +15,7 @@ description: |
   assistant: "Posso usar o agente test para escrever testes seguindo as convenções do projeto."
   </example>
 color: green
-model: sonnet
+model: opus
 skills:
   - skill-unit-integration-testing
   - skill-jest

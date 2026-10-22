@@ -6,7 +6,7 @@ description: |
   Cobre checklist de review, categorias de feedback e comunicação construtiva.
   Para checklist pré-release, ver `skill-quality-checklist`.
 argument-hint: "[escopo]"
-model: sonnet
+model: opus
 user-invocable: true
 ---
 
