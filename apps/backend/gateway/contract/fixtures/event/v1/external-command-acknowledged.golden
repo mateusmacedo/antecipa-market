@@ -1,0 +1,139 @@
+{
+  "format_version": "1",
+  "identity": {
+    "fixture": "gateway/event/v1/external-command-acknowledged",
+    "contract": {
+      "package": "company.gateway.event.v1",
+      "message": "ExternalCommandAcknowledged"
+    },
+    "type": "com.company.gateway.external-command-acknowledged.v1",
+    "dataschema": "type.googleapis.com/company.gateway.event.v1.ExternalCommandAcknowledged"
+  },
+  "covers": {
+    "profile_major": "1",
+    "contract_major": "v1"
+  },
+  "cases": [
+    {
+      "name": "all-conditionals-present",
+      "doc": "Caminho típico com os três atributos condicionais presentes (aggregateversion, tenantid, tracestate).",
+      "envelope": {
+        "aggregateversion": "7",
+        "causationid": "evt-0001",
+        "correlationid": "corr-0001",
+        "datacontenttype": "application/protobuf",
+        "dataschema": "type.googleapis.com/company.gateway.event.v1.ExternalCommandAcknowledged",
+        "id": "evt-0001",
+        "partitionkey": "c-42",
+        "source": "urn:dmpf:reference-gateway",
+        "specversion": "1.0",
+        "subject": "prt-1:production:submitEffect:eff-1",
+        "tenantid": "tenant-a",
+        "time": "2026-09-02T12:00:00Z",
+        "traceparent": "00-0af7651916cd43dd8448eb211c80319c-b7ad6b7169203331-01",
+        "tracestate": "vendor=1",
+        "type": "com.company.gateway.external-command-acknowledged.v1"
+      },
+      "payload": {
+        "at": "2026-09-02T12:00:00Z",
+        "business_key": "eff-1",
+        "connector_id": "prt-1:production",
+        "external_reference_id": "ext-1001",
+        "idempotency_key": "prt-1:production:submitEffect:eff-1",
+        "operation": "submitEffect",
+        "tenant_id": "tnt-1001"
+      },
+      "payload_bytes_hex": "0a237072742d313a70726f64756374696f6e3a7375626d69744566666563743a6566662d311208746e742d313030311a107072742d313a70726f64756374696f6e220c7375626d69744566666563742a056566662d3132086578742d313030313a0608c09fe0d406",
+      "payload_hash": "5757f23e704ee5a13c8fc27e8696f331bad2f77acb3f3f71c1de1e84daa98e08"
+    },
+    {
+      "name": "all-conditionals-absent",
+      "doc": "Os três condicionais ausentes: nenhum entra no mapa de atributos (ENV-12, sem valor de preenchimento).",
+      "envelope": {
+        "causationid": "evt-0001",
+        "correlationid": "corr-0001",
+        "datacontenttype": "application/protobuf",
+        "dataschema": "type.googleapis.com/company.gateway.event.v1.ExternalCommandAcknowledged",
+        "id": "evt-0002",
+        "partitionkey": "c-42",
+        "source": "urn:dmpf:reference-gateway",
+        "specversion": "1.0",
+        "subject": "prt-1:production:submitEffect:eff-1",
+        "time": "2026-09-02T12:00:00Z",
+        "traceparent": "00-0af7651916cd43dd8448eb211c80319c-b7ad6b7169203331-01",
+        "type": "com.company.gateway.external-command-acknowledged.v1"
+      },
+      "payload": {
+        "at": "2026-09-02T12:00:01Z",
+        "business_key": "eff-2",
+        "connector_id": "prt-1:production",
+        "external_reference_id": "ext-1002",
+        "idempotency_key": "prt-1:production:submitEffect:eff-2",
+        "operation": "submitEffect",
+        "tenant_id": "tnt-1001"
+      },
+      "payload_bytes_hex": "0a237072742d313a70726f64756374696f6e3a7375626d69744566666563743a6566662d321208746e742d313030311a107072742d313a70726f64756374696f6e220c7375626d69744566666563742a056566662d3232086578742d313030323a0608c19fe0d406",
+      "payload_hash": "42d077350eff0850398027bf05c218746dacae65146d3fdf3ff0bffce41b9936"
+    }
+  ],
+  "discriminators": [
+    {
+      "name": "unknown-field",
+      "doc": "Bytes canônicos mais um campo de número 99 (varint 42) que o contrato não conhece: a desserialização o preserva (PTB-10) e o hash o cobre (ENV-17).",
+      "envelope": {
+        "causationid": "evt-0001",
+        "correlationid": "corr-0001",
+        "datacontenttype": "application/protobuf",
+        "dataschema": "type.googleapis.com/company.gateway.event.v1.ExternalCommandAcknowledged",
+        "id": "evt-2001",
+        "partitionkey": "c-42",
+        "source": "urn:dmpf:reference-gateway",
+        "specversion": "1.0",
+        "subject": "prt-1:production:submitEffect:eff-1",
+        "time": "2026-09-02T12:00:00Z",
+        "traceparent": "00-0af7651916cd43dd8448eb211c80319c-b7ad6b7169203331-01",
+        "type": "com.company.gateway.external-command-acknowledged.v1"
+      },
+      "payload": {
+        "at": "2026-09-02T12:00:02Z",
+        "business_key": "eff-3",
+        "connector_id": "prt-2:production",
+        "external_reference_id": "ext-2001",
+        "idempotency_key": "prt-2:production:cancelEffect:eff-3",
+        "operation": "cancelEffect",
+        "tenant_id": "tnt-2001"
+      },
+      "payload_bytes_hex": "0a237072742d323a70726f64756374696f6e3a63616e63656c4566666563743a6566662d331208746e742d323030311a107072742d323a70726f64756374696f6e220c63616e63656c4566666563742a056566662d3332086578742d323030313a0608c29fe0d40698062a",
+      "payload_hash": "3962ddfe270a69b0bcfe8e34b07b421e6290c42242e9230e09fcb2455ffbb2a5"
+    },
+    {
+      "name": "non-canonical-field-order",
+      "doc": "Campos em ordem decrescente de número, o instante como sub-mensagem: decodifica no mesmo valor, mas o hash é o dos bytes transportados e difere do hash de uma reserialização (ENV-18). Campo repetido fica vazio e booleano fica falso, porque o codificador não canônico do kit cobre só strings, inteiros, enums e mensagens.",
+      "envelope": {
+        "causationid": "evt-0001",
+        "correlationid": "corr-0001",
+        "datacontenttype": "application/protobuf",
+        "dataschema": "type.googleapis.com/company.gateway.event.v1.ExternalCommandAcknowledged",
+        "id": "evt-2002",
+        "partitionkey": "c-42",
+        "source": "urn:dmpf:reference-gateway",
+        "specversion": "1.0",
+        "subject": "prt-1:production:submitEffect:eff-1",
+        "time": "2026-09-02T12:00:00Z",
+        "traceparent": "00-0af7651916cd43dd8448eb211c80319c-b7ad6b7169203331-01",
+        "type": "com.company.gateway.external-command-acknowledged.v1"
+      },
+      "payload": {
+        "at": "2026-09-02T12:00:03.123456789Z",
+        "business_key": "eff-4",
+        "connector_id": "prt-2:homologation",
+        "external_reference_id": "ext-2002",
+        "idempotency_key": "prt-2:homologation:submitEffect:eff-4",
+        "operation": "submitEffect",
+        "tenant_id": "tnt-2001"
+      },
+      "payload_bytes_hex": "3a0b08c39fe0d40610959aef3a32086578742d323030322a056566662d34220c7375626d69744566666563741a127072742d323a686f6d6f6c6f676174696f6e1208746e742d323030310a257072742d323a686f6d6f6c6f676174696f6e3a7375626d69744566666563743a6566662d34",
+      "payload_hash": "4b53765af1119d299f48a46dea15f17039fa64883fcfd731008af581bcc0dcaf"
+    }
+  ]
+}

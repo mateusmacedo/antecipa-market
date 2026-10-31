@@ -1,6 +1,6 @@
 {
   "schema": "dmpf/units-baseline@1",
-  "digest": "sha256:f3613b92bff0e3c737cbed58600b8b4e76d98cae4e98006fb651d985c33348a9",
+  "digest": "sha256:fb561f63f52f195c086ee04eb65949296c819f9b989fa3077191ccb0687b8f21",
   "entries": [
     {
       "unit": "bff/app",
@@ -12,6 +12,82 @@
         "github.com/mateusmacedo/antecipa-market/apps/backend/bff/app/api",
         "github.com/mateusmacedo/antecipa-market/apps/backend/bff/app/rpc",
         "github.com/mateusmacedo/antecipa-market/apps/backend/bff/cmd"
+      ]
+    },
+    {
+      "unit": "receivables-gateway/app",
+      "module": "github.com/mateusmacedo/antecipa-market/apps/backend/gateway",
+      "block": "app",
+      "bounded_context": "receivables-gateway",
+      "membership": [
+        "github.com/mateusmacedo/antecipa-market/apps/backend/gateway/app",
+        "github.com/mateusmacedo/antecipa-market/apps/backend/gateway/app/rpc",
+        "github.com/mateusmacedo/antecipa-market/apps/backend/gateway/cmd"
+      ]
+    },
+    {
+      "unit": "receivables-gateway/appkit",
+      "module": "github.com/mateusmacedo/antecipa-market/apps/backend/gateway",
+      "block": "app",
+      "bounded_context": "receivables-gateway",
+      "membership": [
+        "github.com/mateusmacedo/antecipa-market/apps/backend/gateway/appkit"
+      ]
+    },
+    {
+      "unit": "receivables-gateway/application",
+      "module": "github.com/mateusmacedo/antecipa-market/apps/backend/gateway",
+      "block": "application",
+      "bounded_context": "receivables-gateway",
+      "membership": [
+        "github.com/mateusmacedo/antecipa-market/apps/backend/gateway/application"
+      ]
+    },
+    {
+      "unit": "receivables-gateway/distkit",
+      "module": "github.com/mateusmacedo/antecipa-market/apps/backend/gateway",
+      "block": "app",
+      "bounded_context": "receivables-gateway",
+      "membership": [
+        "github.com/mateusmacedo/antecipa-market/apps/backend/gateway/distkit"
+      ]
+    },
+    {
+      "unit": "receivables-gateway/domain",
+      "module": "github.com/mateusmacedo/antecipa-market/apps/backend/gateway",
+      "block": "domain",
+      "bounded_context": "receivables-gateway",
+      "membership": [
+        "github.com/mateusmacedo/antecipa-market/apps/backend/gateway/domain"
+      ]
+    },
+    {
+      "unit": "receivables-gateway/ports",
+      "module": "github.com/mateusmacedo/antecipa-market/apps/backend/gateway",
+      "block": "port",
+      "bounded_context": "receivables-gateway",
+      "membership": [
+        "github.com/mateusmacedo/antecipa-market/apps/backend/gateway/ports"
+      ]
+    },
+    {
+      "unit": "receivables-gateway/provider-postgres",
+      "module": "github.com/mateusmacedo/antecipa-market/apps/backend/gateway",
+      "block": "provider",
+      "bounded_context": "receivables-gateway",
+      "membership": [
+        "github.com/mateusmacedo/antecipa-market/apps/backend/gateway/provider"
+      ]
+    },
+    {
+      "unit": "receivables-gateway/contract",
+      "module": "github.com/mateusmacedo/antecipa-market/apps/backend/gateway/contract",
+      "block": "contract",
+      "bounded_context": "receivables-gateway",
+      "membership": [
+        "github.com/mateusmacedo/antecipa-market/apps/backend/gateway/contract",
+        "github.com/mateusmacedo/antecipa-market/apps/backend/gateway/contract/gen/go/company/gateway/event/v1",
+        "github.com/mateusmacedo/antecipa-market/apps/backend/gateway/contract/gen/go/company/gateway/service/v1"
       ]
     },
     {

@@ -1,0 +1,18 @@
+syntax = "proto3";
+
+package company.gateway.event.v1;
+
+import "google/protobuf/timestamp.proto";
+
+// The partner accepted an external command whose effect still has to be
+// observed; acknowledgement is never the confirmed effect.
+// Envelope type: com.company.gateway.external-command-acknowledged.v1 (PTB-03).
+message ExternalCommandAcknowledged {
+  string idempotency_key = 1;
+  string tenant_id = 2;
+  string connector_id = 3;
+  string operation = 4;
+  string business_key = 5;
+  string external_reference_id = 6;
+  google.protobuf.Timestamp at = 7;
+}

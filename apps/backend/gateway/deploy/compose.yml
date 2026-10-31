@@ -1,0 +1,76 @@
+# Processos do gateway na topologia local (ADR-044): api gRPC, que aplica o
+# schema (MIGRATE=true), relay da própria outbox, com os canais gateway.events
+# e gateway.dispatch, e consumer de partner.events.
+x-image: &image
+  build:
+    context: ../../../..
+    dockerfile: apps/backend/gateway/Dockerfile
+  image: ${GATEWAY_IMAGE:-gateway:local}
+
+x-env: &env
+  OTEL_SERVICE_NAME: gateway
+  PG_DSN: postgres://gateway:${GATEWAY_PG_PASSWORD:-gateway-local}@postgres:5432/gateway?sslmode=disable
+
+x-kafka: &kafka
+  KAFKA_SASL_USERNAME: gateway
+  KAFKA_SASL_PASSWORD: ${KAFKA_GATEWAY_PASSWORD:-gateway-local}
+  KAFKA_GROUP: gateway
+
+services:
+  dmpf-gateway-api:
+    <<: *image
+    extends:
+      file: ../../../../infra/local/compose/app-base.yml
+      service: dmpf-grpc-api
+    stop_grace_period: 30s
+    environment:
+      <<: *env
+      OTEL_RESOURCE_ATTRIBUTES: ${OTEL_RESOURCE_ATTRIBUTES:-service.version=local,deployment.environment.name=local},service.instance.id=gateway-api,dmpf.process.role=api
+      PG_MIGRATE_DSN: postgres://gateway_migrator:${GATEWAY_PG_MIGRATOR_PASSWORD:-gateway-migrator-local}@postgres:5432/gateway?sslmode=disable
+      GRPC_TLS_CERT_FILE: /pki/dmpf-gateway-api.crt
+      GRPC_TLS_KEY_FILE: /pki/dmpf-gateway-api.key
+    depends_on:
+      pki-init:
+        condition: service_completed_successfully
+      postgres-init:
+        condition: service_completed_successfully
+      otel-collector:
+        condition: service_started
+
+  dmpf-gateway-relay:
+    <<: *image
+    extends:
+      file: ../../../../infra/local/compose/app-base.yml
+      service: dmpf-kafka-worker
+    stop_grace_period: 30s
+    command: ['--role', 'relay']
+    environment:
+      <<: [*env, *kafka]
+      OTEL_RESOURCE_ATTRIBUTES: ${OTEL_RESOURCE_ATTRIBUTES:-service.version=local,deployment.environment.name=local},service.instance.id=gateway-relay,dmpf.process.role=relay
+      KAFKA_GATEWAY_TOPIC: ${KAFKA_GATEWAY_TOPIC:-gateway.events}
+      KAFKA_GATEWAY_DLQ: ${KAFKA_GATEWAY_DLQ:-gateway.events.dlq}
+      KAFKA_GATEWAY_DISPATCH_TOPIC: ${KAFKA_GATEWAY_DISPATCH_TOPIC:-gateway.dispatch}
+      KAFKA_GATEWAY_DISPATCH_DLQ: ${KAFKA_GATEWAY_DISPATCH_DLQ:-gateway.dispatch.dlq}
+    depends_on:
+      redpanda-init:
+        condition: service_completed_successfully
+      dmpf-gateway-api:
+        condition: service_started
+
+  dmpf-gateway-consumer:
+    <<: *image
+    extends:
+      file: ../../../../infra/local/compose/app-base.yml
+      service: dmpf-kafka-worker
+    stop_grace_period: 30s
+    command: ['--role', 'consumer']
+    environment:
+      <<: [*env, *kafka]
+      OTEL_RESOURCE_ATTRIBUTES: ${OTEL_RESOURCE_ATTRIBUTES:-service.version=local,deployment.environment.name=local},service.instance.id=gateway-consumer,dmpf.process.role=consumer
+      KAFKA_PARTNER_TOPIC: ${KAFKA_PARTNER_TOPIC:-partner.events}
+      KAFKA_PARTNER_DLQ: ${KAFKA_PARTNER_DLQ:-partner.events.dlq}
+    depends_on:
+      redpanda-init:
+        condition: service_completed_successfully
+      dmpf-gateway-api:
+        condition: service_started

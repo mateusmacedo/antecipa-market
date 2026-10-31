@@ -1,0 +1,64 @@
+{
+  "schema": "dmpf/infra@1",
+  "app": "gateway",
+  "image": {
+    "env": "GATEWAY_IMAGE",
+    "local": "gateway:local"
+  },
+  "database": {
+    "passwordEnv": "GATEWAY_PG_PASSWORD",
+    "local": "gateway-local",
+    "dev": "gateway-dev",
+    "migrator": {
+      "passwordEnv": "GATEWAY_PG_MIGRATOR_PASSWORD",
+      "local": "gateway-migrator-local",
+      "dev": "gateway-migrator-dev"
+    }
+  },
+  "kafka": {
+    "passwordEnv": "KAFKA_GATEWAY_PASSWORD",
+    "local": "gateway-local",
+    "topics": [
+      {
+        "name": "gateway.events",
+        "env": "KAFKA_GATEWAY_TOPIC"
+      },
+      {
+        "name": "gateway.events.dlq",
+        "env": "KAFKA_GATEWAY_DLQ"
+      },
+      {
+        "name": "gateway.dispatch",
+        "env": "KAFKA_GATEWAY_DISPATCH_TOPIC"
+      },
+      {
+        "name": "gateway.dispatch.dlq",
+        "env": "KAFKA_GATEWAY_DISPATCH_DLQ"
+      }
+    ],
+    "acls": [
+      {
+        "operations": ["write", "describe"],
+        "topics": [
+          "gateway.events",
+          "gateway.events.dlq",
+          "gateway.dispatch",
+          "gateway.dispatch.dlq",
+          "partner.events.dlq"
+        ]
+      },
+      {
+        "operations": ["read", "describe"],
+        "topics": ["partner.events"],
+        "group": {
+          "name": "gateway",
+          "env": "KAFKA_GATEWAY_GROUP"
+        }
+      }
+    ]
+  },
+  "grpc": {
+    "server": "dmpf-gateway-api"
+  },
+  "openapi": true
+}

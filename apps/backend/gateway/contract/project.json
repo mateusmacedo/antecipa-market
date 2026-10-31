@@ -1,0 +1,143 @@
+{
+  "name": "gateway-contract",
+  "$schema": "../../../../node_modules/nx/schemas/project-schema.json",
+  "projectType": "library",
+  "sourceRoot": "apps/backend/gateway/contract",
+  "tags": ["type:lib", "scope:backend", "stack:go", "layer:contract"],
+  "targets": {
+    "tidy": {
+      "executor": "@mateusmacedo/dmpf-plugin:go-tidy",
+      "cache": false
+    },
+    "fmt-check": {
+      "executor": "nx:run-commands",
+      "cache": true,
+      "inputs": [
+        "go",
+        "^go",
+        "{workspaceRoot}/node_modules/@mateusmacedo/dmpf-plugin/scripts/buf.sh",
+        "{workspaceRoot}/node_modules/@mateusmacedo/dmpf-plugin/versions.json"
+      ],
+      "options": {
+        "command": "saida=\"$(gofmt -l . 2>&1)\"; status=$?; [ $status -eq 0 ] || { printf '%s\\n' \"$saida\" >&2; exit $status; }; [ -z \"$saida\" ] || { printf '%s\\n' \"$saida\" >&2; exit 1; }",
+        "cwd": "{projectRoot}"
+      }
+    },
+    "vet": {
+      "executor": "nx:run-commands",
+      "cache": true,
+      "inputs": [
+        "go",
+        "^go",
+        "{workspaceRoot}/node_modules/@mateusmacedo/dmpf-plugin/scripts/buf.sh",
+        "{workspaceRoot}/node_modules/@mateusmacedo/dmpf-plugin/versions.json"
+      ],
+      "options": {
+        "command": "go vet ./...",
+        "cwd": "{projectRoot}"
+      }
+    },
+    "build": {
+      "executor": "nx:run-commands",
+      "inputs": [
+        "go",
+        "^go",
+        "{workspaceRoot}/node_modules/@mateusmacedo/dmpf-plugin/scripts/buf.sh",
+        "{workspaceRoot}/node_modules/@mateusmacedo/dmpf-plugin/versions.json"
+      ],
+      "options": {
+        "command": "go build ./...",
+        "cwd": "{projectRoot}"
+      }
+    },
+    "test-race": {
+      "executor": "nx:run-commands",
+      "cache": true,
+      "inputs": [
+        "go",
+        "^go",
+        "{workspaceRoot}/node_modules/@mateusmacedo/dmpf-plugin/scripts/buf.sh",
+        "{workspaceRoot}/node_modules/@mateusmacedo/dmpf-plugin/versions.json"
+      ],
+      "options": {
+        "command": "go test -race ./...",
+        "cwd": "{projectRoot}"
+      }
+    },
+    "govulncheck": {
+      "executor": "nx:run-commands",
+      "cache": false,
+      "options": {
+        "command": "go run golang.org/x/vuln/cmd/govulncheck@v1.7.0 ./...",
+        "cwd": "{projectRoot}"
+      }
+    },
+    "buf-warmup": {
+      "executor": "@mateusmacedo/dmpf-plugin:buf-gate",
+      "cache": false,
+      "options": {
+        "gate": "warmup"
+      }
+    },
+    "buf-lint": {
+      "executor": "@mateusmacedo/dmpf-plugin:buf-gate",
+      "cache": true,
+      "dependsOn": ["buf-warmup"],
+      "inputs": [
+        "{workspaceRoot}/node_modules/@mateusmacedo/dmpf-plugin/scripts/buf.sh",
+        "{workspaceRoot}/node_modules/@mateusmacedo/dmpf-plugin/versions.json",
+        "{workspaceRoot}/node_modules/@mateusmacedo/dmpf-plugin/scripts/buf-gate.sh",
+        "{projectRoot}/**/*"
+      ],
+      "options": {
+        "gate": "lint"
+      }
+    },
+    "buf-pins": {
+      "executor": "@mateusmacedo/dmpf-plugin:buf-gate",
+      "cache": true,
+      "inputs": [
+        "{workspaceRoot}/node_modules/@mateusmacedo/dmpf-plugin/scripts/buf.sh",
+        "{workspaceRoot}/node_modules/@mateusmacedo/dmpf-plugin/versions.json",
+        "{workspaceRoot}/node_modules/@mateusmacedo/dmpf-plugin/scripts/buf-gate.sh",
+        "{projectRoot}/go.mod",
+        "{projectRoot}/buf.yaml",
+        "{projectRoot}/buf.gen.yaml",
+        "{projectRoot}/buf.lock",
+        "{workspaceRoot}/**/buf.gen.yaml"
+      ],
+      "options": {
+        "gate": "pins"
+      }
+    },
+    "buf-generate-check": {
+      "executor": "@mateusmacedo/dmpf-plugin:buf-gate",
+      "cache": true,
+      "dependsOn": ["buf-warmup"],
+      "inputs": [
+        "{workspaceRoot}/node_modules/@mateusmacedo/dmpf-plugin/scripts/buf.sh",
+        "{workspaceRoot}/node_modules/@mateusmacedo/dmpf-plugin/versions.json",
+        "{workspaceRoot}/node_modules/@mateusmacedo/dmpf-plugin/scripts/buf-gate.sh",
+        "{projectRoot}/gen/**/*",
+        "{projectRoot}/go.mod",
+        "{projectRoot}/**/*"
+      ],
+      "options": {
+        "gate": "generate-check"
+      }
+    },
+    "buf-breaking": {
+      "executor": "@mateusmacedo/dmpf-plugin:buf-gate",
+      "cache": false,
+      "inputs": [
+        "{workspaceRoot}/node_modules/@mateusmacedo/dmpf-plugin/scripts/buf.sh",
+        "{workspaceRoot}/node_modules/@mateusmacedo/dmpf-plugin/versions.json",
+        "{workspaceRoot}/node_modules/@mateusmacedo/dmpf-plugin/scripts/buf-gate.sh",
+        "{projectRoot}/**/*"
+      ],
+      "options": {
+        "gate": "breaking"
+      }
+    }
+  }
+}

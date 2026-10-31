@@ -1,0 +1,1270 @@
+openapi: 3.1.0
+info:
+  title: Gateway — receivables-gateway bounded context
+  version: 1.0.0
+  description: >-
+    REST edge of the receivables-gateway context, served by apps/backend/bff,
+    which calls company.gateway.service.v1.GatewayService over gRPC, one
+    operation per RPC, and exposes no route this published contract does not
+    declare. Writes are idempotent by Idempotency-Key; reads run outside any
+    transaction and never write to the outbox or call a partner. Every call
+    runs in the platform tenant; the business tenant of an external command
+    travels as data. Instants are nanoseconds since the Unix epoch. Schemas
+    bound the form only; within those bounds, the emptiness and validity
+    refusals the spec declares come back from the domain as 422 rejections.
+    Credentials travel only as vault references and the payload of an
+    external command is never returned. The contract is not covered by the
+    Buf gates.
+servers:
+  - url: http://localhost:8080
+    description: local backend-for-frontend
+security:
+  - bearerAuth: []
+paths:
+  /gateway/connectors:
+    post:
+      operationId: registerConnector
+      summary: Register the connector of a partner in an environment, or swap its credential on a newer integration version
+      parameters:
+        - $ref: '#/components/parameters/IdempotencyKey'
+        - $ref: '#/components/parameters/CorrelationID'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RegisterConnectorRequest'
+      responses:
+        '200':
+          description: Connector registered, or kept as it was
+          headers:
+            Idempotent-Replayed:
+              $ref: '#/components/headers/IdempotentReplayed'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ConnectorKeyResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '409':
+          $ref: '#/components/responses/VersionConflict'
+        '422':
+          $ref: '#/components/responses/Rejected'
+        '429':
+          $ref: '#/components/responses/AdmissionRefused'
+        '503':
+          $ref: '#/components/responses/Unavailable'
+        '504':
+          $ref: '#/components/responses/Timeout'
+        default:
+          $ref: '#/components/responses/Failure'
+  /gateway/connectors/{connectorKey}:
+    get:
+      operationId: findConnector
+      summary: Read the connector, its enabled capabilities and its suspensions
+      parameters:
+        - $ref: '#/components/parameters/ConnectorKey'
+        - $ref: '#/components/parameters/CorrelationID'
+      responses:
+        '200':
+          description: Current snapshot of the connector
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Connector'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '429':
+          $ref: '#/components/responses/AdmissionRefused'
+        '503':
+          $ref: '#/components/responses/Unavailable'
+        '504':
+          $ref: '#/components/responses/Timeout'
+        default:
+          $ref: '#/components/responses/Failure'
+  /gateway/connectors/{connectorKey}/suspensions:
+    post:
+      operationId: suspendOperation
+      summary: Suspend one operation, or the whole connector, for new commands and reads
+      parameters:
+        - $ref: '#/components/parameters/ConnectorKey'
+        - $ref: '#/components/parameters/IdempotencyKey'
+        - $ref: '#/components/parameters/CorrelationID'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SuspendOperationRequest'
+      responses:
+        '200':
+          description: Operation suspended, or the suspension kept as it was
+          headers:
+            Idempotent-Replayed:
+              $ref: '#/components/headers/IdempotentReplayed'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ConnectorKeyResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/VersionConflict'
+        '422':
+          $ref: '#/components/responses/Rejected'
+        '429':
+          $ref: '#/components/responses/AdmissionRefused'
+        '503':
+          $ref: '#/components/responses/Unavailable'
+        '504':
+          $ref: '#/components/responses/Timeout'
+        default:
+          $ref: '#/components/responses/Failure'
+  /gateway/connectors/{connectorKey}/enablements:
+    post:
+      operationId: enableOperation
+      summary: Enable an operation the Partner homologated, lifting its suspensions
+      parameters:
+        - $ref: '#/components/parameters/ConnectorKey'
+        - $ref: '#/components/parameters/IdempotencyKey'
+        - $ref: '#/components/parameters/CorrelationID'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/EnableOperationRequest'
+      responses:
+        '200':
+          description: Operation enabled, or an older version discarded
+          headers:
+            Idempotent-Replayed:
+              $ref: '#/components/headers/IdempotentReplayed'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ConnectorKeyResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/VersionConflict'
+        '422':
+          $ref: '#/components/responses/Rejected'
+        '429':
+          $ref: '#/components/responses/AdmissionRefused'
+        '503':
+          $ref: '#/components/responses/Unavailable'
+        '504':
+          $ref: '#/components/responses/Timeout'
+        default:
+          $ref: '#/components/responses/Failure'
+  /gateway/connectors/{connectorKey}/capability-profiles:
+    post:
+      operationId: declareCapabilityProfile
+      summary: Declare an immutable version of the capability profile of the connector
+      parameters:
+        - $ref: '#/components/parameters/ConnectorKey'
+        - $ref: '#/components/parameters/IdempotencyKey'
+        - $ref: '#/components/parameters/CorrelationID'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DeclareCapabilityProfileRequest'
+      responses:
+        '201':
+          description: Version declared
+          headers:
+            Idempotent-Replayed:
+              $ref: '#/components/headers/IdempotentReplayed'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProfileKeyResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '409':
+          $ref: '#/components/responses/VersionConflict'
+        '422':
+          $ref: '#/components/responses/Rejected'
+        '429':
+          $ref: '#/components/responses/AdmissionRefused'
+        '503':
+          $ref: '#/components/responses/Unavailable'
+        '504':
+          $ref: '#/components/responses/Timeout'
+        default:
+          $ref: '#/components/responses/Failure'
+  /gateway/connectors/{connectorKey}/capability-profiles/{version}:
+    get:
+      operationId: findCapabilityProfile
+      summary: Read one version of the capability profile
+      parameters:
+        - $ref: '#/components/parameters/ConnectorKey'
+        - $ref: '#/components/parameters/Version'
+        - $ref: '#/components/parameters/CorrelationID'
+      responses:
+        '200':
+          description: The version
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CapabilityProfile'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '429':
+          $ref: '#/components/responses/AdmissionRefused'
+        '503':
+          $ref: '#/components/responses/Unavailable'
+        '504':
+          $ref: '#/components/responses/Timeout'
+        default:
+          $ref: '#/components/responses/Failure'
+  /gateway/connectors/{connectorKey}/effective-capability-profile:
+    get:
+      operationId: findEffectiveCapabilityProfile
+      summary: Read the version of the profile in force at an instant
+      parameters:
+        - $ref: '#/components/parameters/ConnectorKey'
+        - $ref: '#/components/parameters/EffectiveAtQuery'
+        - $ref: '#/components/parameters/CorrelationID'
+      responses:
+        '200':
+          description: The highest version whose effectiveFrom has arrived
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CapabilityProfile'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '429':
+          $ref: '#/components/responses/AdmissionRefused'
+        '503':
+          $ref: '#/components/responses/Unavailable'
+        '504':
+          $ref: '#/components/responses/Timeout'
+        default:
+          $ref: '#/components/responses/Failure'
+  /gateway/connectors/{connectorKey}/external-commands:
+    get:
+      operationId: findExternalCommandsByBusinessKey
+      summary: List the versions of a business object sent to the connector
+      parameters:
+        - $ref: '#/components/parameters/ConnectorKey'
+        - $ref: '#/components/parameters/BusinessKeyQuery'
+        - $ref: '#/components/parameters/CorrelationID'
+      responses:
+        '200':
+          description: The external commands of the business key, empty when none
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/ExternalCommand'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '429':
+          $ref: '#/components/responses/AdmissionRefused'
+        '503':
+          $ref: '#/components/responses/Unavailable'
+        '504':
+          $ref: '#/components/responses/Timeout'
+        default:
+          $ref: '#/components/responses/Failure'
+  /gateway/query-authorizations:
+    post:
+      operationId: grantQueryAuthorization
+      summary: Project a consent to query, or renew its scope on a newer version
+      parameters:
+        - $ref: '#/components/parameters/IdempotencyKey'
+        - $ref: '#/components/parameters/CorrelationID'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/GrantQueryAuthorizationRequest'
+      responses:
+        '200':
+          description: Authorization granted, renewed or kept as it was
+          headers:
+            Idempotent-Replayed:
+              $ref: '#/components/headers/IdempotentReplayed'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ConsentIDResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '409':
+          $ref: '#/components/responses/VersionConflict'
+        '422':
+          $ref: '#/components/responses/Rejected'
+        '429':
+          $ref: '#/components/responses/AdmissionRefused'
+        '503':
+          $ref: '#/components/responses/Unavailable'
+        '504':
+          $ref: '#/components/responses/Timeout'
+        default:
+          $ref: '#/components/responses/Failure'
+    get:
+      operationId: findQueryAuthorizationByOrganization
+      summary: List the query authorizations of an organization
+      parameters:
+        - $ref: '#/components/parameters/OrganizationIDQuery'
+        - $ref: '#/components/parameters/CorrelationID'
+      responses:
+        '200':
+          description: The authorizations, empty when the organization has none
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/QueryAuthorization'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '429':
+          $ref: '#/components/responses/AdmissionRefused'
+        '503':
+          $ref: '#/components/responses/Unavailable'
+        '504':
+          $ref: '#/components/responses/Timeout'
+        default:
+          $ref: '#/components/responses/Failure'
+  /gateway/query-authorizations/{consentId}/revocation:
+    post:
+      operationId: revokeQueryAuthorization
+      summary: Revoke a query authorization; a revoked one is final
+      parameters:
+        - $ref: '#/components/parameters/ConsentID'
+        - $ref: '#/components/parameters/IdempotencyKey'
+        - $ref: '#/components/parameters/CorrelationID'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RevokeQueryAuthorizationRequest'
+      responses:
+        '200':
+          description: Authorization revoked, or already revoked
+          headers:
+            Idempotent-Replayed:
+              $ref: '#/components/headers/IdempotentReplayed'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ConsentIDResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/VersionConflict'
+        '422':
+          $ref: '#/components/responses/Rejected'
+        '429':
+          $ref: '#/components/responses/AdmissionRefused'
+        '503':
+          $ref: '#/components/responses/Unavailable'
+        '504':
+          $ref: '#/components/responses/Timeout'
+        default:
+          $ref: '#/components/responses/Failure'
+  /gateway/external-commands:
+    post:
+      operationId: createExternalCommand
+      summary: Make an external command durable and request its dispatch
+      description: >-
+        The command is created before anything is sent: the dispatch intent
+        goes to the outbox with it. The gate of the connector and the profile
+        in force are read in the same transaction, and no partner is called.
+      parameters:
+        - $ref: '#/components/parameters/IdempotencyKey'
+        - $ref: '#/components/parameters/CorrelationID'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateExternalCommandRequest'
+      responses:
+        '201':
+          description: Command created, or the existing one with the same payload
+          headers:
+            Idempotent-Replayed:
+              $ref: '#/components/headers/IdempotentReplayed'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CommandStatusResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '409':
+          $ref: '#/components/responses/VersionConflict'
+        '422':
+          $ref: '#/components/responses/Rejected'
+        '429':
+          $ref: '#/components/responses/AdmissionRefused'
+        '503':
+          $ref: '#/components/responses/Unavailable'
+        '504':
+          $ref: '#/components/responses/Timeout'
+        default:
+          $ref: '#/components/responses/Failure'
+    get:
+      operationId: findExternalCommandsByStatus
+      summary: List the external commands in a status, for follow-up
+      parameters:
+        - $ref: '#/components/parameters/StatusQuery'
+        - $ref: '#/components/parameters/ConnectorIDQuery'
+        - $ref: '#/components/parameters/CorrelationID'
+      responses:
+        '200':
+          description: The commands in the status, empty when none
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/ExternalCommand'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '429':
+          $ref: '#/components/responses/AdmissionRefused'
+        '503':
+          $ref: '#/components/responses/Unavailable'
+        '504':
+          $ref: '#/components/responses/Timeout'
+        default:
+          $ref: '#/components/responses/Failure'
+  /gateway/external-commands/{commandKey}:
+    get:
+      operationId: findExternalCommand
+      summary: Read an external command, without its payload
+      parameters:
+        - $ref: '#/components/parameters/CommandKey'
+        - $ref: '#/components/parameters/CorrelationID'
+      responses:
+        '200':
+          description: Current snapshot of the command
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ExternalCommand'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '429':
+          $ref: '#/components/responses/AdmissionRefused'
+        '503':
+          $ref: '#/components/responses/Unavailable'
+        '504':
+          $ref: '#/components/responses/Timeout'
+        default:
+          $ref: '#/components/responses/Failure'
+  /gateway/external-commands/{commandKey}/cancellation:
+    post:
+      operationId: cancelExternalCommand
+      summary: Cancel an external command never sent
+      parameters:
+        - $ref: '#/components/parameters/CommandKey'
+        - $ref: '#/components/parameters/IdempotencyKey'
+        - $ref: '#/components/parameters/CorrelationID'
+      responses:
+        '200':
+          description: Command cancelled
+          headers:
+            Idempotent-Replayed:
+              $ref: '#/components/headers/IdempotentReplayed'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CommandKeyResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/VersionConflict'
+        '422':
+          $ref: '#/components/responses/Rejected'
+        '429':
+          $ref: '#/components/responses/AdmissionRefused'
+        '503':
+          $ref: '#/components/responses/Unavailable'
+        '504':
+          $ref: '#/components/responses/Timeout'
+        default:
+          $ref: '#/components/responses/Failure'
+  /gateway/external-commands/{commandKey}/resolution:
+    post:
+      operationId: resolveUnknownOutcome
+      summary: Resolve by a human the outcome of a command waiting for it
+      description: >-
+        The resolution reaches the kernel's attempt ledger as an observation
+        and the cycle picks the step: not_received leads to a resend with the
+        same outbound key when the partner deduplicates on it.
+      parameters:
+        - $ref: '#/components/parameters/CommandKey'
+        - $ref: '#/components/parameters/IdempotencyKey'
+        - $ref: '#/components/parameters/CorrelationID'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ResolveUnknownOutcomeRequest'
+      responses:
+        '200':
+          description: Resolution recorded, with the status it led to
+          headers:
+            Idempotent-Replayed:
+              $ref: '#/components/headers/IdempotentReplayed'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CommandStatusResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/VersionConflict'
+        '422':
+          $ref: '#/components/responses/Rejected'
+        '429':
+          $ref: '#/components/responses/AdmissionRefused'
+        '503':
+          $ref: '#/components/responses/Unavailable'
+        '504':
+          $ref: '#/components/responses/Timeout'
+        default:
+          $ref: '#/components/responses/Failure'
+  /gateway/external-command-sweeps:
+    post:
+      operationId: sweepExternalCommands
+      summary: Run the sweep of the external command cycle, for an external scheduler
+      description: >-
+        Requests the resend of the retryable failures past their quiescence
+        and escalates the waits past their deadline. Each command it acts on
+        runs under a key derived from the instant that enabled it, so a
+        repeated sweep is safe.
+      parameters:
+        - $ref: '#/components/parameters/IdempotencyKey'
+        - $ref: '#/components/parameters/CorrelationID'
+      responses:
+        '200':
+          description: What the sweep did
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SweepReport'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '429':
+          $ref: '#/components/responses/AdmissionRefused'
+        '503':
+          $ref: '#/components/responses/Unavailable'
+        '504':
+          $ref: '#/components/responses/Timeout'
+        default:
+          $ref: '#/components/responses/Failure'
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      description: >-
+        Access token of the authorization server the backend-for-frontend
+        verifies (OIDC). Each route requires the permission
+        gateway:<operation in kebab-case>, for example
+        gateway:create-external-command, checked by the backend-for-frontend.
+  parameters:
+    IdempotencyKey:
+      name: Idempotency-Key
+      in: header
+      required: true
+      description: Key of the command (IDM-02); a retry with the same key replays the stored answer
+      schema:
+        type: string
+        pattern: '^[A-Za-z0-9._-]{1,128}$'
+    CorrelationID:
+      name: X-Correlation-ID
+      in: header
+      required: false
+      schema:
+        $ref: '#/components/schemas/Identifier'
+    ConnectorKey:
+      name: connectorKey
+      in: path
+      required: true
+      description: '<partnerId>:<environment>'
+      schema:
+        $ref: '#/components/schemas/Identifier'
+    Version:
+      name: version
+      in: path
+      required: true
+      schema:
+        type: integer
+        format: int32
+        minimum: 0
+    ConsentID:
+      name: consentId
+      in: path
+      required: true
+      schema:
+        $ref: '#/components/schemas/Identifier'
+    CommandKey:
+      name: commandKey
+      in: path
+      required: true
+      description: The idempotency key of the external command, its identity
+      schema:
+        $ref: '#/components/schemas/CommandKey'
+    EffectiveAtQuery:
+      name: effectiveAt
+      in: query
+      required: true
+      schema:
+        $ref: '#/components/schemas/Instant'
+    BusinessKeyQuery:
+      name: businessKey
+      in: query
+      required: true
+      schema:
+        type: string
+        pattern: '^[A-Za-z0-9._:/-]{1,128}$'
+    OrganizationIDQuery:
+      name: organizationId
+      in: query
+      required: true
+      schema:
+        $ref: '#/components/schemas/Identifier'
+    StatusQuery:
+      name: status
+      in: query
+      required: true
+      schema:
+        $ref: '#/components/schemas/CommandStatus'
+    ConnectorIDQuery:
+      name: connectorId
+      in: query
+      required: false
+      description: When absent, every connector
+      schema:
+        $ref: '#/components/schemas/Identifier'
+  headers:
+    IdempotentReplayed:
+      description: >-
+        Present with the value true when the answer is the stored response of
+        an earlier request with the same Idempotency-Key.
+      schema:
+        type: string
+        enum: ['true']
+  responses:
+    BadRequest:
+      description: The request is malformed or misses Idempotency-Key
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Rejection'
+    NotFound:
+      description: No record with this id in the platform tenant
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Rejection'
+    VersionConflict:
+      description: >-
+        A concurrent write advanced the aggregate or the guarded series (replay
+        the request), or a request with the same Idempotency-Key is still in progress
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Rejection'
+    Rejected:
+      description: >-
+        The domain refused the command (a business rejection, not a failure), or
+        the Idempotency-Key was already used with another request
+      headers:
+        Idempotent-Replayed:
+          $ref: '#/components/headers/IdempotentReplayed'
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Rejection'
+    AdmissionRefused:
+      description: Admission control refused the request before reading the body
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Rejection'
+    Unavailable:
+      description: The gateway context is unavailable
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Rejection'
+    Timeout:
+      description: The deadline every call to the context carries expired
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Rejection'
+    Failure:
+      description: Technical failure; the body carries only the code and a safe message
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Rejection'
+  schemas:
+    Identifier:
+      type: string
+      minLength: 1
+      maxLength: 128
+      pattern: '^[A-Za-z0-9._:-]+$'
+    OptionalIdentifier:
+      type: string
+      maxLength: 128
+      pattern: '^[A-Za-z0-9._:-]*$'
+    CommandKey:
+      type: string
+      description: Up to 100 symbols, so the sweep can derive the key of each step it takes
+      pattern: '^[A-Za-z0-9._-]{1,100}$'
+    Operation:
+      type: string
+      pattern: '^[A-Za-z][A-Za-z0-9]{0,63}$'
+      examples: [submitEffect, requestRelease, activateOptIn, revokeOptIn, queryAsset]
+    AssetType:
+      type: string
+      pattern: '^[A-Za-z0-9._-]{0,64}$'
+      description: Empty covers every asset type
+    Text:
+      type: string
+      maxLength: 512
+    Instant:
+      type: integer
+      format: int64
+      minimum: 0
+      description: Nanoseconds since the Unix epoch
+    Environment:
+      type: string
+      enum: [development, integration, homologation, production]
+    SuspensionCause:
+      type: string
+      enum: [partner, schema_mismatch]
+    Protocol:
+      type: string
+      enum: [sync_http, async_callback, file_batch, polling]
+    IdempotencySupport:
+      type: string
+      enum: [native, key_header, none]
+    EncumbranceCoverage:
+      type: string
+      enum: [complete, partial, unavailable]
+    Efficacy:
+      type: string
+      enum: [on_submit, by_observation]
+    AuthorizationStatus:
+      type: string
+      enum: [granted, revoked]
+    CommandStatus:
+      type: string
+      enum: [created, acknowledged, confirmed, retryable_failure, final_failure, unknown_outcome, cancelled]
+    FailureCategory:
+      type: string
+      enum: [final_validation, final_business, final_authorization, unknown_sent, unknown_ambiguous, schema_mismatch]
+      description: Absent when the last outcome was not a failure
+    Resolution:
+      type: string
+      enum: [confirmed, final_failure, not_received]
+    Rejection:
+      type: object
+      required: [code, message]
+      description: >-
+        A refusal the domain or the edge declared. Domain codes take the stable
+        "context/aggregate/reason" form.
+      properties:
+        code:
+          type: string
+          examples:
+            - receivables-gateway/external-command/capability-not-enabled
+            - receivables-gateway/capability-profile/external-profile-invalid
+        message:
+          type: string
+    RegisterConnectorRequest:
+      type: object
+      additionalProperties: false
+      required: [partnerId, environment, credentialRef, integrationVersion]
+      properties:
+        partnerId:
+          $ref: '#/components/schemas/Identifier'
+        environment:
+          $ref: '#/components/schemas/Environment'
+        credentialRef:
+          type: string
+          maxLength: 512
+          description: Reference to the vault; the credential itself never travels
+        integrationVersion:
+          type: integer
+          format: int32
+          minimum: 0
+    ConnectorKeyResponse:
+      type: object
+      required: [connectorKey]
+      properties:
+        connectorKey:
+          $ref: '#/components/schemas/Identifier'
+    SuspendOperationRequest:
+      type: object
+      additionalProperties: false
+      required: [cause]
+      properties:
+        operation:
+          type: string
+          pattern: '^([A-Za-z][A-Za-z0-9]{0,63})?$'
+          description: Empty suspends the whole connector
+        assetType:
+          $ref: '#/components/schemas/AssetType'
+        cause:
+          $ref: '#/components/schemas/SuspensionCause'
+        capabilityId:
+          $ref: '#/components/schemas/OptionalIdentifier'
+        version:
+          type: integer
+          format: int32
+          minimum: 0
+    EnableOperationRequest:
+      type: object
+      additionalProperties: false
+      required: [capabilityId, operation, version]
+      properties:
+        capabilityId:
+          $ref: '#/components/schemas/Identifier'
+        operation:
+          $ref: '#/components/schemas/Operation'
+        assetType:
+          $ref: '#/components/schemas/AssetType'
+        stateQuerySupported:
+          type: boolean
+        version:
+          type: integer
+          format: int32
+          minimum: 0
+    OperationCapability:
+      type: object
+      additionalProperties: false
+      required: [operation, supported, idempotencySupport, efficacy, maxQueries, keyAlphabet, keyMaxLength]
+      properties:
+        operation:
+          $ref: '#/components/schemas/Operation'
+        supported:
+          type: boolean
+        protocol:
+          $ref: '#/components/schemas/Protocol'
+        stateQuerySupported:
+          type: boolean
+        idempotencySupport:
+          $ref: '#/components/schemas/IdempotencySupport'
+        partialResultSupported:
+          type: boolean
+        assetTypes:
+          type: array
+          maxItems: 64
+          items:
+            $ref: '#/components/schemas/AssetType'
+        maxItemsPerRequest:
+          type: integer
+          format: int32
+          minimum: 0
+        maxRequestsPerMinute:
+          type: integer
+          format: int32
+          minimum: 0
+        maxPayloadBytes:
+          type: integer
+          format: int32
+          minimum: 0
+        businessCalendar:
+          $ref: '#/components/schemas/Text'
+        cutoffTime:
+          $ref: '#/components/schemas/Text'
+        processingWindow:
+          $ref: '#/components/schemas/Text'
+        encumbranceCoverage:
+          $ref: '#/components/schemas/EncumbranceCoverage'
+        positionFreshnessSla:
+          type: integer
+          format: int32
+          minimum: 0
+          description: Seconds; zero when the source declares none
+        efficacy:
+          $ref: '#/components/schemas/Efficacy'
+        quiescence:
+          type: integer
+          format: int64
+          minimum: 0
+          description: Nanoseconds before an absence the partner reports is final
+        authoritativeAbsence:
+          type: boolean
+        maxQueries:
+          type: integer
+          format: int32
+          minimum: 0
+        keyAlphabet:
+          type: string
+          maxLength: 94
+          pattern: '^[\x21-\x7E]*$'
+        keyMaxLength:
+          type: integer
+          format: int32
+          minimum: 0
+        queryInterval:
+          type: integer
+          format: int32
+          minimum: 0
+          description: Seconds between two state queries
+        ambiguityDeadline:
+          type: integer
+          format: int32
+          minimum: 0
+          description: Seconds a wait lasts before it escalates
+    DeclareCapabilityProfileRequest:
+      type: object
+      additionalProperties: false
+      required: [version, effectiveFrom, operations]
+      properties:
+        version:
+          type: integer
+          format: int32
+          minimum: 0
+        effectiveFrom:
+          $ref: '#/components/schemas/Instant'
+        operations:
+          type: array
+          maxItems: 64
+          items:
+            $ref: '#/components/schemas/OperationCapability'
+    ProfileKeyResponse:
+      type: object
+      required: [profileKey]
+      properties:
+        profileKey:
+          type: string
+          description: '<connectorKey>:<version>'
+    CapabilityProfile:
+      type: object
+      required: [profileKey, connectorId, version, effectiveFrom, operations]
+      properties:
+        profileKey:
+          type: string
+        connectorId:
+          $ref: '#/components/schemas/Identifier'
+        version:
+          type: integer
+          format: int32
+        effectiveFrom:
+          $ref: '#/components/schemas/Instant'
+        operations:
+          type: array
+          items:
+            $ref: '#/components/schemas/OperationCapability'
+    EnabledCapability:
+      type: object
+      properties:
+        capabilityId:
+          type: string
+        operation:
+          type: string
+        assetType:
+          type: string
+        stateQuerySupported:
+          type: boolean
+        version:
+          type: integer
+          format: int32
+        at:
+          $ref: '#/components/schemas/Instant'
+    OperationSuspension:
+      type: object
+      properties:
+        operation:
+          type: string
+        assetType:
+          type: string
+        cause:
+          $ref: '#/components/schemas/SuspensionCause'
+        capabilityId:
+          type: string
+        version:
+          type: integer
+          format: int32
+        since:
+          $ref: '#/components/schemas/Instant'
+    Connector:
+      type: object
+      required: [connectorKey, partnerId, environment, credentialRef, integrationVersion, capabilities, suspensions, registeredAt]
+      properties:
+        connectorKey:
+          type: string
+        partnerId:
+          type: string
+        environment:
+          $ref: '#/components/schemas/Environment'
+        credentialRef:
+          type: string
+        integrationVersion:
+          type: integer
+          format: int32
+        capabilities:
+          type: array
+          items:
+            $ref: '#/components/schemas/EnabledCapability'
+        suspensions:
+          type: array
+          items:
+            $ref: '#/components/schemas/OperationSuspension'
+        registeredAt:
+          $ref: '#/components/schemas/Instant'
+    GrantQueryAuthorizationRequest:
+      type: object
+      additionalProperties: false
+      required: [consentId, organizationId, consentVersion, assetTypes, periodFromDate, periodUntilDate]
+      properties:
+        consentId:
+          $ref: '#/components/schemas/Identifier'
+        organizationId:
+          $ref: '#/components/schemas/Identifier'
+        consentVersion:
+          type: integer
+          format: int32
+          minimum: 0
+        assetTypes:
+          type: array
+          maxItems: 64
+          items:
+            $ref: '#/components/schemas/AssetType'
+        periodFromDate:
+          type: string
+          format: date
+        periodUntilDate:
+          type: string
+          format: date
+    RevokeQueryAuthorizationRequest:
+      type: object
+      additionalProperties: false
+      required: [effectiveAt]
+      properties:
+        effectiveAt:
+          $ref: '#/components/schemas/Instant'
+    ConsentIDResponse:
+      type: object
+      required: [consentId]
+      properties:
+        consentId:
+          $ref: '#/components/schemas/Identifier'
+    QueryAuthorization:
+      type: object
+      properties:
+        consentId:
+          type: string
+        organizationId:
+          type: string
+        consentVersion:
+          type: integer
+          format: int32
+        status:
+          $ref: '#/components/schemas/AuthorizationStatus'
+        assetTypes:
+          type: array
+          items:
+            type: string
+        periodFromDate:
+          type: string
+          format: date
+        periodUntilDate:
+          type: string
+          format: date
+        grantedAt:
+          $ref: '#/components/schemas/Instant'
+        revokedAt:
+          $ref: '#/components/schemas/Instant'
+    CreateExternalCommandRequest:
+      type: object
+      additionalProperties: false
+      required: [idempotencyKey, tenantId, connectorId, operation, businessKey, payloadVersion, payload, payloadHash]
+      properties:
+        idempotencyKey:
+          $ref: '#/components/schemas/CommandKey'
+        tenantId:
+          $ref: '#/components/schemas/Identifier'
+        connectorId:
+          $ref: '#/components/schemas/Identifier'
+        operation:
+          $ref: '#/components/schemas/Operation'
+        assetType:
+          $ref: '#/components/schemas/AssetType'
+        businessKey:
+          type: string
+          pattern: '^[A-Za-z0-9._:/-]{0,128}$'
+        payloadVersion:
+          type: integer
+          format: int32
+          minimum: 0
+        payload:
+          type: string
+          maxLength: 1048576
+          description: Canonical JSON, CONFIDENTIAL
+        payloadHash:
+          $ref: '#/components/schemas/Text'
+    CommandStatusResponse:
+      type: object
+      required: [idempotencyKey, status]
+      properties:
+        idempotencyKey:
+          $ref: '#/components/schemas/CommandKey'
+        status:
+          $ref: '#/components/schemas/CommandStatus'
+    CommandKeyResponse:
+      type: object
+      required: [idempotencyKey]
+      properties:
+        idempotencyKey:
+          $ref: '#/components/schemas/CommandKey'
+    ResolveUnknownOutcomeRequest:
+      type: object
+      additionalProperties: false
+      required: [resolution, queryInteractionId, justification]
+      properties:
+        resolution:
+          $ref: '#/components/schemas/Resolution'
+        queryInteractionId:
+          $ref: '#/components/schemas/OptionalIdentifier'
+        externalReferenceId:
+          $ref: '#/components/schemas/OptionalIdentifier'
+        partnerCode:
+          $ref: '#/components/schemas/Text'
+        partnerMessage:
+          $ref: '#/components/schemas/Text'
+        justification:
+          $ref: '#/components/schemas/Text'
+        partial:
+          type: boolean
+    CommandProfile:
+      type: object
+      properties:
+        profileVersion:
+          type: integer
+          format: int32
+        stateQuerySupported:
+          type: boolean
+        idempotencySupport:
+          $ref: '#/components/schemas/IdempotencySupport'
+        partialResultSupported:
+          type: boolean
+        efficacy:
+          $ref: '#/components/schemas/Efficacy'
+        quiescence:
+          type: integer
+          format: int64
+        authoritativeAbsence:
+          type: boolean
+        maxQueries:
+          type: integer
+          format: int32
+        keyAlphabet:
+          type: string
+        keyMaxLength:
+          type: integer
+          format: int32
+        queryInterval:
+          type: integer
+          format: int32
+        ambiguityDeadline:
+          type: integer
+          format: int32
+    ExternalCommand:
+      type: object
+      description: The command without its payload, which is CONFIDENTIAL
+      properties:
+        idempotencyKey:
+          $ref: '#/components/schemas/CommandKey'
+        tenantId:
+          type: string
+        connectorId:
+          type: string
+        operation:
+          type: string
+        assetType:
+          type: string
+        businessKey:
+          type: string
+        payloadVersion:
+          type: integer
+          format: int32
+        seriesKey:
+          type: string
+        payloadHash:
+          type: string
+        profile:
+          $ref: '#/components/schemas/CommandProfile'
+        status:
+          $ref: '#/components/schemas/CommandStatus'
+        failureCategory:
+          $ref: '#/components/schemas/FailureCategory'
+        createdAt:
+          $ref: '#/components/schemas/Instant'
+        submissions:
+          type: integer
+          format: int32
+        lastSubmittedAt:
+          $ref: '#/components/schemas/Instant'
+        waitingSince:
+          $ref: '#/components/schemas/Instant'
+        nextQueryAt:
+          $ref: '#/components/schemas/Instant'
+        resendAfter:
+          $ref: '#/components/schemas/Instant'
+        reconciliationRequired:
+          type: boolean
+        ambiguityExpiredAt:
+          $ref: '#/components/schemas/Instant'
+        confirmedAt:
+          $ref: '#/components/schemas/Instant'
+        externalReferenceId:
+          type: string
+    SweepReport:
+      type: object
+      required: [resendRequested, ambiguityExpired, skipped, failed]
+      properties:
+        resendRequested:
+          type: integer
+          format: int32
+        ambiguityExpired:
+          type: integer
+          format: int32
+        skipped:
+          type: integer
+          format: int32
+          description: Commands a concurrent step already moved on
+        failed:
+          type: integer
+          format: int32
+          description: Commands the next sweep retries

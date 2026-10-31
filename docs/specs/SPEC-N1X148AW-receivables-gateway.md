@@ -2,11 +2,11 @@
 id: SPEC-N1X148AW
 slug: receivables-gateway
 title: Bounded context — receivables-gateway
-stage: planning
+stage: building
 priority: P0
 depends_on: [SPEC-GXGASP24, SPEC-9TEQ9EV9]
 ticket_url: https://linear.app/mmda/issue/DEVS-84/spec-n1x148aw-bounded-context-receivables-gateway
-subtask_urls: []
+subtask_urls: [https://linear.app/mmda/issue/DEVS-173, https://linear.app/mmda/issue/DEVS-174]
 created: 2026-10-12
 ---
 
@@ -244,7 +244,7 @@ O tempo do ciclo é de quem chama, não do kernel (ADR-070 do DMPF, item 6: quie
   - `businessKey` não vazio → `receivables-gateway/external-command/business-key-empty`
   - `payload` não vazio → `receivables-gateway/external-command/payload-empty`
   - chave já existente com `payloadHash` diferente → `receivables-gateway/external-command/idempotency-key-conflict`
-  - `seriesOpen` falso → `receivables-gateway/external-command/content-changed-after-send`. O caso de uso lê a série na UoW, sob a guarda `external_commands.series_key`: `seriesOpen` é verdadeiro quando um comando da mesma série com `payloadVersion` diferente existe e não terminou em `cancelled` nem em `final_failure` por `final_validation`, inclusive em `created` (parado na reentrega, na quarentena ou na fila) e em `retryable_failure`. Duas versões da mesma série nunca seguem para o parceiro: a anterior ainda em `created` é cancelada antes, e a enviada exige revisão, não reenvio (00 §7.3).
+  - `seriesOpen` falso → `receivables-gateway/external-command/content-changed-after-send`. O caso de uso lê a série na UoW, sob a guarda `external_commands.series_key`: `seriesOpen` é falso quando um comando da mesma série com `payloadVersion` diferente existe e não terminou em `cancelled` nem em `final_failure` por `final_validation`, inclusive em `created` (parado na reentrega, na quarentena ou na fila) e em `retryable_failure`. Duas versões da mesma série nunca seguem para o parceiro: a anterior ainda em `created` é cancelada antes, e a enviada exige revisão, não reenvio (00 §7.3).
 - **Efeitos sobre o estado**: quando ausente: campos ← entrada, `seriesKey ← <connectorKey>:<operation>:<businessKey>`, `status ← created`, `createdAt ← at`, `submissions ← 0`, `reconciliationRequired ← false`, e a intenção de despacho (`ExternalCommandDispatchRequested`, com `IntentID = idempotencyKey`) vai à outbox na mesma UoW (`RES-45`); quando presente com o mesmo `payloadHash`: nenhum, devolve o comando existente
 - **Eventos emitidos**: nenhum de integração; só a intenção de despacho, interna ao contexto
 - **Resposta**: `idempotencyKey: string`, `status`
@@ -267,7 +267,7 @@ As classes retentáveis do envio (`ClassRetryableTransport`, `ClassRetryableUpst
   - `origin = submit` exige `status` em `created`, `retryable_failure` ou `cancelled`; `origin = observation` exige `status` em `acknowledged` ou `unknown_outcome` → `receivables-gateway/external-command/not-in-flight`
 - **Efeitos sobre o estado**:
   - `origin = submit`: `submissions ← submissions + 1`, `lastSubmittedAt ← at`, e então o passo. Um comando `cancelled` só recebe envio na corrida com o handler do despacho; o fato externo prevalece e o comando segue o passo.
-  - `confirm` → `status ← confirmed`, `confirmedAt ← at`, `externalReferenceId ← entrada`.
+  - `confirm` → `status ← confirmed`, `confirmedAt ← at`; `externalReferenceId ← entrada` quando informado, preservando a referência gravada no aceite quando a resolução humana não a traz.
   - `await` → `status ← acknowledged`; `externalReferenceId ← entrada` quando informado; com consulta de estado, `nextQueryAt ← at + queryInterval` (convertido a ns).
   - `retry` (só por achado `FindingAbsent`) → `status ← retryable_failure`, `failureCategory` vazia, `resendAfter ← at + quiescence`; o reenvio, com a mesma chave de saída, é pedido pela varredura (`RequestResend`, `RES-42`).
   - `fail` → `status ← final_failure`; `failureCategory ← final_validation | final_business | final_authorization` pela classe, ou `final_business` pelo achado `FindingRejected` (recusa pela regra do parceiro, `ERR-28`).

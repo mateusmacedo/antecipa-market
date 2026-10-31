@@ -10,6 +10,8 @@ resources:
 secretGenerator:
   - name: databases
     literals:
+      - gateway=gateway-dev
+      - gateway_migrator=gateway-migrator-dev
       - identity=identity-dev
       - partner=partner-dev
       - partner_migrator=partner-migrator-dev

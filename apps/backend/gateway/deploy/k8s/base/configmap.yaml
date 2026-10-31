@@ -1,0 +1,26 @@
+# Valores não sensíveis dos três papéis: o relay publica em gateway.events e
+# gateway.dispatch, o consumer lê partner.events. Os opt-outs de TLS nascem
+# desligados e o transporte gRPC não tem default: o overlay declara um dos dois modos.
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: gateway
+data:
+  GRPC_ADDR: ':9090'
+  KAFKA_GATEWAY_TOPIC: gateway.events
+  KAFKA_GATEWAY_DLQ: gateway.events.dlq
+  KAFKA_GATEWAY_DISPATCH_TOPIC: gateway.dispatch
+  KAFKA_GATEWAY_DISPATCH_DLQ: gateway.dispatch.dlq
+  KAFKA_PARTNER_TOPIC: partner.events
+  KAFKA_PARTNER_DLQ: partner.events.dlq
+  KAFKA_GROUP: gateway
+  KAFKA_INSECURE: 'false'
+  OTEL_SERVICE_NAME: gateway
+  OTEL_EXPORTER_OTLP_PROTOCOL: grpc
+  OTEL_EXPORTER_OTLP_ENDPOINT: http://otel-collector:4317
+  OTEL_TRACES_SAMPLER_ARG: '1.0'
+  OTEL_LOGS_EXPORTER: otlp
+  OTEL_PROPAGATORS: tracecontext
+  OTEL_GO_X_OBSERVABILITY: 'true'
+  OTEL_BSP_EXPORT_TIMEOUT: '3000'
+  OTEL_BLRP_EXPORT_TIMEOUT: '3000'

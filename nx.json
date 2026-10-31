@@ -98,6 +98,12 @@
       }
     },
     "groups": {
+      "go-contract-gateway": {
+        "projects": ["gateway-contract"],
+        "releaseTag": {
+          "pattern": "apps/backend/gateway/contract/v{version}"
+        }
+      },
       "go-contract-partner": {
         "projects": ["partner-contract"],
         "releaseTag": {
@@ -160,7 +166,8 @@
           "run",
           "github.com/golangci/golangci-lint/v2/cmd/golangci-lint@v2.15.0",
           "run",
-          "--allow-parallel-runners"
+          "--allow-parallel-runners",
+          "--build-tags=integration,distributed"
         ]
       }
     },

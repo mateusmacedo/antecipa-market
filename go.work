@@ -2,6 +2,8 @@ go 1.26.10
 
 use (
 	./apps/backend/bff
+	./apps/backend/gateway
+	./apps/backend/gateway/contract
 	./apps/backend/identity
 	./apps/backend/identity/contract
 	./apps/backend/partner
@@ -9,6 +11,7 @@ use (
 )
 
 replace (
+	github.com/mateusmacedo/antecipa-market/apps/backend/gateway/contract v0.1.0 => ./apps/backend/gateway/contract
 	github.com/mateusmacedo/antecipa-market/apps/backend/identity/contract v0.1.0 => ./apps/backend/identity/contract
 	github.com/mateusmacedo/antecipa-market/apps/backend/partner/contract v0.1.0 => ./apps/backend/partner/contract
 )

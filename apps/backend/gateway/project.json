@@ -1,0 +1,157 @@
+{
+  "name": "gateway",
+  "$schema": "../../../node_modules/nx/schemas/project-schema.json",
+  "projectType": "application",
+  "sourceRoot": "apps/backend/gateway",
+  "tags": ["type:app", "scope:backend", "stack:go", "layer:apps"],
+  "targets": {
+    "tidy": {
+      "executor": "@mateusmacedo/dmpf-plugin:go-tidy",
+      "cache": false
+    },
+    "fmt-check": {
+      "executor": "nx:run-commands",
+      "cache": true,
+      "inputs": ["go", "^go"],
+      "options": {
+        "command": "saida=\"$(gofmt -l . 2>&1)\"; status=$?; [ $status -eq 0 ] || { printf '%s\\n' \"$saida\" >&2; exit $status; }; [ -z \"$saida\" ] || { printf '%s\\n' \"$saida\" >&2; exit 1; }",
+        "cwd": "{projectRoot}"
+      }
+    },
+    "vet": {
+      "executor": "nx:run-commands",
+      "cache": true,
+      "inputs": ["go", "^go"],
+      "options": {
+        "command": "go vet ./...",
+        "cwd": "{projectRoot}"
+      }
+    },
+    "build": {
+      "executor": "nx:run-commands",
+      "inputs": ["go", "^go"],
+      "options": {
+        "command": "go build ./...",
+        "cwd": "{projectRoot}"
+      }
+    },
+    "test-race": {
+      "executor": "@mateusmacedo/dmpf-plugin:test-env",
+      "cache": true,
+      "inputs": [
+        "go",
+        "^go",
+        "{workspaceRoot}/apps/backend/gateway/deploy/.env.example",
+        "{workspaceRoot}/infra/test/compose.yml",
+        "{workspaceRoot}/.env.example",
+        "{workspaceRoot}/node_modules/@mateusmacedo/dmpf-plugin/scripts/test-env.sh",
+        { "env": "CI" }
+      ],
+      "options": {
+        "command": "go test -race -count=1 -p 1 -tags=integration ./..."
+      },
+      "dependsOn": ["test-infra-up"]
+    },
+    "govulncheck": {
+      "executor": "nx:run-commands",
+      "cache": false,
+      "options": {
+        "command": "go run golang.org/x/vuln/cmd/govulncheck@v1.7.0 ./...",
+        "cwd": "{projectRoot}"
+      }
+    },
+    "test-infra-up": {
+      "executor": "@mateusmacedo/dmpf-plugin:test-infra",
+      "cache": false,
+      "options": {
+        "action": "up"
+      }
+    },
+    "test-infra-down": {
+      "executor": "@mateusmacedo/dmpf-plugin:test-infra",
+      "cache": false,
+      "options": {
+        "action": "down"
+      }
+    },
+    "nx-release-publish": {
+      "executor": "nx:noop"
+    },
+    "serve-api": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "set -a; [ ! -f deploy/.env.migrator.example ] || . deploy/.env.migrator.example; [ ! -f deploy/.env ] || . deploy/.env; [ ! -f deploy/.env.migrator ] || . deploy/.env.migrator; OTEL_RESOURCE_ATTRIBUTES=\"${OTEL_RESOURCE_ATTRIBUTES:+$OTEL_RESOURCE_ATTRIBUTES,}service.instance.id=gateway-local-api,dmpf.process.role=api\"; set +a; exec go run ./cmd --role api",
+        "cwd": "{projectRoot}",
+        "envFile": "{projectRoot}/deploy/.env.example"
+      },
+      "continuous": true
+    },
+    "serve-relay": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "set -a; [ ! -f deploy/.env ] || . deploy/.env; OTEL_RESOURCE_ATTRIBUTES=\"${OTEL_RESOURCE_ATTRIBUTES:+$OTEL_RESOURCE_ATTRIBUTES,}service.instance.id=gateway-local-relay,dmpf.process.role=relay\"; set +a; exec go run ./cmd --role relay",
+        "cwd": "{projectRoot}",
+        "envFile": "{projectRoot}/deploy/.env.example"
+      },
+      "continuous": true,
+      "dependsOn": ["serve-api"]
+    },
+    "deploy-env": {
+      "options": {
+        "command": "[ -f deploy/.env ] || cp deploy/.env.example deploy/.env; [ -f deploy/.env.migrator ] || cp deploy/.env.migrator.example deploy/.env.migrator"
+      }
+    },
+    "docker:run": {
+      "options": {
+        "args": [
+          "--rm",
+          "--name gateway",
+          "--network host",
+          "--env-file deploy/.env",
+          "--env-file deploy/.env.migrator"
+        ]
+      }
+    },
+    "docker:run-relay": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "[ ! -f deploy/.env ] || . deploy/.env; exec docker run --rm --name gateway-relay --network host --env-file deploy/.env -e OTEL_RESOURCE_ATTRIBUTES=\"${OTEL_RESOURCE_ATTRIBUTES:+$OTEL_RESOURCE_ATTRIBUTES,}service.instance.id=gateway-local-relay,dmpf.process.role=relay\" apps-backend-gateway --role relay",
+        "cwd": "{projectRoot}"
+      },
+      "continuous": true,
+      "dependsOn": ["docker:run"]
+    },
+    "test-distributed": {
+      "executor": "@mateusmacedo/dmpf-plugin:test-env",
+      "cache": true,
+      "inputs": [
+        "go",
+        "^go",
+        "{workspaceRoot}/infra/test/compose.yml",
+        "{workspaceRoot}/.env.example",
+        "{workspaceRoot}/node_modules/@mateusmacedo/dmpf-plugin/scripts/test-env.sh",
+        { "env": "CI" }
+      ],
+      "dependsOn": ["test-infra-up", "test-race"],
+      "options": {
+        "command": "go test -race -count=1 -p 1 -tags=integration,distributed ./distkit/..."
+      }
+    },
+    "e2e": {
+      "executor": "@mateusmacedo/dmpf-plugin:test-env",
+      "cache": true,
+      "inputs": [
+        "go",
+        "^go",
+        "{workspaceRoot}/infra/test/compose.yml",
+        "{workspaceRoot}/.env.example",
+        "{workspaceRoot}/node_modules/@mateusmacedo/dmpf-plugin/scripts/test-env.sh",
+        { "env": "CI" }
+      ],
+      "dependsOn": ["test-infra-up"],
+      "options": {
+        "command": "go test -race -count=1 -p 1 -tags=integration,distributed ./distkit/..."
+      }
+    }
+  }
+}

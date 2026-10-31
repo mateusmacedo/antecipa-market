@@ -1,0 +1,24 @@
+syntax = "proto3";
+
+package company.gateway.event.v1;
+
+import "company/gateway/event/v1/types.proto";
+import "google/protobuf/timestamp.proto";
+
+// The wait for the outcome of an external command passed its deadline; the
+// Backoffice escalates it to an operational case (00 §7.2.5).
+// Envelope type: com.company.gateway.external-command-ambiguity-expired.v1 (PTB-03).
+message ExternalCommandAmbiguityExpired {
+  string idempotency_key = 1;
+  string tenant_id = 2;
+  string connector_id = 3;
+  string partner_id = 4;
+  string operation = 5;
+  string business_key = 6;
+  WaitingStatus status = 7;
+  google.protobuf.Timestamp waiting_since = 8;
+  // Seconds, copied from the profile when the command was created.
+  int32 ambiguity_deadline = 9;
+  bool state_query_supported = 10;
+  google.protobuf.Timestamp at = 11;
+}

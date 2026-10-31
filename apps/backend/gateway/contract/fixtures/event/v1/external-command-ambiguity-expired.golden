@@ -1,0 +1,155 @@
+{
+  "format_version": "1",
+  "identity": {
+    "fixture": "gateway/event/v1/external-command-ambiguity-expired",
+    "contract": {
+      "package": "company.gateway.event.v1",
+      "message": "ExternalCommandAmbiguityExpired"
+    },
+    "type": "com.company.gateway.external-command-ambiguity-expired.v1",
+    "dataschema": "type.googleapis.com/company.gateway.event.v1.ExternalCommandAmbiguityExpired"
+  },
+  "covers": {
+    "profile_major": "1",
+    "contract_major": "v1"
+  },
+  "cases": [
+    {
+      "name": "all-conditionals-present",
+      "doc": "Caminho típico com os três atributos condicionais presentes (aggregateversion, tenantid, tracestate).",
+      "envelope": {
+        "aggregateversion": "7",
+        "causationid": "evt-0001",
+        "correlationid": "corr-0001",
+        "datacontenttype": "application/protobuf",
+        "dataschema": "type.googleapis.com/company.gateway.event.v1.ExternalCommandAmbiguityExpired",
+        "id": "evt-0001",
+        "partitionkey": "c-42",
+        "source": "urn:dmpf:reference-gateway",
+        "specversion": "1.0",
+        "subject": "prt-1:production:submitEffect:eff-1",
+        "tenantid": "tenant-a",
+        "time": "2026-09-02T12:00:00Z",
+        "traceparent": "00-0af7651916cd43dd8448eb211c80319c-b7ad6b7169203331-01",
+        "tracestate": "vendor=1",
+        "type": "com.company.gateway.external-command-ambiguity-expired.v1"
+      },
+      "payload": {
+        "ambiguity_deadline": "3600",
+        "at": "2026-09-02T12:00:00Z",
+        "business_key": "eff-1",
+        "connector_id": "prt-1:production",
+        "idempotency_key": "prt-1:production:submitEffect:eff-1",
+        "operation": "submitEffect",
+        "partner_id": "prt-1",
+        "state_query_supported": "true",
+        "status": "WAITING_STATUS_ACKNOWLEDGED",
+        "tenant_id": "tnt-1001",
+        "waiting_since": "2026-09-02T10:00:00Z"
+      },
+      "payload_bytes_hex": "0a237072742d313a70726f64756374696f6e3a7375626d69744566666563743a6566662d311208746e742d313030311a107072742d313a70726f64756374696f6e22057072742d312a0c7375626d697445666665637432056566662d313801420608a0e7dfd40648901c50015a0608c09fe0d406",
+      "payload_hash": "015f9ec827b981dd9204e7d0467a7764d9ddc416a93d1a696db1102d89e3d44d"
+    },
+    {
+      "name": "all-conditionals-absent",
+      "doc": "Os três condicionais ausentes: nenhum entra no mapa de atributos (ENV-12, sem valor de preenchimento).",
+      "envelope": {
+        "causationid": "evt-0001",
+        "correlationid": "corr-0001",
+        "datacontenttype": "application/protobuf",
+        "dataschema": "type.googleapis.com/company.gateway.event.v1.ExternalCommandAmbiguityExpired",
+        "id": "evt-0002",
+        "partitionkey": "c-42",
+        "source": "urn:dmpf:reference-gateway",
+        "specversion": "1.0",
+        "subject": "prt-1:production:submitEffect:eff-1",
+        "time": "2026-09-02T12:00:00Z",
+        "traceparent": "00-0af7651916cd43dd8448eb211c80319c-b7ad6b7169203331-01",
+        "type": "com.company.gateway.external-command-ambiguity-expired.v1"
+      },
+      "payload": {
+        "ambiguity_deadline": "7200",
+        "at": "2026-09-02T12:00:01Z",
+        "business_key": "eff-2",
+        "connector_id": "prt-1:production",
+        "idempotency_key": "prt-1:production:submitEffect:eff-2",
+        "operation": "submitEffect",
+        "partner_id": "prt-1",
+        "state_query_supported": "false",
+        "status": "WAITING_STATUS_UNKNOWN_OUTCOME",
+        "tenant_id": "tnt-1001",
+        "waiting_since": "2026-09-02T09:00:00Z"
+      },
+      "payload_bytes_hex": "0a237072742d313a70726f64756374696f6e3a7375626d69744566666563743a6566662d321208746e742d313030311a107072742d313a70726f64756374696f6e22057072742d312a0c7375626d697445666665637432056566662d32380242060890cbdfd40648a0385a0608c19fe0d406",
+      "payload_hash": "e03478bcfa8725323c1319810353e68ddef917d061d7e568e6c78b5fc0a86e78"
+    }
+  ],
+  "discriminators": [
+    {
+      "name": "unknown-field",
+      "doc": "Bytes canônicos mais um campo de número 99 (varint 42) que o contrato não conhece: a desserialização o preserva (PTB-10) e o hash o cobre (ENV-17).",
+      "envelope": {
+        "causationid": "evt-0001",
+        "correlationid": "corr-0001",
+        "datacontenttype": "application/protobuf",
+        "dataschema": "type.googleapis.com/company.gateway.event.v1.ExternalCommandAmbiguityExpired",
+        "id": "evt-2001",
+        "partitionkey": "c-42",
+        "source": "urn:dmpf:reference-gateway",
+        "specversion": "1.0",
+        "subject": "prt-1:production:submitEffect:eff-1",
+        "time": "2026-09-02T12:00:00Z",
+        "traceparent": "00-0af7651916cd43dd8448eb211c80319c-b7ad6b7169203331-01",
+        "type": "com.company.gateway.external-command-ambiguity-expired.v1"
+      },
+      "payload": {
+        "ambiguity_deadline": "86400",
+        "at": "2026-09-02T12:00:02Z",
+        "business_key": "eff-3",
+        "connector_id": "prt-2:production",
+        "idempotency_key": "prt-2:production:cancelEffect:eff-3",
+        "operation": "cancelEffect",
+        "partner_id": "prt-2",
+        "state_query_supported": "true",
+        "status": "WAITING_STATUS_ACKNOWLEDGED",
+        "tenant_id": "tnt-2001",
+        "waiting_since": "2026-09-01T12:00:00Z"
+      },
+      "payload_bytes_hex": "0a237072742d323a70726f64756374696f6e3a63616e63656c4566666563743a6566662d331208746e742d323030311a107072742d323a70726f64756374696f6e22057072742d322a0c63616e63656c45666665637432056566662d333801420608c0fcdad4064880a30550015a0608c29fe0d40698062a",
+      "payload_hash": "2e05e6a0a2a3e7c193d0f7636c81e311b481147fa53bf09d05f4a95022ddd60e"
+    },
+    {
+      "name": "non-canonical-field-order",
+      "doc": "Campos em ordem decrescente de número, o instante como sub-mensagem: decodifica no mesmo valor, mas o hash é o dos bytes transportados e difere do hash de uma reserialização (ENV-18). Campo repetido fica vazio e booleano fica falso, porque o codificador não canônico do kit cobre só strings, inteiros, enums e mensagens.",
+      "envelope": {
+        "causationid": "evt-0001",
+        "correlationid": "corr-0001",
+        "datacontenttype": "application/protobuf",
+        "dataschema": "type.googleapis.com/company.gateway.event.v1.ExternalCommandAmbiguityExpired",
+        "id": "evt-2002",
+        "partitionkey": "c-42",
+        "source": "urn:dmpf:reference-gateway",
+        "specversion": "1.0",
+        "subject": "prt-1:production:submitEffect:eff-1",
+        "time": "2026-09-02T12:00:00Z",
+        "traceparent": "00-0af7651916cd43dd8448eb211c80319c-b7ad6b7169203331-01",
+        "type": "com.company.gateway.external-command-ambiguity-expired.v1"
+      },
+      "payload": {
+        "ambiguity_deadline": "1800",
+        "at": "2026-09-02T12:00:03.123456789Z",
+        "business_key": "eff-4",
+        "connector_id": "prt-2:homologation",
+        "idempotency_key": "prt-2:homologation:submitEffect:eff-4",
+        "operation": "submitEffect",
+        "partner_id": "prt-2",
+        "state_query_supported": "false",
+        "status": "WAITING_STATUS_UNKNOWN_OUTCOME",
+        "tenant_id": "tnt-2001",
+        "waiting_since": "2026-09-02T11:30:00.123456789Z"
+      },
+      "payload_bytes_hex": "5a0b08c39fe0d40610959aef3a48880e420b08b891e0d40610959aef3a380232056566662d342a0c7375626d697445666665637422057072742d321a127072742d323a686f6d6f6c6f676174696f6e1208746e742d323030310a257072742d323a686f6d6f6c6f676174696f6e3a7375626d69744566666563743a6566662d34",
+      "payload_hash": "43185d7944486e262ede546b37c321f92fe2dcd8a4978e5ede5a93b591ff9559"
+    }
+  ]
+}

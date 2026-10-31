@@ -1,0 +1,21 @@
+syntax = "proto3";
+
+package company.gateway.event.v1;
+
+import "company/gateway/event/v1/types.proto";
+import "google/protobuf/timestamp.proto";
+
+// The effect of an external command is confirmed on the partner.
+// Envelope type: com.company.gateway.external-command-confirmed.v1 (PTB-03).
+message ExternalCommandConfirmed {
+  string idempotency_key = 1;
+  string tenant_id = 2;
+  string connector_id = 3;
+  string operation = 4;
+  string business_key = 5;
+  string external_reference_id = 6;
+  ConfirmationSource confirmation_source = 7;
+  bool partial = 8;
+  string interaction_id = 9;
+  google.protobuf.Timestamp confirmed_at = 10;
+}
