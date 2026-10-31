@@ -55,7 +55,7 @@ var orderTable = postgres.SnapshotTable("orders", "order_id",
 Todo comando passa pela inbox, com `consumer_name` `gateway.commands`
 (`application.CommandConsumer`), na mesma transação do efeito (FND-04 §7.6,
 ADR-056). O generator não escreve casos de uso: cabe a quem escreve o contexto
-passar cada comando por `usecase.Execute`, que o corre em `usecase.RunIdempotent`,
+passar cada comando por `usecase.Execute`, que o executa em `usecase.RunIdempotent`,
 e declarar o método em `rpc.Commands()`, que o interceptor usa para exigir a
 metadata `idempotency-key`.
 O `kernelgrpc.StatusOf`, com que os handlers devolvem o erro, já traduz a
