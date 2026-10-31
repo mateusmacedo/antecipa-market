@@ -6,5 +6,6 @@ kind: Kustomization
 
 resources:
   - ../../../../../apps/backend/bff/deploy/k8s/overlays/dev
+  - ../../../../../apps/backend/gateway/deploy/k8s/overlays/dev
   - ../../../../../apps/backend/identity/deploy/k8s/overlays/dev
   - ../../../../../apps/backend/partner/deploy/k8s/overlays/dev

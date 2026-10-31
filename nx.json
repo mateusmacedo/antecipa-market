@@ -98,6 +98,12 @@
       }
     },
     "groups": {
+      "go-contract-gateway": {
+        "projects": ["gateway-contract"],
+        "releaseTag": {
+          "pattern": "apps/backend/gateway/contract/v{version}"
+        }
+      },
       "go-contract-partner": {
         "projects": ["partner-contract"],
         "releaseTag": {
