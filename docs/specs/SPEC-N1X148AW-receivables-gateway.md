@@ -6,7 +6,7 @@ stage: building
 priority: P0
 depends_on: [SPEC-GXGASP24, SPEC-9TEQ9EV9]
 ticket_url: https://linear.app/mmda/issue/DEVS-84/spec-n1x148aw-bounded-context-receivables-gateway
-subtask_urls: []
+subtask_urls: [https://linear.app/mmda/issue/DEVS-173, https://linear.app/mmda/issue/DEVS-174]
 created: 2026-10-12
 ---
 
