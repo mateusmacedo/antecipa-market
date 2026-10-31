@@ -1,0 +1,254 @@
+{
+  "format_version": "1",
+  "identity": {
+    "fixture": "gateway/event/v1/external-outcome-unknown",
+    "contract": {
+      "package": "company.gateway.event.v1",
+      "message": "ExternalOutcomeUnknown"
+    },
+    "type": "com.company.gateway.external-outcome-unknown.v1",
+    "dataschema": "type.googleapis.com/company.gateway.event.v1.ExternalOutcomeUnknown"
+  },
+  "covers": {
+    "profile_major": "1",
+    "contract_major": "v1"
+  },
+  "cases": [
+    {
+      "name": "all-conditionals-present",
+      "doc": "Caminho típico com os três atributos condicionais presentes (aggregateversion, tenantid, tracestate).",
+      "envelope": {
+        "aggregateversion": "7",
+        "causationid": "evt-0001",
+        "correlationid": "corr-0001",
+        "datacontenttype": "application/protobuf",
+        "dataschema": "type.googleapis.com/company.gateway.event.v1.ExternalOutcomeUnknown",
+        "id": "evt-0001",
+        "partitionkey": "c-42",
+        "source": "urn:dmpf:reference-gateway",
+        "specversion": "1.0",
+        "subject": "prt-1:production:submitEffect:eff-1",
+        "tenantid": "tenant-a",
+        "time": "2026-09-02T12:00:00Z",
+        "traceparent": "00-0af7651916cd43dd8448eb211c80319c-b7ad6b7169203331-01",
+        "tracestate": "vendor=1",
+        "type": "com.company.gateway.external-outcome-unknown.v1"
+      },
+      "payload": {
+        "business_key": "eff-1",
+        "connector_id": "prt-1:production",
+        "failure_category": "FAILURE_CATEGORY_UNKNOWN_SENT",
+        "idempotency_key": "prt-1:production:submitEffect:eff-1",
+        "last_submitted_at": "2026-09-02T11:59:00Z",
+        "operation": "submitEffect",
+        "requires_human_resolution": "false",
+        "state_query_supported": "true",
+        "submissions": "1",
+        "tenant_id": "tnt-1001",
+        "unknown_since": "2026-09-02T12:00:00Z"
+      },
+      "payload_bytes_hex": "0a237072742d313a70726f64756374696f6e3a7375626d69744566666563743a6566662d311208746e742d313030311a107072742d313a70726f64756374696f6e220c7375626d69744566666563742a056566662d3130043801420608849fe0d40648015a0608c09fe0d406",
+      "payload_hash": "2d57f15a7dc9ec69d8c45687971b4070598514f664d704cf8b5cd3714b211a84"
+    },
+    {
+      "name": "all-conditionals-absent",
+      "doc": "Os três condicionais ausentes: nenhum entra no mapa de atributos (ENV-12, sem valor de preenchimento).",
+      "envelope": {
+        "causationid": "evt-0001",
+        "correlationid": "corr-0001",
+        "datacontenttype": "application/protobuf",
+        "dataschema": "type.googleapis.com/company.gateway.event.v1.ExternalOutcomeUnknown",
+        "id": "evt-0002",
+        "partitionkey": "c-42",
+        "source": "urn:dmpf:reference-gateway",
+        "specversion": "1.0",
+        "subject": "prt-1:production:submitEffect:eff-1",
+        "time": "2026-09-02T12:00:00Z",
+        "traceparent": "00-0af7651916cd43dd8448eb211c80319c-b7ad6b7169203331-01",
+        "type": "com.company.gateway.external-outcome-unknown.v1"
+      },
+      "payload": {
+        "business_key": "eff-2",
+        "connector_id": "prt-1:production",
+        "failure_category": "FAILURE_CATEGORY_UNKNOWN_AMBIGUOUS",
+        "idempotency_key": "prt-1:production:submitEffect:eff-2",
+        "last_submitted_at": "2026-09-02T11:59:30Z",
+        "operation": "submitEffect",
+        "requires_human_resolution": "true",
+        "state_query_supported": "false",
+        "submissions": "2",
+        "tenant_id": "tnt-1001",
+        "unknown_since": "2026-09-02T12:00:01Z"
+      },
+      "payload_bytes_hex": "0a237072742d313a70726f64756374696f6e3a7375626d69744566666563743a6566662d321208746e742d313030311a107072742d313a70726f64756374696f6e220c7375626d69744566666563742a056566662d3230053802420608a29fe0d40650015a0608c19fe0d406",
+      "payload_hash": "92cafb28c30ecadb50a8da1451b3860630c85f7ee02eaefe2c2db547dfe27a19"
+    },
+    {
+      "name": "enum-coverage-1",
+      "doc": "Caso empacotado que cobre o valor FAILURE_CATEGORY_FINAL_VALIDATION do campo failure_category, que os quatro casos da fixture enxuta não alcançam.",
+      "envelope": {
+        "causationid": "evt-0001",
+        "correlationid": "corr-0001",
+        "datacontenttype": "application/protobuf",
+        "dataschema": "type.googleapis.com/company.gateway.event.v1.ExternalOutcomeUnknown",
+        "id": "evt-0003",
+        "partitionkey": "c-42",
+        "source": "urn:dmpf:reference-gateway",
+        "specversion": "1.0",
+        "subject": "prt-1:production:submitEffect:eff-1",
+        "time": "2026-09-02T12:00:00Z",
+        "traceparent": "00-0af7651916cd43dd8448eb211c80319c-b7ad6b7169203331-01",
+        "type": "com.company.gateway.external-outcome-unknown.v1"
+      },
+      "payload": {
+        "business_key": "eff-5",
+        "connector_id": "prt-3:production",
+        "failure_category": "FAILURE_CATEGORY_FINAL_VALIDATION",
+        "idempotency_key": "prt-3:production:submitEffect:eff-5",
+        "last_submitted_at": "2026-09-02T11:59:00Z",
+        "operation": "submitEffect",
+        "requires_human_resolution": "false",
+        "state_query_supported": "true",
+        "submissions": "1",
+        "tenant_id": "tnt-3001",
+        "unknown_since": "2026-09-02T12:00:04Z"
+      },
+      "payload_bytes_hex": "0a237072742d333a70726f64756374696f6e3a7375626d69744566666563743a6566662d351208746e742d333030311a107072742d333a70726f64756374696f6e220c7375626d69744566666563742a056566662d3530013801420608849fe0d40648015a0608c49fe0d406",
+      "payload_hash": "31bc2250b97394c07d12a125ddbe00cb6374484706010a2c1ee2db2b08fba7b1"
+    },
+    {
+      "name": "enum-coverage-2",
+      "doc": "Caso empacotado que cobre o valor FAILURE_CATEGORY_FINAL_BUSINESS do campo failure_category, que os quatro casos da fixture enxuta não alcançam.",
+      "envelope": {
+        "causationid": "evt-0001",
+        "correlationid": "corr-0001",
+        "datacontenttype": "application/protobuf",
+        "dataschema": "type.googleapis.com/company.gateway.event.v1.ExternalOutcomeUnknown",
+        "id": "evt-0004",
+        "partitionkey": "c-42",
+        "source": "urn:dmpf:reference-gateway",
+        "specversion": "1.0",
+        "subject": "prt-1:production:submitEffect:eff-1",
+        "time": "2026-09-02T12:00:00Z",
+        "traceparent": "00-0af7651916cd43dd8448eb211c80319c-b7ad6b7169203331-01",
+        "type": "com.company.gateway.external-outcome-unknown.v1"
+      },
+      "payload": {
+        "business_key": "eff-6",
+        "connector_id": "prt-3:production",
+        "failure_category": "FAILURE_CATEGORY_FINAL_BUSINESS",
+        "idempotency_key": "prt-3:production:submitEffect:eff-6",
+        "last_submitted_at": "2026-09-02T11:59:00Z",
+        "operation": "submitEffect",
+        "requires_human_resolution": "false",
+        "state_query_supported": "true",
+        "submissions": "1",
+        "tenant_id": "tnt-3001",
+        "unknown_since": "2026-09-02T12:00:05Z"
+      },
+      "payload_bytes_hex": "0a237072742d333a70726f64756374696f6e3a7375626d69744566666563743a6566662d361208746e742d333030311a107072742d333a70726f64756374696f6e220c7375626d69744566666563742a056566662d3630023801420608849fe0d40648015a0608c59fe0d406",
+      "payload_hash": "5401e5d9b42e9ed111bba55b3b9c91c5a984a796498de566630d81d93ef29aff"
+    },
+    {
+      "name": "enum-coverage-3",
+      "doc": "Caso empacotado que cobre o valor FAILURE_CATEGORY_FINAL_AUTHORIZATION do campo failure_category, que os quatro casos da fixture enxuta não alcançam.",
+      "envelope": {
+        "causationid": "evt-0001",
+        "correlationid": "corr-0001",
+        "datacontenttype": "application/protobuf",
+        "dataschema": "type.googleapis.com/company.gateway.event.v1.ExternalOutcomeUnknown",
+        "id": "evt-0005",
+        "partitionkey": "c-42",
+        "source": "urn:dmpf:reference-gateway",
+        "specversion": "1.0",
+        "subject": "prt-1:production:submitEffect:eff-1",
+        "time": "2026-09-02T12:00:00Z",
+        "traceparent": "00-0af7651916cd43dd8448eb211c80319c-b7ad6b7169203331-01",
+        "type": "com.company.gateway.external-outcome-unknown.v1"
+      },
+      "payload": {
+        "business_key": "eff-7",
+        "connector_id": "prt-3:production",
+        "failure_category": "FAILURE_CATEGORY_FINAL_AUTHORIZATION",
+        "idempotency_key": "prt-3:production:submitEffect:eff-7",
+        "last_submitted_at": "2026-09-02T11:59:00Z",
+        "operation": "submitEffect",
+        "requires_human_resolution": "false",
+        "state_query_supported": "true",
+        "submissions": "1",
+        "tenant_id": "tnt-3001",
+        "unknown_since": "2026-09-02T12:00:06Z"
+      },
+      "payload_bytes_hex": "0a237072742d333a70726f64756374696f6e3a7375626d69744566666563743a6566662d371208746e742d333030311a107072742d333a70726f64756374696f6e220c7375626d69744566666563742a056566662d3730033801420608849fe0d40648015a0608c69fe0d406",
+      "payload_hash": "b965e305f050b5d61ce20701d380d0c6a3ca9fea05cbe82c4fdb7497a0084398"
+    }
+  ],
+  "discriminators": [
+    {
+      "name": "unknown-field",
+      "doc": "Bytes canônicos mais um campo de número 99 (varint 42) que o contrato não conhece: a desserialização o preserva (PTB-10) e o hash o cobre (ENV-17).",
+      "envelope": {
+        "causationid": "evt-0001",
+        "correlationid": "corr-0001",
+        "datacontenttype": "application/protobuf",
+        "dataschema": "type.googleapis.com/company.gateway.event.v1.ExternalOutcomeUnknown",
+        "id": "evt-2001",
+        "partitionkey": "c-42",
+        "source": "urn:dmpf:reference-gateway",
+        "specversion": "1.0",
+        "subject": "prt-1:production:submitEffect:eff-1",
+        "time": "2026-09-02T12:00:00Z",
+        "traceparent": "00-0af7651916cd43dd8448eb211c80319c-b7ad6b7169203331-01",
+        "type": "com.company.gateway.external-outcome-unknown.v1"
+      },
+      "payload": {
+        "business_key": "eff-3",
+        "connector_id": "prt-2:production",
+        "failure_category": "FAILURE_CATEGORY_SCHEMA_MISMATCH",
+        "idempotency_key": "prt-2:production:cancelEffect:eff-3",
+        "last_submitted_at": "2026-09-02T11:58:00Z",
+        "operation": "cancelEffect",
+        "requires_human_resolution": "true",
+        "state_query_supported": "true",
+        "submissions": "1",
+        "tenant_id": "tnt-2001",
+        "unknown_since": "2026-09-02T12:00:02Z"
+      },
+      "payload_bytes_hex": "0a237072742d323a70726f64756374696f6e3a63616e63656c4566666563743a6566662d331208746e742d323030311a107072742d323a70726f64756374696f6e220c63616e63656c4566666563742a056566662d3330063801420608c89ee0d406480150015a0608c29fe0d40698062a",
+      "payload_hash": "e706687a88496ecc76f94b4d5132dc6cdcd626069c57f5cb4b082927456f8896"
+    },
+    {
+      "name": "non-canonical-field-order",
+      "doc": "Campos em ordem decrescente de número, o instante como sub-mensagem: decodifica no mesmo valor, mas o hash é o dos bytes transportados e difere do hash de uma reserialização (ENV-18). Campo repetido fica vazio e booleano fica falso, porque o codificador não canônico do kit cobre só strings, inteiros, enums e mensagens.",
+      "envelope": {
+        "causationid": "evt-0001",
+        "correlationid": "corr-0001",
+        "datacontenttype": "application/protobuf",
+        "dataschema": "type.googleapis.com/company.gateway.event.v1.ExternalOutcomeUnknown",
+        "id": "evt-2002",
+        "partitionkey": "c-42",
+        "source": "urn:dmpf:reference-gateway",
+        "specversion": "1.0",
+        "subject": "prt-1:production:submitEffect:eff-1",
+        "time": "2026-09-02T12:00:00Z",
+        "traceparent": "00-0af7651916cd43dd8448eb211c80319c-b7ad6b7169203331-01",
+        "type": "com.company.gateway.external-outcome-unknown.v1"
+      },
+      "payload": {
+        "business_key": "eff-4",
+        "connector_id": "prt-2:homologation",
+        "failure_category": "FAILURE_CATEGORY_UNKNOWN_SENT",
+        "idempotency_key": "prt-2:homologation:submitEffect:eff-4",
+        "last_submitted_at": "2026-09-02T11:59:59.123456789Z",
+        "operation": "submitEffect",
+        "requires_human_resolution": "false",
+        "state_query_supported": "false",
+        "submissions": "3",
+        "tenant_id": "tnt-2001",
+        "unknown_since": "2026-09-02T12:00:03.123456789Z"
+      },
+      "payload_bytes_hex": "5a0b08c39fe0d40610959aef3a420b08bf9fe0d40610959aef3a380330042a056566662d34220c7375626d69744566666563741a127072742d323a686f6d6f6c6f676174696f6e1208746e742d323030310a257072742d323a686f6d6f6c6f676174696f6e3a7375626d69744566666563743a6566662d34",
+      "payload_hash": "473c9c3d2c2a1698f41b005e76ac077bd22d627e5456b65822d6363b251efe50"
+    }
+  ]
+}

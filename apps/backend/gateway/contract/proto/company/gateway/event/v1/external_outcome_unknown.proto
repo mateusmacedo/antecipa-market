@@ -1,0 +1,23 @@
+syntax = "proto3";
+
+package company.gateway.event.v1;
+
+import "company/gateway/event/v1/types.proto";
+import "google/protobuf/timestamp.proto";
+
+// Nobody knows whether an external command took effect; it is resolved by a
+// state query or by a human, never by a resend.
+// Envelope type: com.company.gateway.external-outcome-unknown.v1 (PTB-03).
+message ExternalOutcomeUnknown {
+  string idempotency_key = 1;
+  string tenant_id = 2;
+  string connector_id = 3;
+  string operation = 4;
+  string business_key = 5;
+  FailureCategory failure_category = 6;
+  int32 submissions = 7;
+  google.protobuf.Timestamp last_submitted_at = 8;
+  bool state_query_supported = 9;
+  bool requires_human_resolution = 10;
+  google.protobuf.Timestamp unknown_since = 11;
+}

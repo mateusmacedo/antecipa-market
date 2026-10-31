@@ -1,0 +1,139 @@
+{
+  "format_version": "1",
+  "identity": {
+    "fixture": "gateway/event/v1/external-command-submitted",
+    "contract": {
+      "package": "company.gateway.event.v1",
+      "message": "ExternalCommandSubmitted"
+    },
+    "type": "com.company.gateway.external-command-submitted.v1",
+    "dataschema": "type.googleapis.com/company.gateway.event.v1.ExternalCommandSubmitted"
+  },
+  "covers": {
+    "profile_major": "1",
+    "contract_major": "v1"
+  },
+  "cases": [
+    {
+      "name": "all-conditionals-present",
+      "doc": "Caminho típico com os três atributos condicionais presentes (aggregateversion, tenantid, tracestate).",
+      "envelope": {
+        "aggregateversion": "7",
+        "causationid": "evt-0001",
+        "correlationid": "corr-0001",
+        "datacontenttype": "application/protobuf",
+        "dataschema": "type.googleapis.com/company.gateway.event.v1.ExternalCommandSubmitted",
+        "id": "evt-0001",
+        "partitionkey": "c-42",
+        "source": "urn:dmpf:reference-gateway",
+        "specversion": "1.0",
+        "subject": "prt-1:production:submitEffect:eff-1",
+        "tenantid": "tenant-a",
+        "time": "2026-09-02T12:00:00Z",
+        "traceparent": "00-0af7651916cd43dd8448eb211c80319c-b7ad6b7169203331-01",
+        "tracestate": "vendor=1",
+        "type": "com.company.gateway.external-command-submitted.v1"
+      },
+      "payload": {
+        "at": "2026-09-02T12:00:00Z",
+        "business_key": "eff-1",
+        "connector_id": "prt-1:production",
+        "idempotency_key": "prt-1:production:submitEffect:eff-1",
+        "operation": "submitEffect",
+        "submission": "1",
+        "tenant_id": "tnt-1001"
+      },
+      "payload_bytes_hex": "0a237072742d313a70726f64756374696f6e3a7375626d69744566666563743a6566662d311208746e742d313030311a107072742d313a70726f64756374696f6e220c7375626d69744566666563742a056566662d3130013a0608c09fe0d406",
+      "payload_hash": "0638e4b63c570b69188d4295b606e4b3bc4ae73847bd52b9587b847a7e75fc99"
+    },
+    {
+      "name": "all-conditionals-absent",
+      "doc": "Os três condicionais ausentes: nenhum entra no mapa de atributos (ENV-12, sem valor de preenchimento).",
+      "envelope": {
+        "causationid": "evt-0001",
+        "correlationid": "corr-0001",
+        "datacontenttype": "application/protobuf",
+        "dataschema": "type.googleapis.com/company.gateway.event.v1.ExternalCommandSubmitted",
+        "id": "evt-0002",
+        "partitionkey": "c-42",
+        "source": "urn:dmpf:reference-gateway",
+        "specversion": "1.0",
+        "subject": "prt-1:production:submitEffect:eff-1",
+        "time": "2026-09-02T12:00:00Z",
+        "traceparent": "00-0af7651916cd43dd8448eb211c80319c-b7ad6b7169203331-01",
+        "type": "com.company.gateway.external-command-submitted.v1"
+      },
+      "payload": {
+        "at": "2026-09-02T12:00:01Z",
+        "business_key": "eff-2",
+        "connector_id": "prt-1:production",
+        "idempotency_key": "prt-1:production:submitEffect:eff-2",
+        "operation": "submitEffect",
+        "submission": "2",
+        "tenant_id": "tnt-1001"
+      },
+      "payload_bytes_hex": "0a237072742d313a70726f64756374696f6e3a7375626d69744566666563743a6566662d321208746e742d313030311a107072742d313a70726f64756374696f6e220c7375626d69744566666563742a056566662d3230023a0608c19fe0d406",
+      "payload_hash": "facc626d839c94d0c8067b5bafdbd65bd096c97dfe2528b410f626439d7a825f"
+    }
+  ],
+  "discriminators": [
+    {
+      "name": "unknown-field",
+      "doc": "Bytes canônicos mais um campo de número 99 (varint 42) que o contrato não conhece: a desserialização o preserva (PTB-10) e o hash o cobre (ENV-17).",
+      "envelope": {
+        "causationid": "evt-0001",
+        "correlationid": "corr-0001",
+        "datacontenttype": "application/protobuf",
+        "dataschema": "type.googleapis.com/company.gateway.event.v1.ExternalCommandSubmitted",
+        "id": "evt-2001",
+        "partitionkey": "c-42",
+        "source": "urn:dmpf:reference-gateway",
+        "specversion": "1.0",
+        "subject": "prt-1:production:submitEffect:eff-1",
+        "time": "2026-09-02T12:00:00Z",
+        "traceparent": "00-0af7651916cd43dd8448eb211c80319c-b7ad6b7169203331-01",
+        "type": "com.company.gateway.external-command-submitted.v1"
+      },
+      "payload": {
+        "at": "2026-09-02T12:00:02Z",
+        "business_key": "eff-3",
+        "connector_id": "prt-2:production",
+        "idempotency_key": "prt-2:production:cancelEffect:eff-3",
+        "operation": "cancelEffect",
+        "submission": "1",
+        "tenant_id": "tnt-2001"
+      },
+      "payload_bytes_hex": "0a237072742d323a70726f64756374696f6e3a63616e63656c4566666563743a6566662d331208746e742d323030311a107072742d323a70726f64756374696f6e220c63616e63656c4566666563742a056566662d3330013a0608c29fe0d40698062a",
+      "payload_hash": "457645001d9bd9bbdf1462cd9376de9ad9c2346973c8270b9cdb73f3dc3e1d4a"
+    },
+    {
+      "name": "non-canonical-field-order",
+      "doc": "Campos em ordem decrescente de número, o instante como sub-mensagem: decodifica no mesmo valor, mas o hash é o dos bytes transportados e difere do hash de uma reserialização (ENV-18). Campo repetido fica vazio e booleano fica falso, porque o codificador não canônico do kit cobre só strings, inteiros, enums e mensagens.",
+      "envelope": {
+        "causationid": "evt-0001",
+        "correlationid": "corr-0001",
+        "datacontenttype": "application/protobuf",
+        "dataschema": "type.googleapis.com/company.gateway.event.v1.ExternalCommandSubmitted",
+        "id": "evt-2002",
+        "partitionkey": "c-42",
+        "source": "urn:dmpf:reference-gateway",
+        "specversion": "1.0",
+        "subject": "prt-1:production:submitEffect:eff-1",
+        "time": "2026-09-02T12:00:00Z",
+        "traceparent": "00-0af7651916cd43dd8448eb211c80319c-b7ad6b7169203331-01",
+        "type": "com.company.gateway.external-command-submitted.v1"
+      },
+      "payload": {
+        "at": "2026-09-02T12:00:03.123456789Z",
+        "business_key": "eff-4",
+        "connector_id": "prt-2:homologation",
+        "idempotency_key": "prt-2:homologation:submitEffect:eff-4",
+        "operation": "submitEffect",
+        "submission": "3",
+        "tenant_id": "tnt-2001"
+      },
+      "payload_bytes_hex": "3a0b08c39fe0d40610959aef3a30032a056566662d34220c7375626d69744566666563741a127072742d323a686f6d6f6c6f676174696f6e1208746e742d323030310a257072742d323a686f6d6f6c6f676174696f6e3a7375626d69744566666563743a6566662d34",
+      "payload_hash": "dc136f2dcc6dbbcc3901d78a98843b3dee7dce2f7322b90d2569e79f77b12ebc"
+    }
+  ]
+}

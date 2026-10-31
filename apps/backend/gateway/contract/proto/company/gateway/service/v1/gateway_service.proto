@@ -1,0 +1,487 @@
+syntax = "proto3";
+
+package company.gateway.service.v1;
+
+// Internal synchronous surface of the receivables-gateway bounded context
+// (GRP-01). A domain refusal travels as `rejection` in the response; a
+// technical failure is a gRPC status. Every call runs in the platform tenant;
+// the business tenant of an external command travels as data. Instants are
+// nanoseconds since the Unix epoch, the domain's instant.
+service GatewayService {
+  rpc RegisterConnector(RegisterConnectorRequest) returns (RegisterConnectorResponse);
+  rpc SuspendOperation(SuspendOperationRequest) returns (SuspendOperationResponse);
+  rpc EnableOperation(EnableOperationRequest) returns (EnableOperationResponse);
+  rpc DeclareCapabilityProfile(DeclareCapabilityProfileRequest) returns (DeclareCapabilityProfileResponse);
+  rpc GrantQueryAuthorization(GrantQueryAuthorizationRequest) returns (GrantQueryAuthorizationResponse);
+  rpc RevokeQueryAuthorization(RevokeQueryAuthorizationRequest) returns (RevokeQueryAuthorizationResponse);
+  rpc CreateExternalCommand(CreateExternalCommandRequest) returns (CreateExternalCommandResponse);
+  rpc CancelExternalCommand(CancelExternalCommandRequest) returns (CancelExternalCommandResponse);
+  rpc ResolveUnknownOutcome(ResolveUnknownOutcomeRequest) returns (ResolveUnknownOutcomeResponse);
+  // The sweep of the external command cycle, called by an external scheduler:
+  // each command it acts on runs in a unit of work of its own, under a key
+  // derived from the instant that enabled it, so a repeated sweep is safe.
+  rpc SweepExternalCommands(SweepExternalCommandsRequest) returns (SweepExternalCommandsResponse);
+  rpc FindConnector(FindConnectorRequest) returns (FindConnectorResponse);
+  rpc FindEffectiveCapabilityProfile(FindEffectiveCapabilityProfileRequest) returns (FindEffectiveCapabilityProfileResponse);
+  rpc FindCapabilityProfile(FindCapabilityProfileRequest) returns (FindCapabilityProfileResponse);
+  rpc FindQueryAuthorizationByOrganization(FindQueryAuthorizationByOrganizationRequest) returns (FindQueryAuthorizationByOrganizationResponse);
+  rpc FindExternalCommand(FindExternalCommandRequest) returns (FindExternalCommandResponse);
+  rpc FindExternalCommandsByBusinessKey(FindExternalCommandsByBusinessKeyRequest) returns (FindExternalCommandsByBusinessKeyResponse);
+  rpc FindExternalCommandsByStatus(FindExternalCommandsByStatusRequest) returns (FindExternalCommandsByStatusResponse);
+}
+
+message Rejection {
+  string code = 1;
+  string message = 2;
+}
+
+message RegisterConnectorRequest {
+  string partner_id = 1;
+  Environment environment = 2;
+  // A reference to the vault; the credential itself never enters the context.
+  string credential_ref = 3;
+  int32 integration_version = 4;
+}
+
+message RegisterConnectorResponse {
+  oneof result {
+    RegisteredConnector registered = 1;
+    Rejection rejection = 2;
+  }
+}
+
+message RegisteredConnector {
+  string connector_key = 1;
+}
+
+message SuspendOperationRequest {
+  string connector_key = 1;
+  // Empty suspends the whole connector.
+  string operation = 2;
+  // Empty suspends every asset type.
+  string asset_type = 3;
+  SuspensionCause cause = 4;
+  // Empty, as the version is zero, for a schema mismatch.
+  string capability_id = 5;
+  int32 version = 6;
+}
+
+message SuspendOperationResponse {
+  oneof result {
+    SuspendedOperation suspended = 1;
+    Rejection rejection = 2;
+  }
+}
+
+message SuspendedOperation {
+  string connector_key = 1;
+}
+
+message EnableOperationRequest {
+  string connector_key = 1;
+  string capability_id = 2;
+  string operation = 3;
+  string asset_type = 4;
+  bool state_query_supported = 5;
+  int32 version = 6;
+}
+
+message EnableOperationResponse {
+  oneof result {
+    EnabledOperation enabled = 1;
+    Rejection rejection = 2;
+  }
+}
+
+message EnabledOperation {
+  string connector_key = 1;
+}
+
+message DeclareCapabilityProfileRequest {
+  string connector_id = 1;
+  int32 version = 2;
+  int64 effective_from = 3;
+  repeated OperationCapability operations = 4;
+}
+
+message DeclareCapabilityProfileResponse {
+  oneof result {
+    DeclaredCapabilityProfile declared = 1;
+    Rejection rejection = 2;
+  }
+}
+
+message DeclaredCapabilityProfile {
+  string profile_key = 1;
+}
+
+// One operation of a connector as the partner declares it (04 §2.1).
+message OperationCapability {
+  string operation = 1;
+  bool supported = 2;
+  Protocol protocol = 3;
+  bool state_query_supported = 4;
+  IdempotencySupport idempotency_support = 5;
+  bool partial_result_supported = 6;
+  repeated string asset_types = 7;
+  int32 max_items_per_request = 8;
+  int32 max_requests_per_minute = 9;
+  int32 max_payload_bytes = 10;
+  string business_calendar = 11;
+  string cutoff_time = 12;
+  string processing_window = 13;
+  EncumbranceCoverage encumbrance_coverage = 14;
+  // Seconds; zero when the source declares none.
+  int32 position_freshness_sla = 15;
+  Efficacy efficacy = 16;
+  // Nanoseconds the partner needs before an absence it reports is final.
+  int64 quiescence = 17;
+  bool authoritative_absence = 18;
+  int32 max_queries = 19;
+  string key_alphabet = 20;
+  int32 key_max_length = 21;
+  // Seconds between two state queries.
+  int32 query_interval = 22;
+  // Seconds a wait lasts before it escalates to an operational case.
+  int32 ambiguity_deadline = 23;
+}
+
+message GrantQueryAuthorizationRequest {
+  string consent_id = 1;
+  string organization_id = 2;
+  int32 consent_version = 3;
+  repeated string asset_types = 4;
+  // ISO 8601 dates.
+  string period_from_date = 5;
+  string period_until_date = 6;
+}
+
+message GrantQueryAuthorizationResponse {
+  oneof result {
+    GrantedQueryAuthorization granted = 1;
+    Rejection rejection = 2;
+  }
+}
+
+message GrantedQueryAuthorization {
+  string consent_id = 1;
+}
+
+message RevokeQueryAuthorizationRequest {
+  string consent_id = 1;
+  int64 effective_at = 2;
+}
+
+message RevokeQueryAuthorizationResponse {
+  oneof result {
+    RevokedQueryAuthorization revoked = 1;
+    Rejection rejection = 2;
+  }
+}
+
+message RevokedQueryAuthorization {
+  string consent_id = 1;
+}
+
+message CreateExternalCommandRequest {
+  // Derived by the caller from stable business data (00 §7.3); it never
+  // reaches the partner, which receives the outbound key the kernel derives.
+  string idempotency_key = 1;
+  string tenant_id = 2;
+  string connector_id = 3;
+  string operation = 4;
+  string asset_type = 5;
+  string business_key = 6;
+  int32 payload_version = 7;
+  // Canonical JSON, CONFIDENTIAL; no query returns it.
+  string payload = 8;
+  string payload_hash = 9;
+}
+
+message CreateExternalCommandResponse {
+  oneof result {
+    CreatedExternalCommand created = 1;
+    Rejection rejection = 2;
+  }
+}
+
+message CreatedExternalCommand {
+  string idempotency_key = 1;
+  ExternalCommandStatus status = 2;
+}
+
+message CancelExternalCommandRequest {
+  string idempotency_key = 1;
+}
+
+message CancelExternalCommandResponse {
+  oneof result {
+    CancelledExternalCommand cancelled = 1;
+    Rejection rejection = 2;
+  }
+}
+
+message CancelledExternalCommand {
+  string idempotency_key = 1;
+}
+
+message ResolveUnknownOutcomeRequest {
+  string idempotency_key = 1;
+  Resolution resolution = 2;
+  // The recorded query or evidence the human decision rests on (17 §5).
+  string query_interaction_id = 3;
+  string external_reference_id = 4;
+  string partner_code = 5;
+  string partner_message = 6;
+  string justification = 7;
+  bool partial = 8;
+}
+
+message ResolveUnknownOutcomeResponse {
+  oneof result {
+    ResolvedUnknownOutcome resolved = 1;
+    Rejection rejection = 2;
+  }
+}
+
+message ResolvedUnknownOutcome {
+  string idempotency_key = 1;
+  ExternalCommandStatus status = 2;
+}
+
+message SweepExternalCommandsRequest {}
+
+message SweepExternalCommandsResponse {
+  int32 resend_requested = 1;
+  int32 ambiguity_expired = 2;
+  int32 skipped = 3;
+  int32 failed = 4;
+}
+
+message FindConnectorRequest {
+  string connector_key = 1;
+}
+
+message FindConnectorResponse {
+  Connector connector = 1;
+}
+
+message Connector {
+  string connector_key = 1;
+  string partner_id = 2;
+  Environment environment = 3;
+  string credential_ref = 4;
+  int32 integration_version = 5;
+  repeated EnabledCapability capabilities = 6;
+  repeated OperationSuspension suspensions = 7;
+  int64 registered_at = 8;
+}
+
+message EnabledCapability {
+  string capability_id = 1;
+  string operation = 2;
+  string asset_type = 3;
+  bool state_query_supported = 4;
+  int32 version = 5;
+  int64 at = 6;
+}
+
+message OperationSuspension {
+  string operation = 1;
+  string asset_type = 2;
+  SuspensionCause cause = 3;
+  string capability_id = 4;
+  int32 version = 5;
+  int64 since = 6;
+}
+
+message FindEffectiveCapabilityProfileRequest {
+  string connector_id = 1;
+  int64 effective_at = 2;
+}
+
+message FindEffectiveCapabilityProfileResponse {
+  CapabilityProfile profile = 1;
+}
+
+message FindCapabilityProfileRequest {
+  string connector_id = 1;
+  int32 version = 2;
+}
+
+message FindCapabilityProfileResponse {
+  CapabilityProfile profile = 1;
+}
+
+message CapabilityProfile {
+  string profile_key = 1;
+  string connector_id = 2;
+  int32 version = 3;
+  int64 effective_from = 4;
+  repeated OperationCapability operations = 5;
+}
+
+message FindQueryAuthorizationByOrganizationRequest {
+  string organization_id = 1;
+}
+
+message FindQueryAuthorizationByOrganizationResponse {
+  repeated QueryAuthorization authorizations = 1;
+}
+
+message QueryAuthorization {
+  string consent_id = 1;
+  string organization_id = 2;
+  int32 consent_version = 3;
+  AuthorizationStatus status = 4;
+  repeated string asset_types = 5;
+  string period_from_date = 6;
+  string period_until_date = 7;
+  int64 granted_at = 8;
+  int64 revoked_at = 9;
+}
+
+message FindExternalCommandRequest {
+  string idempotency_key = 1;
+}
+
+message FindExternalCommandResponse {
+  ExternalCommand command = 1;
+}
+
+message FindExternalCommandsByBusinessKeyRequest {
+  string connector_id = 1;
+  string business_key = 2;
+}
+
+message FindExternalCommandsByBusinessKeyResponse {
+  repeated ExternalCommand commands = 1;
+}
+
+message FindExternalCommandsByStatusRequest {
+  ExternalCommandStatus status = 1;
+  // Optional; empty lists the status across connectors.
+  string connector_id = 2;
+}
+
+message FindExternalCommandsByStatusResponse {
+  repeated ExternalCommand commands = 1;
+}
+
+message ExternalCommand {
+  string idempotency_key = 1;
+  string tenant_id = 2;
+  string connector_id = 3;
+  string operation = 4;
+  string asset_type = 5;
+  string business_key = 6;
+  int32 payload_version = 7;
+  string series_key = 8;
+  string payload_hash = 9;
+  CommandProfile profile = 10;
+  ExternalCommandStatus status = 11;
+  FailureCategory failure_category = 12;
+  int64 created_at = 13;
+  int32 submissions = 14;
+  int64 last_submitted_at = 15;
+  int64 waiting_since = 16;
+  int64 next_query_at = 17;
+  int64 resend_after = 18;
+  bool reconciliation_required = 19;
+  int64 ambiguity_expired_at = 20;
+  int64 confirmed_at = 21;
+  string external_reference_id = 22;
+}
+
+// The declaration of the operation copied when the command was created.
+message CommandProfile {
+  int32 profile_version = 1;
+  bool state_query_supported = 2;
+  IdempotencySupport idempotency_support = 3;
+  bool partial_result_supported = 4;
+  Efficacy efficacy = 5;
+  int64 quiescence = 6;
+  bool authoritative_absence = 7;
+  int32 max_queries = 8;
+  string key_alphabet = 9;
+  int32 key_max_length = 10;
+  int32 query_interval = 11;
+  int32 ambiguity_deadline = 12;
+}
+
+enum Environment {
+  ENVIRONMENT_UNSPECIFIED = 0;
+  ENVIRONMENT_DEVELOPMENT = 1;
+  ENVIRONMENT_INTEGRATION = 2;
+  ENVIRONMENT_HOMOLOGATION = 3;
+  ENVIRONMENT_PRODUCTION = 4;
+}
+
+enum SuspensionCause {
+  SUSPENSION_CAUSE_UNSPECIFIED = 0;
+  SUSPENSION_CAUSE_PARTNER = 1;
+  SUSPENSION_CAUSE_SCHEMA_MISMATCH = 2;
+}
+
+enum Protocol {
+  PROTOCOL_UNSPECIFIED = 0;
+  PROTOCOL_SYNC_HTTP = 1;
+  PROTOCOL_ASYNC_CALLBACK = 2;
+  PROTOCOL_FILE_BATCH = 3;
+  PROTOCOL_POLLING = 4;
+}
+
+enum IdempotencySupport {
+  IDEMPOTENCY_SUPPORT_UNSPECIFIED = 0;
+  IDEMPOTENCY_SUPPORT_NATIVE = 1;
+  IDEMPOTENCY_SUPPORT_KEY_HEADER = 2;
+  IDEMPOTENCY_SUPPORT_NONE = 3;
+}
+
+enum EncumbranceCoverage {
+  ENCUMBRANCE_COVERAGE_UNSPECIFIED = 0;
+  ENCUMBRANCE_COVERAGE_COMPLETE = 1;
+  ENCUMBRANCE_COVERAGE_PARTIAL = 2;
+  ENCUMBRANCE_COVERAGE_UNAVAILABLE = 3;
+}
+
+enum Efficacy {
+  EFFICACY_UNSPECIFIED = 0;
+  EFFICACY_ON_SUBMIT = 1;
+  EFFICACY_BY_OBSERVATION = 2;
+}
+
+enum AuthorizationStatus {
+  AUTHORIZATION_STATUS_UNSPECIFIED = 0;
+  AUTHORIZATION_STATUS_GRANTED = 1;
+  AUTHORIZATION_STATUS_REVOKED = 2;
+}
+
+enum ExternalCommandStatus {
+  EXTERNAL_COMMAND_STATUS_UNSPECIFIED = 0;
+  EXTERNAL_COMMAND_STATUS_CREATED = 1;
+  EXTERNAL_COMMAND_STATUS_ACKNOWLEDGED = 2;
+  EXTERNAL_COMMAND_STATUS_CONFIRMED = 3;
+  EXTERNAL_COMMAND_STATUS_RETRYABLE_FAILURE = 4;
+  EXTERNAL_COMMAND_STATUS_FINAL_FAILURE = 5;
+  EXTERNAL_COMMAND_STATUS_UNKNOWN_OUTCOME = 6;
+  EXTERNAL_COMMAND_STATUS_CANCELLED = 7;
+}
+
+// UNSPECIFIED is no category: the last outcome was not a failure.
+enum FailureCategory {
+  FAILURE_CATEGORY_UNSPECIFIED = 0;
+  FAILURE_CATEGORY_FINAL_VALIDATION = 1;
+  FAILURE_CATEGORY_FINAL_BUSINESS = 2;
+  FAILURE_CATEGORY_FINAL_AUTHORIZATION = 3;
+  FAILURE_CATEGORY_UNKNOWN_SENT = 4;
+  FAILURE_CATEGORY_UNKNOWN_AMBIGUOUS = 5;
+  FAILURE_CATEGORY_SCHEMA_MISMATCH = 6;
+}
+
+enum Resolution {
+  RESOLUTION_UNSPECIFIED = 0;
+  RESOLUTION_CONFIRMED = 1;
+  RESOLUTION_FINAL_FAILURE = 2;
+  RESOLUTION_NOT_RECEIVED = 3;
+}

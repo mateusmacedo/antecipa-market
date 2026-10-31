@@ -1,0 +1,17 @@
+syntax = "proto3";
+
+package company.gateway.event.v1;
+
+import "google/protobuf/timestamp.proto";
+
+// The dispatch intent of an external command, internal to the
+// receivables-gateway context: channel gateway.dispatch, consumed only by its
+// own dispatch handler (RES-45). The payload does not travel; the handler reads
+// the command by its key, which is the IntentID of the outbound key (IDM-11).
+// Envelope type: com.company.gateway.external-command-dispatch-requested.v1.
+message ExternalCommandDispatchRequested {
+  string idempotency_key = 1;
+  string connector_id = 2;
+  string operation = 3;
+  google.protobuf.Timestamp at = 4;
+}

@@ -1,0 +1,22 @@
+syntax = "proto3";
+
+package company.gateway.event.v1;
+
+import "company/gateway/event/v1/types.proto";
+import "google/protobuf/timestamp.proto";
+
+// An external command failed for good; the partner's code and text travel as
+// the partner sent them (92 §2).
+// Envelope type: com.company.gateway.external-command-failed.v1 (PTB-03).
+message ExternalCommandFailed {
+  string idempotency_key = 1;
+  string tenant_id = 2;
+  string connector_id = 3;
+  string operation = 4;
+  string business_key = 5;
+  FailureCategory category = 6;
+  string partner_code = 7;
+  string partner_message = 8;
+  string interaction_id = 9;
+  google.protobuf.Timestamp at = 10;
+}
