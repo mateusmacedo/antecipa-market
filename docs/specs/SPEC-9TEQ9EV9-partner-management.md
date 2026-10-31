@@ -54,7 +54,7 @@ created: 2026-10-12
 - **Decisões registradas nesta spec (2026-10-17)**:
   1. *Idempotência*: todo comando exige chave de idempotência na metadata gRPC (FND-04; ADR-056 do DMPF); o replay com a mesma chave devolve a resposta registrada.
   2. *Tenant único*: nesta versão, a configuração de parceiros vive num tenant único da plataforma, e o `tenantId` dos filtros é o tenant avaliado no rollout; leitura entre tenants espera o uso do K4 (SPEC-QVDGV6J0), que o kernel `1.0.0-rc.7` adotado na DEVS-136 já traz.
-  3. *Enum de ambiente*: `environment` é `development | integration | homologation | production`, igual ao Gateway (SPEC-N1X148AW:62), em `Capability`, `IntegrationProfile`, eventos e consultas.
+  3. *Enum de ambiente*: `environment` é `development | integration | homologation | production`, igual ao Gateway (SPEC-N1X148AW, agregado `Connector`), em `Capability`, `IntegrationProfile`, eventos e consultas.
   4. *Eventos de produto por fato*: `PartnerProductChanged` com `changeKind` dá lugar a `PartnerProductDefined`, `PartnerProductChanged`, `PartnerProductExpired` e `PartnerProductRetired` (`docs/design/92-schemas-eventos.md` §5.3).
   5. *Rollout notificado e determinístico*: `ChangeRollout` emite `CapabilityRolloutChanged`; o bucket do tenant vem de sha256 pela porta da Nota (§); a dimensão de produto do rollout está no Escopo fora.
   6. *Re-homologação*: a retomada de capacidade suspensa com `trigger = schema_mismatch` exige nova homologação (`docs/design/13` §7); os demais triggers retomam direto por `EnableCapability`.
@@ -70,7 +70,8 @@ created: 2026-10-12
   16. *Série de versões*: nos cinco criadores com versão, `supersedesId` aponta a última versão da série, e sem ele a série não pode ter v1; a violação rejeita com `<agregado>/supersedes-invalid` (Nota (††)).
   17. *`callbackApplicable` persistido*: a aplicabilidade do callback (H9) é declarada em `DeclareCapability` e guardada na capacidade.
   18. *Escopo desta versão*: o núcleo implementável sem decisão de produto aberta; o restante está em Escopo fora.
-- **Decisões de produto abertas**: fronteira entre `OperationalPolicy` e `IntegrationProfile` deste contexto e o `CapabilityProfile` do Gateway **[ABERTA: docs/design/13-design-partner-management.md cabeçalho e docs/design/04-design-receivables-gateway.md §2.1 — qual contexto é a fonte dos limites e do calendário]**; regressão `homologating → integrating` e abandono do processo de entrada (`docs/prd/13-prd-partner-management.md:42` mostra só a sequência de estados); modelo do instrumento contratual referenciado por `instrumentTemplateId` **[ABERTA: docs/design/08-design-contracting.md §2 — o modelo híbrido é recomendação, a decisão de produto está aberta]**; dono da suspensão por quebra de schema (`docs/design/04-design-receivables-gateway.md:166-173` suspende a operação no Gateway; `docs/design/13-design-partner-management.md:178` prevê a suspensão automática neste contexto).
+- **Decisões de produto abertas**: regressão `homologating → integrating` e abandono do processo de entrada (`docs/prd/13-prd-partner-management.md:42` mostra só a sequência de estados); modelo do instrumento contratual referenciado por `instrumentTemplateId` **[ABERTA: docs/design/08-design-contracting.md §2 — o modelo híbrido é recomendação, a decisão de produto está aberta]**.
+- **Decididas na SPEC-N1X148AW** (2026-10-31): a fronteira entre `OperationalPolicy` e `IntegrationProfile` deste contexto e o `CapabilityProfile` do Gateway (decisão 11: o Gateway é a fonte do protocolo, dos limites técnicos e do calendário; este contexto guarda a política comercial e operacional); o dono da suspensão por quebra de schema (decisão 2: em camadas, com a parte deste contexto na DEVS-171; `docs/design/04-design-receivables-gateway.md:166-173` e `docs/design/13-design-partner-management.md:178` ficam ambos atendidos).
 - **Condição para sair do backlog** (cumprida): `SPEC-GXGASP24` e `SPEC-7KW0HHF6` em `done`; contradições normativas resolvidas em 2026-10-17.
 
 ## Agregados
@@ -445,7 +446,7 @@ As relações são só por identidade. A verificação (†) de existência e vi
   - `PartnerAgreementActivated` → `partner_agreement_activated.proto` — Ledger
   - `CapabilityEnabled` → `capability_enabled.proto` — consumidores (doc 92 §4): Gateway, Eligibility, Marketplace
   - `CapabilitySuspended` → `capability_suspended.proto` — Gateway, Eligibility, Marketplace, Ops
-  - `CapabilityRolloutChanged` → `capability_rollout_changed.proto` — consumidores das capacidades (Gateway, Eligibility, Marketplace)
+  - `CapabilityRolloutChanged` → `capability_rollout_changed.proto` — consumidores das capacidades (Eligibility, Marketplace); o Gateway não consome, porque o rollout é avaliado por quem abre a operação (SPEC-N1X148AW, decisão 4)
   - `PartnerProductDefined` → `partner_product_defined.proto` — Eligibility, Marketplace
   - `PartnerProductChanged` → `partner_product_changed.proto` — Eligibility, Marketplace
   - `PartnerProductExpired` → `partner_product_expired.proto` — Eligibility, Marketplace
