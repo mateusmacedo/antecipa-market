@@ -56,7 +56,7 @@ Nota de modelagem: `tenantId` não é campo dos agregados — o escopo vem do `E
 
 - **Identidade**: `generated`
 - **Campos**:
-  - `caseType: EXTERNAL_OUTCOME_UNKNOWN | EFFECT_REJECTED | EFFECT_PARTIAL | EFFECT_DISPUTED | FUNDING_MISMATCH | DISBURSEMENT_REVERSED | RECONCILIATION_MISMATCH | BENEFICIARY_DIVERGENCE | CONSENT_SYNC_FAILED | KYB_DISCREPANCY | SCHEMA_MISMATCH | CERTIFICATE_EXPIRING | DLQ_MESSAGE | OUTBOX_STALLED` — o catálogo de 17 §4
+  - `caseType: EXTERNAL_OUTCOME_UNKNOWN | EFFECT_REJECTED | EFFECT_PARTIAL | EFFECT_DISPUTED | FUNDING_MISMATCH | DISBURSEMENT_REVERSED | RECONCILIATION_MISMATCH | BENEFICIARY_DIVERGENCE | CONSENT_SYNC_FAILED | KYB_DISCREPANCY | SCHEMA_MISMATCH | EXTERNAL_INTERACTION_UNCORRELATED | EXTERNAL_AMBIGUITY_EXPIRED | EXTERNAL_REPROCESS_TERMINAL | CERTIFICATE_EXPIRING | DLQ_MESSAGE | OUTBOX_STALLED` — o catálogo de 17 §4, mais os três do Gateway (SPEC-N1X148AW, decisões 5, 7 e 10)
   - `severity: LOW | MEDIUM | HIGH | CRITICAL`
   - `sourceEventId: string` (opcional) — ausente em `DLQ_MESSAGE` e `OUTBOX_STALLED`, que nascem de fila morta e de alarme técnico
   - `subjects: list<CaseSubject>` — coleção indispensável: entidades relacionadas; cada uma com `subjectType: contract | effect | asset | organization` e `subjectId: id`
@@ -122,7 +122,7 @@ Nota de modelagem: `tenantId` não é campo dos agregados — o escopo vem do `E
   - Justificativa obrigatória onde a tabela pede — `backoffice-operations/case-action/justification-missing`.
   - O reenvio de comando externo sem `priorQueryId` é recusado mecanicamente, o que impõe C9.3 de 94 — `backoffice-operations/case-action/prior-query-missing`.
   - O segundo aprovador é pessoa distinta do autor — `backoffice-operations/case-action/self-approval`.
-  - Reenvio, `UNKNOWN_OUTCOME` e idempotência de saída pertencem ao `gateway` **[ABERTA: ciclo de comando externo sem suporte no kernel]**.
+  - Reenvio, `UNKNOWN_OUTCOME` e idempotência de saída pertencem ao `gateway`, sobre o ciclo de comando externo do kernel (ADR-070 do DMPF, na `1.0.0-rc.7`; SPEC-N1X148AW).
 
 ### CaseEvidence
 
@@ -332,7 +332,7 @@ Todas correm fora da UoW.
 ## Integração
 
 - **Publica** (integration events), em `apps/backend/ops/contract/proto/company/ops/event/v1/`, package `company.ops.event.v1`: `OperationalCaseOpened` (`operational_case_opened.proto`) e `OperationalCaseResolved` (`operational_case_resolved.proto`).
-- **Consome** (inbox e Kafka, D4 da fundação; disposições de consumo de FND-04 §6.4). Todo evento abaixo dispara `OpenOperationalCase` com o mesmo mapa: `id` → `sourceEventId`; `caseType`, `severity` e `dueAt` do catálogo de 17 §4 (o prazo alvo parte de `at`); `subjects`, `partnerId` e `financialImpact*` do payload do evento. Os prazos são propostas sem base histórica **[ABERTA: 17:B3 — prazos alvo]**.
+- **Consome** (inbox e Kafka, D4 da fundação; disposições de consumo de FND-04 §6.4). Todo evento abaixo dispara `OpenOperationalCase` com o mesmo mapa: `id` → `sourceEventId`; `caseType`, `severity` e `dueAt` do catálogo de 17 §4, e da tabela abaixo para os três tipos `EXTERNAL_*` que a SPEC-N1X148AW acrescenta (o prazo alvo parte de `at`); `subjects`, `partnerId` e `financialImpact*` do payload do evento. Os prazos são propostas sem base histórica **[ABERTA: 17:B3 — prazos alvo]**.
 
 | messageFQN | caseType | severity | prazo alvo |
 | --- | --- | --- | --- |
@@ -347,6 +347,9 @@ Todas correm fora da UoW.
 | `company.consent.event.v1.AuthorizationSyncFailed` | `CONSENT_SYNC_FAILED` | `MEDIUM` | 1 dia útil |
 | `company.kyb.event.v1.DiscrepancyDetected` | `KYB_DISCREPANCY` | `MEDIUM` | 2 dias úteis |
 | `company.gateway.event.v1.ExternalSchemaMismatchDetected` | `SCHEMA_MISMATCH` | `HIGH` | 4 h |
+| `company.gateway.event.v1.ExternalInteractionUncorrelated` | `EXTERNAL_INTERACTION_UNCORRELATED` | `HIGH` | 4 h |
+| `company.gateway.event.v1.ExternalCommandAmbiguityExpired` | `EXTERNAL_AMBIGUITY_EXPIRED` | `CRITICAL` | 2 h |
+| `company.gateway.event.v1.ExternalInteractionReprocessed` com `terminalCommandAffected = true` | `EXTERNAL_REPROCESS_TERMINAL` | `HIGH` | 4 h |
 | `company.partner.event.v1.PartnerCertificateExpiring` | `CERTIFICATE_EXPIRING` | `MEDIUM` | antes do vencimento |
 
 - **Casos sem evento de domínio**: `DLQ_MESSAGE` (fila morta, `MEDIUM`, 1 dia útil) e `OUTBOX_STALLED` (alarme técnico, `HIGH`, 1 h) entram por RPC de serviço, sem `sourceEventId` **[ABERTA: 17:§4 — origem de fila morta e de alarme técnico]**.
@@ -355,6 +358,7 @@ Todas correm fora da UoW.
   - `92` §4 lista o `ops` como consumidor de `ExternalCommandFailed`, `ContractMismatchDetected`, `EffectOutcomeUnknown` e `CapabilitySuspended`, e 17 §4 não define `caseType` para eles **[ABERTA: 17:§4 — `caseType` desses quatro eventos]**.
   - `ExternalOutcomeUnknown` (gateway) e `EffectOutcomeUnknown` (effects) descrevem a mesma condição em dois contextos, e o mesmo problema abriria dois casos **[ABERTA: 17:§4 — deduplicação entre os dois eventos]**.
   - O prazo de 17 §3.1 é "derivado da severidade", e 17 §4 o dá por tipo (`MEDIUM` tem 1 e 2 dias úteis).
+  - 17 §4 não define `EXTERNAL_INTERACTION_UNCORRELATED`, `EXTERNAL_AMBIGUITY_EXPIRED` nem `EXTERNAL_REPROCESS_TERMINAL`. Os três vêm da SPEC-N1X148AW (decisões 5, 7 e 8; linha 18 do ADR-022), com severidade e prazo propostos aqui, sob o mesmo 17:B3.
 - **Chama (gRPC, como identidade de plataforma)**: as ações de `CaseAction` invocam o comando de domínio do contexto dono, que as specs desses contextos nomeiam:
 
 | actionType | Contexto-alvo |
