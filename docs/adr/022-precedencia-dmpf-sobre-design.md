@@ -29,6 +29,16 @@ Aceito — 2026-10-12. Implementa SPEC-GXGASP24 (DEVS-76).
 > porta de cifra em envelope (SPEC-CC5SHV1K, DEVS-102) entrou na rc.7, mas a
 > adoção fica para outra issue. As demais linhas não foram reconferidas nesta
 > adoção.
+>
+> **Addendum (2026-10-31)** — a triagem da SPEC-N1X148AW (DEVS-84 e DEVS-122)
+> acrescenta a linha 16, achada no Partner já implementado: `partner.events`
+> leva 11 tipos de evento e o catálogo do canal declara só um. Acrescenta
+> também as linhas 17 (rate limit distribuído) e 18 (tempo de espera do comando
+> externo), achadas na adoção do ciclo de comando externo da rc.7. A linha 11 deixa
+> de ser divergência: a SPEC-5AQHHMJ0 (ADR-070 do kernel) está na `1.0.0-rc.7`,
+> e a SPEC-N1X148AW passa a usar o ciclo de comando externo do kernel. A linha
+> 12 segue: a SPEC-CWBA4BPV (DEVS-95) está em `planning` no kernel e não entrou
+> na `1.0.0-rc.7`.
 
 ## Contexto
 
@@ -67,15 +77,18 @@ rastreabilidade das lacunas.
 | 8 | Autenticação | 01: federação por organização e revogação em 60 s | Addendum 2026-10-17: `authn` com issuer único e tenant pelo caminho `organization.*.tenant_id`, que casa exatamente uma organização (ADR-064, IDN-20); deny-list por `sub` e `sid` no Redis, alimentada pelo papel `session-events` do `bff` (ADR-065); IDN-01 | Keycloak de referência do kernel, com o mapper nativo de organização e sem mapper próprio, e deny-list de sessão consultada em toda requisição, que supera a lista com cache de 30 s do doc 01 §2.2 | [ADR-016](./016-provedor-de-identidade-oidc.md) (addendum 2026-10-17); SPEC-SBW7HT6Y (DEVS-97) e SPEC-STEJG347 (DEVS-101), entregues no `1.0.0-rc.5` |
 | 9 | Tempo | 00 §8: UTC com milissegundo | ADR-034, ADR-035, ADR-053 §8 | Instante de domínio em `int64` de nanossegundos; data de negócio segue data pura com calendário | Este ADR; specs de contexto |
 | 10 | Ambientes | 00 §11: desenvolvimento, integração, homologação e produção | ADR-054 §4 e §7 (overlays dev e hmg, infra de testes) | Dev e hmg pelo baseline; integração coberta por hmg e pela infra de testes; produção pendente | [ADR-019](./019-go-sobre-o-kernel-dmpf.md) |
-| 11 | Comando externo de saída | 00 §7.2 e §7.3: `UNKNOWN_OUTCOME`, consulta de estado, chave idempotente de saída | ADR-056 cobre só entrada; RES-25 a RES-28 | Extensão do kernel para o ciclo de saída | SPEC-5AQHHMJ0 (DEVS-96); SPEC-N1X148AW, SPEC-ZFDEPFWC, SPEC-CWYGNY82 |
+| 11 | Comando externo de saída | 00 §7.2 e §7.3: `UNKNOWN_OUTCOME`, consulta de estado, chave idempotente de saída | ADR-056 cobre a entrada; addendum 2026-10-31: ADR-070, ciclo de saída com `Dispatch`, `Resolve` e `Abandon`; RES-25 a RES-28 | Ciclo de comando externo de saída do kernel. Deixou de ser divergência: a extensão entrou na `1.0.0-rc.7` | SPEC-5AQHHMJ0 (DEVS-96), entregue na `1.0.0-rc.7`; SPEC-N1X148AW, SPEC-ZFDEPFWC, SPEC-CWYGNY82 |
 | 12 | Evidência bruta em object storage | 00 §5.2 | Sem porta nem provider de object storage (a capability `io.storage` existe, ADR-015 do kernel) | Porta de object storage com provider S3 | [ADR-018](./018-imutabilidade-do-ledger.md); SPEC-CWBA4BPV (DEVS-95) |
 | 13 | Dados de homologação | 00 §11: anonimizados | Sem norma; o kernel cobre só a infra de teste (ADR-054 §7) | Dados sintéticos | [ADR-021](./021-dados-de-teste-sinteticos.md) |
 | 14 | Cifra de campo pessoal (addendum 2026-10-12) | 90 §1.4: envelope adicional para `PII`; envelope com chave segregada para `PII_SENSITIVE` | Sem porta de cifra de campo: SPEC-MSA607GT exclui a cifra por KMS e SPEC-CWBA4BPV cifra só objeto em repouso | Porta de cifra em envelope com chave mestra no KMS. Até a implementação, `PII_SENSITIVE` guardado só como hash e máscara, e `PII` sem envelope | SPEC-CC5SHV1K (DEVS-102); SPEC-7KW0HHF6 |
 | 15 | Unicidade de negócio (addendum 2026-10-12) | 90 §3.1: índice único `(taxIdHash, jurisdiction)` sem tenant, para o requisito 1 do PRD 01 | ADR-051: `tenant_id` à frente de toda chave; violação de índice único fora da PK volta como erro técnico, não como rejeição | Unicidade por tenant traduzida em rejeição de domínio. Até a implementação, pré-checagem por leitura com o índice como salvaguarda. Unicidade entre tenants pendente de registro na plataforma | SPEC-7SRQ3RPK (DEVS-103); SPEC-QVDGV6J0 (DEVS-100); SPEC-7KW0HHF6 |
+| 16 | Tópico com vários tipos de evento (addendum 2026-10-31) | 92 §4: catálogo de eventos por contexto produtor, sem regra de tópico; o Partner implementado publica todos os seus eventos em `partner.events` | `KFK-03`: um tipo por tópico; `KFK-03b`: vários tipos exigem conjunto fechado declarado no catálogo do canal, variação modelada no contrato e ordenação válida para o conjunto inteiro | Canal `<ctx>.events` com as três condições da `KFK-03b` declaradas no catálogo, e ordem só por agregado (`partitionkey`); o consumidor filtra por `Sink` de conjunto fechado e dá `Ack` sem inbox aos demais tipos. Canal interno de um tipo só segue a `KFK-03`. O catálogo multi-evento no kernel é a SPEC-Z2HM6NAP (DEVS-58, em `backlog`) | SPEC-N1X148AW; SPEC-9TEQ9EV9 e DEVS-171 (fechar o catálogo de `partner.events`) |
+| 17 | Rate limit distribuído (addendum 2026-10-31) | 00 §7.4: rate limit distribuído por parceiro e operação | O kernel fixa só a posição do slot `rate_limit` na composição de resiliência (`observability/resilience`), sem limitador | Na fase 1, limitador local por instância no slot, com cota dividida pelo número de réplicas declarado na composition root; o limitador distribuído nasce como spec no kernel, pelo item 3 | SPEC-N1X148AW |
+| 18 | Tempo de espera do comando externo (addendum 2026-10-31) | 00 §7.2.5: limite configurado de resultado desconhecido que abre caso operacional | ADR-070 do kernel, item 6: quiescência, intervalo entre consultas e orçamento de reenvio são de quem chama; o kernel não tem timer de espera | Varredura do contexto (`SweepExternalCommands`) acionada por agendador externo: reenvio depois da quiescência, consulta no intervalo do perfil e escalonamento do prazo | SPEC-N1X148AW |
 
 As specs SPEC-QPRR24C4, SPEC-CWBA4BPV, SPEC-MSA607GT, SPEC-QVDGV6J0,
-SPEC-5AQHHMJ0, SPEC-SBW7HT6Y, SPEC-STEJG347, SPEC-SWN93XHJ, SPEC-CC5SHV1K e
-SPEC-7SRQ3RPK vivem no repositório do kernel (`docs/specs/`), no projeto DMPF
+SPEC-5AQHHMJ0, SPEC-SBW7HT6Y, SPEC-STEJG347, SPEC-SWN93XHJ, SPEC-CC5SHV1K,
+SPEC-7SRQ3RPK e SPEC-Z2HM6NAP vivem no repositório do kernel (`docs/specs/`), no projeto DMPF
 do Linear.
 
 ## Alternativas descartadas
