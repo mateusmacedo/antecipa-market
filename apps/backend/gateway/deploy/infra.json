@@ -52,7 +52,7 @@
         "topics": ["partner.events"],
         "group": {
           "name": "gateway",
-          "env": "KAFKA_GROUP"
+          "env": "KAFKA_GATEWAY_GROUP"
         }
       }
     ]
