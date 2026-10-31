@@ -1,0 +1,73 @@
+{
+  "schema": "dmpf/units@1",
+  "units": [
+    {
+      "id": "receivables-gateway/domain",
+      "block": "domain",
+      "bounded_context": "receivables-gateway",
+      "public_integration_surface": false,
+      "include": ["github.com/mateusmacedo/antecipa-market/apps/backend/gateway/domain"]
+    },
+    {
+      "id": "receivables-gateway/ports",
+      "block": "port",
+      "bounded_context": "receivables-gateway",
+      "public_integration_surface": false,
+      "include": ["github.com/mateusmacedo/antecipa-market/apps/backend/gateway/ports"]
+    },
+    {
+      "id": "receivables-gateway/application",
+      "block": "application",
+      "bounded_context": "receivables-gateway",
+      "public_integration_surface": false,
+      "include": ["github.com/mateusmacedo/antecipa-market/apps/backend/gateway/application"]
+    },
+    {
+      "id": "receivables-gateway/provider-postgres",
+      "block": "provider",
+      "bounded_context": "receivables-gateway",
+      "public_integration_surface": false,
+      "include": ["github.com/mateusmacedo/antecipa-market/apps/backend/gateway/provider"]
+    },
+    {
+      "id": "receivables-gateway/app",
+      "block": "app",
+      "bounded_context": "receivables-gateway",
+      "public_integration_surface": false,
+      "include": [
+        "github.com/mateusmacedo/antecipa-market/apps/backend/gateway/app",
+        "github.com/mateusmacedo/antecipa-market/apps/backend/gateway/app/rpc",
+        "github.com/mateusmacedo/antecipa-market/apps/backend/gateway/cmd"
+      ]
+    },
+    {
+      "id": "receivables-gateway/appkit",
+      "block": "app",
+      "bounded_context": "receivables-gateway",
+      "public_integration_surface": false,
+      "include": ["github.com/mateusmacedo/antecipa-market/apps/backend/gateway/appkit"]
+    },
+    {
+      "id": "receivables-gateway/distkit",
+      "block": "app",
+      "bounded_context": "receivables-gateway",
+      "public_integration_surface": false,
+      "include": ["github.com/mateusmacedo/antecipa-market/apps/backend/gateway/distkit"]
+    }
+  ],
+  "external": [
+    {
+      "package": "github.com/jackc/pgx/v5",
+      "versions": ">=5.10 <6",
+      "entrypoints": [".", "github.com/jackc/pgx/v5/pgxpool", "github.com/jackc/pgx/v5/pgconn"],
+      "capability": "io.storage"
+    },
+    {
+      "package": "google.golang.org/protobuf",
+      "versions": ">=1.36.12 <2",
+      "entrypoints": ["google.golang.org/protobuf/proto"],
+      "capability": "wire.codec"
+    }
+  ],
+  "exceptions": []
+}

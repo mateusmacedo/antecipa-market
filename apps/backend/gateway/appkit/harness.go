@@ -1,0 +1,31 @@
+//go:build integration
+
+package appkit
+
+import (
+	"testing"
+
+	"github.com/jackc/pgx/v5/pgxpool"
+	"github.com/mateusmacedo/dmpf/libs/backend/go/postgres"
+	"github.com/mateusmacedo/dmpf/libs/backend/go/testkit/tb/pg"
+
+	"github.com/mateusmacedo/antecipa-market/apps/backend/gateway/provider"
+)
+
+// Tables of this context, which the kit cannot know: it resets the kernel
+// tables and the ones named here.
+var Tables = []string{"connectors", "capability_profiles", "query_authorizations", "external_commands"}
+
+// PoolOptions is the database this context's suites run in.
+var PoolOptions = pg.Options{
+	Project:      "gateway",
+	Capabilities: []postgres.Capability{postgres.Outbox, postgres.Inbox, postgres.ExternalAttempt},
+	Schemas:      []string{provider.Schema},
+	Tables:       Tables,
+	Grants:       provider.Grants,
+}
+
+func OpenPool(t testing.TB) *pgxpool.Pool {
+	t.Helper()
+	return pg.OpenPool(t, PoolOptions)
+}
