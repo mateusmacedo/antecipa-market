@@ -35,16 +35,26 @@ func permissionOf(op application.Operation) port.Permission {
 		return "gateway:cancel-external-command"
 	case application.ResolveUnknownOutcome:
 		return "gateway:resolve-unknown-outcome"
+	// RequestResend and ExpireAmbiguity have no method of their own: the sweep
+	// runs them under its execution, so they answer for its permission.
 	case application.SweepExternalCommands, application.RequestResend, application.ExpireAmbiguity:
 		return "gateway:sweep-external-commands"
 	case application.ConsumeCapabilityEnabled, application.ConsumeCapabilitySuspended:
 		return "gateway:consume"
-	case application.FindConnector, application.FindEffectiveCapabilityProfile, application.FindCapabilityProfile:
-		return "gateway:read-connector"
+	case application.FindConnector:
+		return "gateway:find-connector"
+	case application.FindEffectiveCapabilityProfile:
+		return "gateway:find-effective-capability-profile"
+	case application.FindCapabilityProfile:
+		return "gateway:find-capability-profile"
 	case application.FindQueryAuthorizationByOrganization:
-		return "gateway:read-query-authorization"
-	case application.FindExternalCommand, application.FindExternalCommandsByBusinessKey, application.FindExternalCommandsByStatus:
-		return "gateway:read-external-command"
+		return "gateway:find-query-authorization-by-organization"
+	case application.FindExternalCommand:
+		return "gateway:find-external-command"
+	case application.FindExternalCommandsByBusinessKey:
+		return "gateway:find-external-commands-by-business-key"
+	case application.FindExternalCommandsByStatus:
+		return "gateway:find-external-commands-by-status"
 	default:
 		return ""
 	}
