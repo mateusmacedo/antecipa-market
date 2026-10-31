@@ -131,7 +131,7 @@ services:
           rpk topic describe "$$topic" $$broker >/dev/null
         done
         rpk security acl create --allow-principal User:gateway --operation write,describe --topic ${KAFKA_GATEWAY_TOPIC:-gateway.events} --topic ${KAFKA_GATEWAY_DLQ:-gateway.events.dlq} --topic ${KAFKA_GATEWAY_DISPATCH_TOPIC:-gateway.dispatch} --topic ${KAFKA_GATEWAY_DISPATCH_DLQ:-gateway.dispatch.dlq} --topic ${KAFKA_PARTNER_DLQ:-partner.events.dlq} $$broker
-        rpk security acl create --allow-principal User:gateway --operation read,describe --topic ${KAFKA_PARTNER_TOPIC:-partner.events} --group ${KAFKA_GROUP:-gateway} $$broker
+        rpk security acl create --allow-principal User:gateway --operation read,describe --topic ${KAFKA_PARTNER_TOPIC:-partner.events} --group ${KAFKA_GATEWAY_GROUP:-gateway} $$broker
         rpk security acl create --allow-principal User:identity --operation write,describe --topic ${KAFKA_IDENTITY_TOPIC:-identity.events} --topic ${KAFKA_IDENTITY_DLQ:-identity.events.dlq} $$broker
         rpk security acl create --allow-principal User:partner --operation write,describe --topic ${KAFKA_PARTNER_TOPIC:-partner.events} --topic ${KAFKA_PARTNER_DLQ:-partner.events.dlq} $$broker
         rpk cluster config set kafka_enable_authorization true $$admin
