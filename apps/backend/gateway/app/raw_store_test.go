@@ -18,11 +18,8 @@ var rawStoreVars = []string{"S3_BUCKET", "gateway-interactions", "AWS_REGION", "
 
 func TestTheRolesThatKeepRawPayloadsNameTheMissingBucketAndRegion(t *testing.T) {
 	roles := map[app.Role][]string{
-		app.RoleAPI: {"PG_DSN", "postgres://x", "GRPC_INSECURE", "true"},
-		app.RoleConsumer: {
-			"PG_DSN", "postgres://x", "KAFKA_BROKERS", "b:9092", "KAFKA_INSECURE", "true", "KAFKA_GROUP", "gateway",
-			"KAFKA_PARTNER_TOPIC", "partner.events", "KAFKA_PARTNER_DLQ", "partner.events.dlq",
-		},
+		app.RoleAPI:      {"PG_DSN", "postgres://x", "GRPC_INSECURE", "true"},
+		app.RoleConsumer: consumerVariables(),
 	}
 	for role, base := range roles {
 		for i := 0; i < len(rawStoreVars); i += 2 {

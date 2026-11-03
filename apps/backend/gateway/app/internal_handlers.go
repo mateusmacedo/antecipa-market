@@ -21,6 +21,7 @@ const (
 	dispatchRequestedEvent = "com.company.gateway.external-command-dispatch-requested.v1"
 	responseCapturedEvent  = "com.company.gateway.external-response-captured.v1"
 	interactionStoredEvent = "com.company.gateway.external-interaction-stored.v1"
+	schemaMismatchEvent    = "com.company.gateway.external-schema-mismatch-detected.v1"
 )
 
 var errIncompleteMessage = errors.New("gateway: the internal message lacks a field its handler keys on")
@@ -74,6 +75,28 @@ func NormalizationHandler(service application.Service) kernelapp.Handler {
 		}
 		return service.ConsumeInteractionStored(ctx, application.ConsumeInteractionStored{
 			Receipt: receipt, InteractionID: domain.InteractionID(stored.GetInteractionId()), Revision: int(stored.GetNormalizationRevision()),
+		})
+	}
+}
+
+// SchemaMismatchHandler hands a mismatch this context published on
+// gateway.events to the suspension of the operation it broke (decision 2). An
+// operation the event does not name is refused: suspending the whole connector
+// is never what a broken response of one operation asks for.
+func SchemaMismatchHandler(service application.Service) kernelapp.Handler {
+	return func(ctx context.Context, receipt ports.Receipt, env envelope.Envelope) (usecase.Disposition, error) {
+		var detected eventv1.ExternalSchemaMismatchDetected
+		if err := unpackInternal(env, schemaMismatchEvent, &detected); err != nil {
+			return usecase.R1D4, err
+		}
+		switch {
+		case detected.GetConnectorKey() == "":
+			return usecase.R1D4, incomplete("connector_key")
+		case detected.GetOperation() == "":
+			return usecase.R1D4, incomplete("operation")
+		}
+		return service.ConsumeSchemaMismatchDetected(ctx, application.ConsumeSchemaMismatchDetected{
+			Receipt: receipt, ConnectorKey: domain.ConnectorKey(detected.GetConnectorKey()), Operation: detected.GetOperation(),
 		})
 	}
 }

@@ -4,6 +4,7 @@ import (
 	"context"
 	"crypto/sha256"
 	"fmt"
+	"reflect"
 	"time"
 
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -59,7 +60,8 @@ type Waits struct {
 
 // Bind is the composition root's half of ADR-034: one open transaction becomes
 // the resource set application declares, so the inboxes, the attempt ledger,
-// the state and the outbox share the same pgx.Tx (INB-07).
+// the state and the outbox share the same pgx.Tx (INB-07). Each channel the
+// consumer reads keeps a message inbox of its own name.
 func Bind(waits Waits) func(tx *postgres.Tx) application.Resources {
 	return func(tx *postgres.Tx) application.Resources {
 		return application.Resources{
@@ -75,6 +77,10 @@ func Bind(waits Waits) func(tx *postgres.Tx) application.Resources {
 			Outbox:               tx.Outbox(provider.Mapper{}),
 			Commands:             tx.CommandInbox(application.CommandConsumer, waits.Command),
 			Inbox:                tx.Inbox(ConsumerName, waits.Message),
+			DispatchInbox:        tx.Inbox(application.DispatchConsumer, waits.Message),
+			InteractionInbox:     tx.Inbox(application.InteractionConsumer, waits.Message),
+			NormalizationInbox:   tx.Inbox(application.NormalizationConsumer, waits.Message),
+			EventsInbox:          tx.Inbox(application.EventsConsumer, waits.Message),
 		}
 	}
 }
@@ -138,8 +144,24 @@ func NewGatewayService(pool *pgxpool.Pool, rt *otelboot.Runtime, cfg Config, raw
 	return service, nil
 }
 
-// grants is what the consumer waits for besides the kernel's tables.
-func grants() []postgres.Grant { return provider.Grants }
+// NewConsumerService is the service of the consumer role: the runtime's, plus
+// the kernel's attempt ledger the dispatch begins in and the budget of one
+// submission, whose stale cut the sweep of attempts shares (decision 21).
+func NewConsumerService(pool *pgxpool.Pool, rt *otelboot.Runtime, cfg Config, raw gatewayports.RawStore, budget kernelapp.ExternalBudget) (application.Service, error) {
+	service, err := NewGatewayService(pool, rt, cfg, raw)
+	if err != nil {
+		return application.Service{}, err
+	}
+	service.Attempts, service.Budget = postgres.NewAttemptStore(pool), DispatchBudgetOf(budget)
+	service.Logger = rt.LoggerFor(reflect.TypeFor[application.Service]().PkgPath())
+	return service, nil
+}
+
+// consumerGrants is what the consumer waits for: the kernel's outbox, inbox and
+// attempt ledger, which the dispatch writes, and the tables of this context.
+func consumerGrants() []postgres.Grant {
+	return append(postgres.KernelGrants(postgres.Outbox, postgres.Inbox, postgres.ExternalAttempt), provider.Grants...)
+}
 
 func api(cfg Config, rt *otelboot.Runtime, raw gatewayports.RawStore) serve.API {
 	return serve.API{

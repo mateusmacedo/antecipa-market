@@ -1,6 +1,7 @@
 package application_test
 
 import (
+	"slices"
 	"testing"
 
 	usecase "github.com/mateusmacedo/dmpf/libs/backend/go/application"
@@ -87,4 +88,67 @@ func TestConsumeOverAnUnknownConnectorAsksForTheRedelivery(t *testing.T) {
 	if h.store.InboxRows() != 0 {
 		t.Fatalf("the inbox kept %d rows, want the reception rolled back", h.store.InboxRows())
 	}
+}
+
+func mismatchDelivery(id port.MessageID, hash string) application.ConsumeSchemaMismatchDetected {
+	return application.ConsumeSchemaMismatchDetected{
+		Receipt: port.Receipt{
+			MessageID: id, MessageType: "com.company.gateway.external-schema-mismatch-detected.v1", PayloadHash: hash, ReceivedAt: testOccurred,
+		},
+		ConnectorKey: testConnector, Operation: "submitEffect",
+	}
+}
+
+// L570-572: the conclusion only writes the fact; its consumption is the unit of
+// work that suspends the operation, for every asset type, with cause
+// schema_mismatch.
+func TestTheMismatchThisContextDetectedSuspendsTheOperationOnceConsumed(t *testing.T) {
+	h := ready(t)
+	h.created(t, testCommand, 1)
+	h.recorded(t, application.RecordExternalInteraction{
+		InteractionID: testInteraction, ConnectorKey: testConnector, Operation: "submitEffect", Direction: domain.DirectionOutbound,
+		Source: domain.InteractionSubmitResponse, CommandID: testCommand, Request: rawRequest, Response: rawResponse,
+		CapturedStep: domain.StepSuspend, Mismatch: brokenField,
+	})
+	h.concluded(t, application.ConcludeInteraction{
+		InteractionID: testInteraction, Revision: 1, Outcome: domain.InteractionSchemaMismatch, Mismatch: brokenField,
+	})
+	if gate, _ := h.connector(t).Gate("submitEffect", "duplicata"); gate != domain.GateAllowed {
+		t.Fatalf("Gate() = %q after the conclusion, want allowed: the conclusion suspends nothing in a second unit of work", gate)
+	}
+	events := h.eventsTo(application.Destination)
+	detected, ok := events[len(events)-1].(domain.ExternalSchemaMismatchDetected)
+	if !ok || detected.AssetType != "duplicata" {
+		t.Fatalf("last event = %+v, want the mismatch with the asset type of its command", events[len(events)-1])
+	}
+
+	disposition, err := h.service.ConsumeSchemaMismatchDetected(withExecution(t), application.ConsumeSchemaMismatchDetected{
+		Receipt: mismatchDelivery("evt-m", "hm").Receipt, ConnectorKey: detected.ConnectorKey, Operation: detected.Operation,
+	})
+
+	consumed(t, disposition, err, usecase.R1D1)
+	want := []domain.OperationSuspension{{Operation: "submitEffect", Cause: domain.CauseSchemaMismatch, Since: testOccurred}}
+	if got := h.connector(t).Suspensions; !slices.Equal(got, want) {
+		t.Fatalf("suspensions = %+v, want %+v: every asset type of the operation", got, want)
+	}
+	for _, assetType := range []string{"duplicata", "cartao"} {
+		if gate, _ := h.connector(t).Gate("submitEffect", assetType); gate != domain.GateSuspended {
+			t.Fatalf("Gate(%s) = %q, want suspended", assetType, gate)
+		}
+	}
+	disposition, err = h.service.ConsumeSchemaMismatchDetected(withExecution(t), mismatchDelivery("evt-m", "hm"))
+	consumed(t, disposition, err, usecase.R2)
+}
+
+// The mismatch registers in the inbox of gateway.events, apart from the one of
+// partner.events: the same message id there is another message.
+func TestTheMismatchRegistersInAnInboxApartFromPartnerEvents(t *testing.T) {
+	h := newHarness(t)
+	h.registered(t)
+	h.enabled(t, "submitEffect", true, 1)
+
+	disposition, err := h.service.ConsumeSchemaMismatchDetected(withExecution(t), mismatchDelivery("evt-1", "h-mismatch"))
+	consumed(t, disposition, err, usecase.R1D1)
+	disposition, err = h.service.ConsumeCapabilitySuspended(withExecution(t), suspended("evt-1", "h-partner", 1))
+	consumed(t, disposition, err, usecase.R1D1)
 }

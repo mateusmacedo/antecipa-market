@@ -6,20 +6,19 @@ import (
 	"testing"
 	"time"
 
-	"github.com/jackc/pgx/v5/pgxpool"
 	kernelapp "github.com/mateusmacedo/dmpf/libs/backend/go/app"
 	usecase "github.com/mateusmacedo/dmpf/libs/backend/go/application"
 	"github.com/mateusmacedo/dmpf/libs/backend/go/contracts/envelope"
 	"github.com/mateusmacedo/dmpf/libs/backend/go/memory"
 	"github.com/mateusmacedo/dmpf/libs/backend/go/ports"
 	"github.com/mateusmacedo/dmpf/libs/backend/go/testkit/tb/execctx"
-	"github.com/mateusmacedo/dmpf/libs/backend/go/transport/channel"
 	"go.opentelemetry.io/otel/trace/noop"
 	"google.golang.org/protobuf/proto"
 	"google.golang.org/protobuf/types/known/timestamppb"
 
 	"github.com/mateusmacedo/antecipa-market/apps/backend/gateway/app"
 	"github.com/mateusmacedo/antecipa-market/apps/backend/gateway/application"
+	eventv1 "github.com/mateusmacedo/antecipa-market/apps/backend/gateway/contract/gen/go/company/gateway/event/v1"
 	"github.com/mateusmacedo/antecipa-market/apps/backend/gateway/domain"
 	partnerv1 "github.com/mateusmacedo/antecipa-market/apps/backend/partner/contract/gen/go/company/partner/event/v1"
 )
@@ -34,7 +33,10 @@ var connectorsTable = memory.Table[domain.ConnectorKey, domain.ConnectorSnapshot
 func service(store *memory.Store) application.Service {
 	return application.Service{
 		UoW: memory.NewUnitOfWork(store, func(tx *memory.Tx) application.Resources {
-			return application.Resources{Connectors: connectorsTable.Repository(tx), Outbox: tx.Outbox(), Inbox: tx.Inbox(app.ConsumerName)}
+			return application.Resources{
+				Connectors: connectorsTable.Repository(tx), Outbox: tx.Outbox(), Inbox: tx.Inbox(app.ConsumerName),
+				EventsInbox: tx.Inbox(application.EventsConsumer),
+			}
 		}),
 		ConnectorReader: connectorsTable.Reader(store),
 		Clock:           memory.FixedClock{At: occurred},
@@ -174,22 +176,40 @@ func raw(t *testing.T, eventType string, msg proto.Message) []byte {
 
 func partnerConsumer(t *testing.T, handler *countingHandler) kernelapp.Consumer {
 	t.Helper()
-	cfg := app.Defaults(app.RoleConsumer)
-	cfg.PartnerTopic, cfg.PartnerDLQ, cfg.Group = "partner.events", "partner.events.dlq", app.ConsumerName
-	pool, err := pgxpool.New(t.Context(), "postgres://gateway@127.0.0.1:1/gateway")
-	if err != nil {
-		t.Fatalf("pgxpool.New() = %v, want a lazy pool", err)
-	}
-	t.Cleanup(pool.Close)
-	ch := app.PartnerChannel(cfg)
-	consumer := app.NewConsumer(pool, memory.FixedClock{At: occurred}, &memory.SequenceIDs{Prefix: "m-"}, time.Second, 10*time.Second, 2,
-		kernelapp.Boundary{Transport: kernelapp.TransportDevelopmentOnly, Sources: []string{"urn:dmpf:reference-partner"}},
-		app.ConsumerTelemetry{Tracer: noop.NewTracerProvider().Tracer(""), Channel: kernelapp.Channel{Address: ch.Address, Group: ch.Group, Carries: channel.WireTypes(ch)}})
-	consumer.Containment = containment{}
+	consumer := subscribed(t, service(memory.New()))["partner.events"].Consumer
 	if handler != nil {
 		consumer.Handle = handler.handle
 	}
 	return consumer
+}
+
+// consumerConfig names every channel the consumer role reads.
+func consumerConfig() app.Config {
+	cfg := app.Defaults(app.RoleConsumer)
+	cfg.PartnerTopic, cfg.PartnerDLQ, cfg.Group = "partner.events", "partner.events.dlq", app.ConsumerName
+	cfg.GatewayTopic, cfg.GatewayDLQ, cfg.GatewayGroup = "gateway.events", "gateway.events.dlq", "gateway.events"
+	cfg.DispatchTopic, cfg.DispatchDLQ, cfg.DispatchGroup = "gateway.dispatch", "gateway.dispatch.dlq", "gateway.dispatch"
+	cfg.InteractionTopic, cfg.InteractionDLQ, cfg.InteractionGroup = "gateway.interactions", "gateway.interactions.dlq", "gateway.interactions"
+	cfg.NormalizationTopic, cfg.NormalizationDLQ, cfg.NormalizationGroup = "gateway.normalizations", "gateway.normalizations.dlq", "gateway.normalizations"
+	return cfg
+}
+
+// subscribed is the subscriptions of the consumer role over a service, by the
+// logical name of their channel.
+func subscribed(t *testing.T, service application.Service) map[string]app.Subscription {
+	t.Helper()
+	budget, err := app.DispatchBudget(app.PartnerRoute())
+	if err != nil {
+		t.Fatalf("DispatchBudget() = %v", err)
+	}
+	byChannel := map[string]app.Subscription{}
+	for _, s := range app.Subscriptions(consumerConfig(), app.ConsumerParts{
+		Service: service, Budget: budget, Containment: containment{}, Clock: memory.FixedClock{At: occurred},
+		Telemetry: app.ConsumerTelemetry{Tracer: noop.NewTracerProvider().Tracer("")},
+	}) {
+		byChannel[s.Channel.Name] = s
+	}
+	return byChannel
 }
 
 func TestTheConsumerAcceptsTheCapabilityEventsAmongTheElevenOfThePartnerChannel(t *testing.T) {
@@ -224,5 +244,123 @@ func TestTheSinkHandsTheAcceptedTypesAndDiscardsTheRestOfTheChannel(t *testing.T
 	}
 	if handler.calls != 1 || taken.acks != 1 {
 		t.Fatalf("a type of the set: handled %d, acks %d; want handed to the handler and acknowledged after it", handler.calls, taken.acks)
+	}
+}
+
+// Each channel of the role is read under a group and into a message inbox of
+// its own, accepting only the type its handler takes (KFK-03c), from the one
+// producer it trusts; the dispatch runs under the budget of a submission.
+func TestEachSubscriptionReadsItsChannelUnderAGroupAndAnInboxOfItsOwn(t *testing.T) {
+	cfg := consumerConfig()
+	budget, err := app.DispatchBudget(app.PartnerRoute())
+	if err != nil {
+		t.Fatalf("DispatchBudget() = %v", err)
+	}
+	want := map[string]struct {
+		inbox   string
+		accepts []string
+		source  string
+	}{
+		"partner.events": {app.ConsumerName,
+			[]string{"com.company.partner.capability-enabled.v1", "com.company.partner.capability-suspended.v1"}, cfg.PartnerSource},
+		"gateway.events":         {application.EventsConsumer, []string{schemaMismatchType}, cfg.Relay.Source},
+		"gateway.dispatch":       {application.DispatchConsumer, []string{dispatchRequestedType}, cfg.Relay.Source},
+		"gateway.interactions":   {application.InteractionConsumer, []string{"com.company.gateway.external-response-captured.v1"}, cfg.Relay.Source},
+		"gateway.normalizations": {application.NormalizationConsumer, []string{"com.company.gateway.external-interaction-stored.v1"}, cfg.Relay.Source},
+	}
+	subscriptions := subscribed(t, service(memory.New()))
+	if len(subscriptions) != len(want) {
+		t.Fatalf("subscriptions = %v, want the %d channels of the role", subscriptions, len(want))
+	}
+	groups := map[string]string{}
+	for name, w := range want {
+		s := subscriptions[name]
+		c := s.Consumer
+		if err := c.Validate(); err != nil {
+			t.Errorf("%s: Validate() = %v, want nil", name, err)
+		}
+		if c.Name != w.inbox || !slices.Equal(c.Accepts, w.accepts) || !slices.Equal(c.Boundary.Sources, []string{w.source}) {
+			t.Errorf("%s: inbox %q, accepts %v, sources %v; want %q, %v, %v", name, c.Name, c.Accepts, c.Boundary.Sources, w.inbox, w.accepts, w.source)
+		}
+		if c.Channel.Group != s.Channel.Group || c.Channel.Address != s.Channel.Address || c.MaxAttempts != s.Channel.Retry.MaxAttempts {
+			t.Errorf("%s: consumer channel %+v and limit %d, want the subscription's %s %s and %d",
+				name, c.Channel, c.MaxAttempts, s.Channel.Address, s.Channel.Group, s.Channel.Retry.MaxAttempts)
+		}
+		if other, taken := groups[s.Channel.Group]; taken {
+			t.Errorf("%s and %s share the group %q: a rebalance of one would pause the other", name, other, s.Channel.Group)
+		}
+		groups[s.Channel.Group] = name
+		timeout := cfg.ConsumerTimeout
+		if name == "gateway.dispatch" {
+			timeout = budget.Processing
+		}
+		if c.Timeout != timeout {
+			t.Errorf("%s: timeout %v, want %v", name, c.Timeout, timeout)
+		}
+	}
+	if dispatch := subscriptions["gateway.dispatch"]; dispatch.ProcessingDeadline != budget.Processing {
+		t.Fatalf("dispatch deadline = %v, want the processing of the budget %v", dispatch.ProcessingDeadline, budget.Processing)
+	}
+}
+
+const schemaMismatchType = "com.company.gateway.external-schema-mismatch-detected.v1"
+
+// ownRaw is a message of this context's relay as the broker delivers it.
+func ownRaw(t *testing.T, source, eventType string, msg proto.Message) []byte {
+	t.Helper()
+	env := packed(t, eventType, msg)
+	tenant := string(testTenant)
+	env.Source, env.TenantID = source, &tenant
+	env.Subject, env.PartitionKey, env.CorrelationID, env.CausationID = "int-1", "int-1", "corr-1", "evt-0"
+	env.TraceParent = "00-0af7651916cd43dd8448eb211c80319c-b7ad6b7169203331-01"
+	ce, err := envelope.Encode(env)
+	if err != nil {
+		t.Fatalf("Encode() = %v", err)
+	}
+	out, err := proto.MarshalOptions{Deterministic: true}.Marshal(ce)
+	if err != nil {
+		t.Fatalf("Marshal() = %v", err)
+	}
+	return out
+}
+
+// L570-572 at the consumer: the mismatch on gateway.events suspends the
+// operation, the other eight types of the channel are acknowledged untouched,
+// and a mismatch from another producer is refused at the boundary.
+func TestTheEventsSubscriptionSuspendsOnTheMismatchAlone(t *testing.T) {
+	store := memory.New()
+	seedEnabledConnector(t, store)
+	contained := &quarantine{}
+	consumer := subscribed(t, service(store))["gateway.events"].Consumer
+	consumer.Containment = contained
+	sink := kernelapp.Sink{Consumer: consumer}
+	relay := consumerConfig().Relay.Source
+	mismatch := &eventv1.ExternalSchemaMismatchDetected{
+		InteractionId: "int-1", ConnectorId: "prt-1:production", ConnectorKey: "prt-1:production", Operation: "submitEffect", AssetType: "duplicata",
+	}
+
+	confirmed := &ack{}
+	if err := sink.Handle(context.Background(), ownRaw(t, relay, "com.company.gateway.external-command-confirmed.v1",
+		&eventv1.ExternalCommandConfirmed{IdempotencyKey: "idem-1"}), 1, confirmed); err != nil || confirmed.acks != 1 {
+		t.Fatalf("Handle(confirmed) = %v with %d acks, want acknowledged untouched", err, confirmed.acks)
+	}
+	foreign := &ack{}
+	_ = sink.Handle(context.Background(), ownRaw(t, "urn:dmpf:reference-partner", schemaMismatchType, mismatch), 1, foreign)
+	if len(contained.contained) != 1 || contained.contained[0].Reason != ports.ReasonUntrustedBoundary {
+		t.Fatalf("contained = %+v, want the mismatch of another producer refused at the boundary", contained.contained)
+	}
+	connector, _, err := connectorsTable.Reader(store).Load(withExecution(t), "prt-1:production")
+	if err != nil || len(connector.Suspensions) != 0 {
+		t.Fatalf("connector = %+v, %v, want nothing suspended yet", connector, err)
+	}
+
+	taken := &ack{}
+	if err := sink.Handle(context.Background(), ownRaw(t, relay, schemaMismatchType, mismatch), 1, taken); err != nil || taken.acks != 1 {
+		t.Fatalf("Handle(mismatch) = %v with %d acks, want handled and acknowledged", err, taken.acks)
+	}
+	connector, _, err = connectorsTable.Reader(store).Load(withExecution(t), "prt-1:production")
+	want := []domain.OperationSuspension{{Operation: "submitEffect", Cause: domain.CauseSchemaMismatch, Since: occurred}}
+	if err != nil || !slices.Equal(connector.Suspensions, want) {
+		t.Fatalf("suspensions = %+v, %v, want %+v", connector.Suspensions, err, want)
 	}
 }

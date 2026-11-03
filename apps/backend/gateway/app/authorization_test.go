@@ -33,17 +33,19 @@ var edgeOperations = []application.Operation{
 // internalSteps have no method: the sweep and the consumer run them under the
 // execution of their own call, so they answer for the caller's permission.
 var internalSteps = map[application.Operation]port.Permission{
-	application.RequestResend{}:              "gateway:sweep-external-commands",
-	application.ExpireAmbiguity{}:            "gateway:sweep-external-commands",
-	application.ConsumeCapabilityEnabled{}:   "gateway:consume",
-	application.ConsumeCapabilitySuspended{}: "gateway:consume",
-	application.HoldDispatch{}:               "gateway:consume",
-	application.RecordExternalInteraction{}:  "gateway:consume",
-	application.ConcludeInteraction{}:        "gateway:consume",
-	application.LinkInteractionReference{}:   "gateway:consume",
-	application.DispatchExternalCommand{}:    "gateway:consume",
-	application.ConsumeResponseCaptured{}:    "gateway:consume",
-	application.ConsumeInteractionStored{}:   "gateway:consume",
+	application.RequestResend{}:                 "gateway:sweep-external-commands",
+	application.ExpireAmbiguity{}:               "gateway:sweep-external-commands",
+	application.QueryExternalState{}:            "gateway:sweep-external-commands",
+	application.ConsumeCapabilityEnabled{}:      "gateway:consume",
+	application.ConsumeCapabilitySuspended{}:    "gateway:consume",
+	application.ConsumeSchemaMismatchDetected{}: "gateway:consume",
+	application.HoldDispatch{}:                  "gateway:consume",
+	application.RecordExternalInteraction{}:     "gateway:consume",
+	application.ConcludeInteraction{}:           "gateway:consume",
+	application.LinkInteractionReference{}:      "gateway:consume",
+	application.DispatchExternalCommand{}:       "gateway:consume",
+	application.ConsumeResponseCaptured{}:       "gateway:consume",
+	application.ConsumeInteractionStored{}:      "gateway:consume",
 }
 
 func TestEveryEdgeOperationDeclaresItsPermission(t *testing.T) {

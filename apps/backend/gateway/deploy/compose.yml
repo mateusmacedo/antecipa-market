@@ -1,7 +1,8 @@
 # Processos do gateway na topologia local (ADR-044): api gRPC, que aplica o
 # schema (MIGRATE=true), relay da própria outbox, com os canais gateway.events,
 # gateway.dispatch, gateway.interactions e gateway.normalizations, e consumer de
-# partner.events. O api e o consumer guardam o bruto das interações no S3 do
+# partner.events e desses quatro canais, cada um com o seu grupo, além da
+# varredura de tentativas do kernel. O api e o consumer guardam o bruto das interações no S3 do
 # floci; o bucket (versionado, com Object Lock e sem retenção padrão) é
 # provisionado fora do contexto, e sem ele os dois papéis recusam a partida.
 x-image: &image
@@ -87,6 +88,18 @@ services:
       OTEL_RESOURCE_ATTRIBUTES: ${OTEL_RESOURCE_ATTRIBUTES:-service.version=local,deployment.environment.name=local},service.instance.id=gateway-consumer,dmpf.process.role=consumer
       KAFKA_PARTNER_TOPIC: ${KAFKA_PARTNER_TOPIC:-partner.events}
       KAFKA_PARTNER_DLQ: ${KAFKA_PARTNER_DLQ:-partner.events.dlq}
+      KAFKA_GATEWAY_TOPIC: ${KAFKA_GATEWAY_TOPIC:-gateway.events}
+      KAFKA_GATEWAY_DLQ: ${KAFKA_GATEWAY_DLQ:-gateway.events.dlq}
+      KAFKA_GATEWAY_EVENTS_GROUP: ${KAFKA_GATEWAY_EVENTS_GROUP:-gateway.events}
+      KAFKA_GATEWAY_DISPATCH_TOPIC: ${KAFKA_GATEWAY_DISPATCH_TOPIC:-gateway.dispatch}
+      KAFKA_GATEWAY_DISPATCH_DLQ: ${KAFKA_GATEWAY_DISPATCH_DLQ:-gateway.dispatch.dlq}
+      KAFKA_GATEWAY_DISPATCH_GROUP: ${KAFKA_GATEWAY_DISPATCH_GROUP:-gateway.dispatch}
+      KAFKA_GATEWAY_INTERACTIONS_TOPIC: ${KAFKA_GATEWAY_INTERACTIONS_TOPIC:-gateway.interactions}
+      KAFKA_GATEWAY_INTERACTIONS_DLQ: ${KAFKA_GATEWAY_INTERACTIONS_DLQ:-gateway.interactions.dlq}
+      KAFKA_GATEWAY_INTERACTIONS_GROUP: ${KAFKA_GATEWAY_INTERACTIONS_GROUP:-gateway.interactions}
+      KAFKA_GATEWAY_NORMALIZATIONS_TOPIC: ${KAFKA_GATEWAY_NORMALIZATIONS_TOPIC:-gateway.normalizations}
+      KAFKA_GATEWAY_NORMALIZATIONS_DLQ: ${KAFKA_GATEWAY_NORMALIZATIONS_DLQ:-gateway.normalizations.dlq}
+      KAFKA_GATEWAY_NORMALIZATIONS_GROUP: ${KAFKA_GATEWAY_NORMALIZATIONS_GROUP:-gateway.normalizations}
     depends_on:
       redpanda-init:
         condition: service_completed_successfully

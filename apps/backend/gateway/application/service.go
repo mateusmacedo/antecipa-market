@@ -29,10 +29,12 @@ const (
 	NormalizationDestination = "gateway.normalizations"
 
 	// Each internal channel keeps a message inbox of its own, named after it
-	// and apart from the one of partner.events (INB-01).
+	// and apart from the one of partner.events (INB-01); so does the reading
+	// of this context's own gateway.events, for the mismatches it detected.
 	DispatchConsumer      = DispatchDestination
 	InteractionConsumer   = InteractionDestination
 	NormalizationConsumer = NormalizationDestination
+	EventsConsumer        = Destination
 
 	OperationRegisterConnector                     = "gateway.RegisterConnector"
 	OperationSuspendOperation                      = "gateway.SuspendOperation"
@@ -68,6 +70,7 @@ const (
 	OperationDispatchExternalCommand               = "gateway.DispatchExternalCommand"
 	OperationConsumeResponseCaptured               = "gateway.ConsumeResponseCaptured"
 	OperationConsumeInteractionStored              = "gateway.ConsumeInteractionStored"
+	OperationConsumeSchemaMismatchDetected         = "gateway.ConsumeSchemaMismatchDetected"
 
 	// OperationCaptureResponse only ever fails: it is how a response the store
 	// lost reaches the metrics while the submission stands (decision 17).
@@ -104,6 +107,7 @@ type Resources struct {
 	DispatchInbox        port.Inbox
 	InteractionInbox     port.Inbox
 	NormalizationInbox   port.Inbox
+	EventsInbox          port.Inbox
 }
 
 type Service struct {
@@ -230,6 +234,10 @@ func dispatchInboxOf(res Resources) port.Inbox { return res.DispatchInbox }
 func interactionInboxOf(res Resources) port.Inbox { return res.InteractionInbox }
 
 func normalizationInboxOf(res Resources) port.Inbox { return res.NormalizationInbox }
+
+func partnerInboxOf(res Resources) port.Inbox { return res.Inbox }
+
+func eventsInboxOf(res Resources) port.Inbox { return res.EventsInbox }
 
 var (
 	loadConnector             = usecase.OrNew(domain.NewConnector, domain.FromConnectorSnapshot)

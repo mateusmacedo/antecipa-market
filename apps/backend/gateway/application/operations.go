@@ -102,6 +102,13 @@ type ResolveUnknownOutcome struct {
 
 type SweepExternalCommands struct{}
 
+// QueryExternalState is the state query the sweep makes of a command due at
+// NextQueryAt: the record of its interaction runs under the sweep's call.
+type QueryExternalState struct {
+	IdempotencyKey domain.IdempotencyKey
+	NextQueryAt    kernel.Instant
+}
+
 // RecordExternalInteraction is recorded after its raw payload is in the
 // store, under the id its recorder minted, which also derives its command key.
 type RecordExternalInteraction struct {
@@ -191,6 +198,14 @@ type ConsumeCapabilitySuspended struct {
 	Suspend SuspendOperation
 }
 
+// ConsumeSchemaMismatchDetected is one delivery of a mismatch this context
+// published on gateway.events, naming the connector and the operation it broke.
+type ConsumeSchemaMismatchDetected struct {
+	Receipt      port.Receipt
+	ConnectorKey domain.ConnectorKey
+	Operation    string
+}
+
 type FindConnector struct {
 	ConnectorKey domain.ConnectorKey
 }
@@ -271,8 +286,10 @@ func (HoldDispatch) isOperation()                         {}
 func (ExpireAmbiguity) isOperation()                      {}
 func (ResolveUnknownOutcome) isOperation()                {}
 func (SweepExternalCommands) isOperation()                {}
+func (QueryExternalState) isOperation()                   {}
 func (ConsumeCapabilityEnabled) isOperation()             {}
 func (ConsumeCapabilitySuspended) isOperation()           {}
+func (ConsumeSchemaMismatchDetected) isOperation()        {}
 func (DispatchExternalCommand) isOperation()              {}
 func (ConsumeResponseCaptured) isOperation()              {}
 func (ConsumeInteractionStored) isOperation()             {}

@@ -35,15 +35,16 @@ func permissionOf(op application.Operation) port.Permission {
 		return "gateway:cancel-external-command"
 	case application.ResolveUnknownOutcome:
 		return "gateway:resolve-unknown-outcome"
-	// RequestResend and ExpireAmbiguity have no method of their own: the sweep
-	// runs them under its execution, so they answer for its permission.
-	case application.SweepExternalCommands, application.RequestResend, application.ExpireAmbiguity:
+	// RequestResend, ExpireAmbiguity and the state query have no method of
+	// their own: the sweep runs them under its execution, so they answer for
+	// its permission.
+	case application.SweepExternalCommands, application.RequestResend, application.ExpireAmbiguity, application.QueryExternalState:
 		return "gateway:sweep-external-commands"
 	// HoldDispatch has no method either: the dispatch handler runs it while it
 	// consumes the intent. The record, the conclusion and the link a
 	// normalization finds are steps of the interaction cycle, run by its
 	// consumers, the sweep and the edge of a partner interaction.
-	case application.ConsumeCapabilityEnabled, application.ConsumeCapabilitySuspended, application.HoldDispatch,
+	case application.ConsumeCapabilityEnabled, application.ConsumeCapabilitySuspended, application.ConsumeSchemaMismatchDetected, application.HoldDispatch,
 		application.RecordExternalInteraction, application.ConcludeInteraction, application.LinkInteractionReference,
 		application.DispatchExternalCommand, application.ConsumeResponseCaptured, application.ConsumeInteractionStored:
 		return "gateway:consume"

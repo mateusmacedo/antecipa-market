@@ -51,6 +51,14 @@ func settings(cfg Config) []slog.Attr {
 			slog.String("kafka_partner_topic", cfg.PartnerTopic),
 			slog.String("kafka_partner_dlq", cfg.PartnerDLQ),
 			slog.String("partner_source", cfg.PartnerSource),
+			slog.String("kafka_gateway_topic", cfg.GatewayTopic),
+			slog.String("kafka_gateway_events_group", cfg.GatewayGroup),
+			slog.String("kafka_gateway_dispatch_topic", cfg.DispatchTopic),
+			slog.String("kafka_gateway_dispatch_group", cfg.DispatchGroup),
+			slog.String("kafka_gateway_interactions_topic", cfg.InteractionTopic),
+			slog.String("kafka_gateway_interactions_group", cfg.InteractionGroup),
+			slog.String("kafka_gateway_normalizations_topic", cfg.NormalizationTopic),
+			slog.String("kafka_gateway_normalizations_group", cfg.NormalizationGroup),
 			slog.Duration("consumer_timeout", cfg.ConsumerTimeout),
 		)...), cfg.RawStore.settings()...)
 	default:

@@ -4,25 +4,15 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"log/slog"
-	"reflect"
 	"time"
 
-	"github.com/jackc/pgx/v5/pgxpool"
 	kernelapp "github.com/mateusmacedo/dmpf/libs/backend/go/app"
 	usecase "github.com/mateusmacedo/dmpf/libs/backend/go/application"
 	"github.com/mateusmacedo/dmpf/libs/backend/go/contracts/envelope"
-	"github.com/mateusmacedo/dmpf/libs/backend/go/kafka"
-	"github.com/mateusmacedo/dmpf/libs/backend/go/observability/idclock"
-	"github.com/mateusmacedo/dmpf/libs/backend/go/observability/logging"
-	"github.com/mateusmacedo/dmpf/libs/backend/go/observability/otelboot"
-	"github.com/mateusmacedo/dmpf/libs/backend/go/observability/retry"
 	"github.com/mateusmacedo/dmpf/libs/backend/go/ports"
-	"github.com/mateusmacedo/dmpf/libs/backend/go/postgres"
 	"github.com/mateusmacedo/dmpf/libs/backend/go/transport/channel"
 	"go.opentelemetry.io/otel/log"
 	"go.opentelemetry.io/otel/metric"
-	semconv "go.opentelemetry.io/otel/semconv/v1.43.0"
 	"go.opentelemetry.io/otel/trace"
 
 	"github.com/mateusmacedo/antecipa-market/apps/backend/gateway/application"
@@ -42,6 +32,12 @@ const (
 	revokeGrace        = 10 * time.Second
 	rebalanceTimeout   = 30 * time.Second
 	queuePerPartition  = 32
+
+	// WHY: an attempt is stale only past the budget's cut, so a sweep every
+	// interval closes an orphan within the cut plus the interval; the
+	// redelivery of its intent waits for that anyway.
+	attemptSweepInterval = 15 * time.Second
+	attemptSweepBatch    = 100
 
 	// consumerLocale answers a mandatory field of CTX-01 that a consumption has
 	// no source for: there is no caller stating a preference on this side.
@@ -111,42 +107,97 @@ func connectorOf(partner string, environment partnerv1.Environment) (domain.Conn
 	return domain.ConnectorKeyOf(domain.PartnerID(partner), name), nil
 }
 
+// ConsumerTelemetry is the telemetry every consumer of the role reports to.
 type ConsumerTelemetry struct {
 	Tracer         trace.Tracer
 	MeterProvider  metric.MeterProvider
 	LoggerProvider log.LoggerProvider
 	System         string
-	Channel        kernelapp.Channel
 }
 
-// NewConsumer is the whole consumer: adapter, service and Postgres quarantine,
-// accepting the capability events among telemetry.Channel.Carries, or
-// PartnerChannel's when it carries none. maxAttempts <= 0 disables the attempt
-// limit (GAR-08 fixes that one exists).
-func NewConsumer(pool *pgxpool.Pool, clock ports.Clock, ids ports.IDGenerator, wait, timeout time.Duration, maxAttempts int, boundary kernelapp.Boundary, telemetry ConsumerTelemetry) kernelapp.Consumer {
-	partner := PartnerChannel(Config{})
-	carries := telemetry.Channel.Carries
-	if len(carries) == 0 {
-		carries = channel.WireTypes(partner)
+// ConsumerParts is what every subscription of the consumer role shares: the
+// service, the budget of a submission, the quarantine, the clock and whether
+// the transport is verified.
+type ConsumerParts struct {
+	Service     application.Service
+	Budget      kernelapp.ExternalBudget
+	Containment ports.Containment
+	Clock       ports.Clock
+
+	// Authenticated is a transport whose TLS checks the broker and whose client
+	// authenticates to it (IDN-03, IDN-04).
+	Authenticated bool
+	Telemetry     ConsumerTelemetry
+}
+
+// Subscription is one channel the consumer role reads and the kernel consumer
+// that takes its deliveries; ProcessingDeadline bounds each at the broker.
+type Subscription struct {
+	Channel            channel.Channel
+	Consumer           kernelapp.Consumer
+	ProcessingDeadline time.Duration
+}
+
+// Subscriptions is every channel the consumer role reads (decision 21): the
+// capability events of the Partner, the mismatches of this context's own
+// gateway.events and the three internal channels. Each consumer accepts only
+// the types its handler takes and names the message inbox it registers in;
+// the dispatch runs under the budget of one submission, the others under the
+// consumer's own time policy.
+func Subscriptions(cfg Config, parts ConsumerParts) []Subscription {
+	read := consumedChannels(cfg)
+	partner, own := PartnerBoundary(cfg, parts.Authenticated), OwnBoundary(cfg, parts.Authenticated)
+	service := parts.Service
+	readings := []reading{
+		{read.partner, ConsumerName, Handler(service), partner, cfg.ConsumerTimeout, processingDeadline,
+			[]channel.Event{capabilityEnabled, capabilitySuspended}},
+		{read.events, application.EventsConsumer, SchemaMismatchHandler(service), own, cfg.ConsumerTimeout, processingDeadline,
+			[]channel.Event{externalSchemaMismatchDetected}},
+		{read.dispatch, application.DispatchConsumer, DispatchHandler(service), own, parts.Budget.Processing, parts.Budget.Processing,
+			[]channel.Event{externalCommandDispatchRequested}},
+		{read.interactions, application.InteractionConsumer, InteractionHandler(service), own, cfg.ConsumerTimeout, processingDeadline,
+			[]channel.Event{externalResponseCaptured}},
+		{read.normalizations, application.NormalizationConsumer, NormalizationHandler(service), own, cfg.ConsumerTimeout, processingDeadline,
+			[]channel.Event{externalInteractionStored}},
 	}
-	return kernelapp.Consumer{
-		Name:           ConsumerName,
-		MaxAttempts:    maxAttempts,
-		Handle:         Handler(NewService(pool, clock, ids, Waits{Message: wait})),
-		Accepts:        wireTypesOf(partner, capabilityEnabled, capabilitySuspended),
-		Containment:    postgres.NewQuarantine(pool, postgres.WithQuarantineLoggerProvider(telemetry.LoggerProvider)),
-		Clock:          clock,
-		Timeout:        timeout,
-		Boundary:       boundary,
-		Locale:         consumerLocale,
-		Tracer:         telemetry.Tracer,
-		MeterProvider:  telemetry.MeterProvider,
-		LoggerProvider: telemetry.LoggerProvider,
-		System:         telemetry.System,
-		Channel: kernelapp.Channel{
-			Address: telemetry.Channel.Address,
-			Group:   telemetry.Channel.Group,
-			Carries: carries,
+	subscriptions := make([]Subscription, len(readings))
+	for i, r := range readings {
+		subscriptions[i] = parts.subscribe(r)
+	}
+	return subscriptions
+}
+
+// reading is how the role reads one channel: the inbox name, the handler, the
+// trusted producer, the time policy and the subscription.
+type reading struct {
+	channel  channel.Channel
+	name     string
+	handle   kernelapp.Handler
+	boundary kernelapp.Boundary
+	timeout  time.Duration
+	deadline time.Duration
+	accepts  []channel.Event
+}
+
+func (p ConsumerParts) subscribe(r reading) Subscription {
+	return Subscription{
+		Channel:            r.channel,
+		ProcessingDeadline: r.deadline,
+		Consumer: kernelapp.Consumer{
+			Name:           r.name,
+			MaxAttempts:    r.channel.Retry.MaxAttempts,
+			Handle:         r.handle,
+			Accepts:        wireTypesOf(r.channel, r.accepts...),
+			Containment:    p.Containment,
+			Clock:          p.Clock,
+			Timeout:        r.timeout,
+			Boundary:       r.boundary,
+			Locale:         consumerLocale,
+			Tracer:         p.Telemetry.Tracer,
+			MeterProvider:  p.Telemetry.MeterProvider,
+			LoggerProvider: p.Telemetry.LoggerProvider,
+			System:         p.Telemetry.System,
+			Channel:        kernelapp.Channel{Address: r.channel.Address, Group: r.channel.Group, Carries: channel.WireTypes(r.channel)},
 		},
 	}
 }
@@ -156,83 +207,51 @@ func wireTypesOf(ch channel.Channel, events ...channel.Event) []string {
 	return channel.WireTypes(ch)
 }
 
-// PartnerBoundary is the one place the consumer's trust is declared: the
-// Partner producer, and a verified transport only when TLS checks the broker
-// and this client authenticates to it (IDN-03, IDN-04).
-func PartnerBoundary(cfg Config, authenticated bool) kernelapp.Boundary {
-	transport := kernelapp.TransportDevelopmentOnly
-	if authenticated {
-		transport = kernelapp.TransportVerified
-	}
-	return kernelapp.Boundary{Transport: transport, Sources: []string{cfg.PartnerSource}}
+// consumed is the channels the consumer role reads. Partner.events keeps the
+// role's group; each channel of this context has a group of its own.
+type consumed struct {
+	partner        channel.Channel
+	events         channel.Channel
+	dispatch       channel.Channel
+	interactions   channel.Channel
+	normalizations channel.Channel
 }
 
-func runConsumer(ctx context.Context, cfg Config, rt *otelboot.Runtime) error {
-	ctx, abort := context.WithCancelCause(ctx)
-	defer abort(nil)
-	if _, err := OpenRawStore(ctx, cfg.RawStore, rt); err != nil {
-		return err
+func consumedChannels(cfg Config) consumed {
+	return consumed{
+		partner:        PartnerChannel(cfg),
+		events:         readBy(GatewayChannel(cfg), cfg.GatewayGroup),
+		dispatch:       readBy(DispatchChannel(cfg), cfg.DispatchGroup),
+		interactions:   readBy(InteractionChannel(cfg), cfg.InteractionGroup),
+		normalizations: readBy(NormalizationChannel(cfg), cfg.NormalizationGroup),
 	}
-	pool, err := postgres.NewPool(ctx, cfg.DSN, rt.Tracer(), postgres.WithMeterProvider(rt.MeterProvider()))
-	if err != nil {
-		return err
-	}
-	defer pool.Close()
-	if err := pool.Ping(ctx); err != nil {
-		return fmt.Errorf("postgres: %w", err)
-	}
-	if err := postgres.WaitForGrants(ctx, pool, time.Second, rt.LoggerProvider(), append(postgres.KernelGrants(postgres.Outbox, postgres.Inbox), grants()...)...); err != nil {
-		return err
-	}
-	stopPurge, err := kernelapp.StartPurge(ctx, abort,
-		kernelapp.PurgeConfig{Name: "message-inbox", Interval: cfg.Policies.PurgeInterval, Batch: cfg.Policies.PurgeBatch, Retention: cfg.Policies.InboxRetention},
-		idclock.SystemClock{}, rt.LoggerProvider(), kernelapp.PurgeMessageInbox(pool, ConsumerName))
-	if err != nil {
-		return err
-	}
-	defer func() { _ = stopPurge() }()
+}
 
-	ch := PartnerChannel(cfg)
-	catalog, err := channel.NewCatalog(ch)
-	if err != nil {
-		return err
+func (c consumed) all() []channel.Channel {
+	return []channel.Channel{c.partner, c.events, c.dispatch, c.interactions, c.normalizations}
+}
+
+func readBy(ch channel.Channel, group string) channel.Channel {
+	ch.Group = group
+	return ch
+}
+
+// PartnerBoundary is the trust of partner.events: the Partner producer, and a
+// verified transport only when TLS checks the broker and this client
+// authenticates to it (IDN-03, IDN-04).
+func PartnerBoundary(cfg Config, authenticated bool) kernelapp.Boundary {
+	return kernelapp.Boundary{Transport: transportOf(authenticated), Sources: []string{cfg.PartnerSource}}
+}
+
+// OwnBoundary is the trust of the channels of this context: only its own relay
+// publishes them, under the source it stamps on every envelope.
+func OwnBoundary(cfg Config, authenticated bool) kernelapp.Boundary {
+	return kernelapp.Boundary{Transport: transportOf(authenticated), Sources: []string{cfg.Relay.Source}}
+}
+
+func transportOf(authenticated bool) kernelapp.Transport {
+	if authenticated {
+		return kernelapp.TransportVerified
 	}
-	kafkaConfig, err := kafka.NewConfig(ctx, rt, catalog, cfg.Brokers, cfg.KafkaInsecure, cfg.KafkaAuth)
-	if err != nil {
-		return err
-	}
-	kafkaConfig.RevokeGrace = revokeGrace
-	logger := rt.LoggerFor(reflect.TypeFor[Config]().PkgPath())
-	adapter := NewConsumer(pool, idclock.SystemClock{}, idclock.NewMessageIDs("gateway"), cfg.Wait, cfg.ConsumerTimeout, ch.Retry.MaxAttempts,
-		PartnerBoundary(cfg, kafkaConfig.ClientAuthenticated()), ConsumerTelemetry{
-			Tracer: rt.Tracer(), MeterProvider: rt.MeterProvider(), LoggerProvider: rt.LoggerProvider(),
-			System:  semconv.MessagingSystemKafka.Value.AsString(),
-			Channel: kernelapp.Channel{Address: ch.Address, Group: ch.Group, Carries: channel.WireTypes(ch)},
-		})
-	if err := adapter.Validate(); err != nil {
-		return err
-	}
-	consumer := &kafka.Consumer{
-		Config:             kafkaConfig,
-		Channel:            ch,
-		Sink:               kernelapp.Sink{Consumer: adapter},
-		Backoff:            retry.Backoff{Base: 10 * time.Millisecond, Factor: 2, Cap: time.Second},
-		ProcessingDeadline: processingDeadline,
-		RebalanceTimeout:   rebalanceTimeout,
-		QueuePerPartition:  queuePerPartition,
-	}
-	if err := consumer.Validate(); err != nil {
-		return err
-	}
-	logger.LogAttrs(ctx, slog.LevelInfo, "consumer joining",
-		slog.String(string(semconv.MessagingSystemKey), semconv.MessagingSystemKafka.Value.AsString()),
-		slog.String(string(semconv.MessagingDestinationNameKey), ch.Address),
-		slog.String(string(semconv.MessagingConsumerGroupNameKey), ch.Group),
-		slog.String(logging.KeyChannelName, ch.Name))
-	// WHY: only the cancellation is a clean exit; a broker failure that lands
-	// during the drain must still reach the caller.
-	if err := consumer.Run(ctx); err != nil && !errors.Is(err, context.Canceled) {
-		return err
-	}
-	return stopPurge()
+	return kernelapp.TransportDevelopmentOnly
 }

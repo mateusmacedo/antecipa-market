@@ -25,6 +25,12 @@ func (s Service) RecordExternalInteraction(ctx context.Context, cmd RecordExtern
 }
 
 func (s Service) record(ctx context.Context, x executor, cmd RecordExternalInteraction) (usecase.Outcome[domain.InteractionResponse], error) {
+	return s.recordAs(ctx, x, cmd, cmd)
+}
+
+// recordAs authorizes the record as the step that runs it, so a step with no
+// method answers for the permission of the call it runs under.
+func (s Service) recordAs(ctx context.Context, x executor, as Operation, cmd RecordExternalInteraction) (usecase.Outcome[domain.InteractionResponse], error) {
 	key, err := s.DerivedKeys.key("record", string(cmd.InteractionID))
 	if err != nil {
 		return usecase.Outcome[domain.InteractionResponse]{}, fmt.Errorf("application: record external interaction %s: %w", cmd.InteractionID, err)
@@ -32,7 +38,7 @@ func (s Service) record(ctx context.Context, x executor, cmd RecordExternalInter
 	return usecase.Execute(port.WithIdempotencyKey(ctx, key), x, command[domain.InteractionResponse]{
 		Operation:   OperationRecordExternalInteraction,
 		Object:      string(cmd.InteractionID),
-		Input:       cmd,
+		Input:       as,
 		Fingerprint: recordFingerprint(cmd),
 		Codec:       interactionCodec,
 		Run: func(ctx context.Context, res Resources, identity usecase.Identity) (usecase.Outcome[domain.InteractionResponse], error) {

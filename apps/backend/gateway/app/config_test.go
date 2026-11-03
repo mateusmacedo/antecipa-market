@@ -82,23 +82,41 @@ func TestTheRelayNamesEachMissingVariable(t *testing.T) {
 	}
 }
 
-func TestTheConsumerNamesEachMissingVariable(t *testing.T) {
-	full := []string{
+// consumerVariables are the variables of the channels the consumer role reads:
+// partner.events and the four of this context, each under its group; lookup
+// adds the bucket of the raw payloads.
+func consumerVariables() []string {
+	return []string{
 		"PG_DSN", "postgres://x", "KAFKA_BROKERS", "b:9092", "KAFKA_INSECURE", "true",
 		"KAFKA_PARTNER_TOPIC", "partner.events", "KAFKA_PARTNER_DLQ", "partner.events.dlq", "KAFKA_GROUP", "gateway",
+		"KAFKA_GATEWAY_TOPIC", "gateway.events", "KAFKA_GATEWAY_DLQ", "gateway.events.dlq", "KAFKA_GATEWAY_EVENTS_GROUP", "gateway.events",
+		"KAFKA_GATEWAY_DISPATCH_TOPIC", "gateway.dispatch", "KAFKA_GATEWAY_DISPATCH_DLQ", "gateway.dispatch.dlq",
+		"KAFKA_GATEWAY_DISPATCH_GROUP", "gateway.dispatch",
+		"KAFKA_GATEWAY_INTERACTIONS_TOPIC", "gateway.interactions", "KAFKA_GATEWAY_INTERACTIONS_DLQ", "gateway.interactions.dlq",
+		"KAFKA_GATEWAY_INTERACTIONS_GROUP", "gateway.interactions",
+		"KAFKA_GATEWAY_NORMALIZATIONS_TOPIC", "gateway.normalizations", "KAFKA_GATEWAY_NORMALIZATIONS_DLQ", "gateway.normalizations.dlq",
+		"KAFKA_GATEWAY_NORMALIZATIONS_GROUP", "gateway.normalizations",
 	}
+}
+
+func TestTheConsumerNamesEachMissingVariable(t *testing.T) {
+	full := consumerVariables()
 	cfg, err := app.FromEnv(app.RoleConsumer, lookup(full...))
 	if err != nil || cfg.PartnerSource != "urn:dmpf:reference-partner" {
 		t.Fatalf("FromEnv(full) = %+v, %v, want the default Partner source", cfg.PartnerSource, err)
 	}
-	for _, variable := range []string{"PG_DSN", "KAFKA_BROKERS", "KAFKA_PARTNER_TOPIC", "KAFKA_PARTNER_DLQ", "KAFKA_GROUP"} {
+	if cfg.DispatchGroup != "gateway.dispatch" || cfg.GatewayGroup != "gateway.events" || cfg.InteractionGroup != "gateway.interactions" ||
+		cfg.NormalizationGroup != "gateway.normalizations" || cfg.Group != "gateway" {
+		t.Fatalf("FromEnv(full) groups = %q %q %q %q %q, want one per channel", cfg.Group, cfg.GatewayGroup, cfg.DispatchGroup,
+			cfg.InteractionGroup, cfg.NormalizationGroup)
+	}
+	for i := 0; i < len(full); i += 2 {
+		variable := full[i]
+		if variable == "KAFKA_INSECURE" {
+			continue
+		}
 		t.Run("without "+variable, func(t *testing.T) {
-			var pairs []string
-			for i := 0; i < len(full); i += 2 {
-				if full[i] != variable {
-					pairs = append(pairs, full[i], full[i+1])
-				}
-			}
+			pairs := append(append([]string{}, full[:i]...), full[i+2:]...)
 
 			_, err := app.FromEnv(app.RoleConsumer, lookup(pairs...))
 
@@ -109,10 +127,12 @@ func TestTheConsumerNamesEachMissingVariable(t *testing.T) {
 	}
 }
 
+// INB-14 holds for every channel the consumer reads, not only partner.events.
 func TestTheConsumerKeepsItsInboxForTheWholeRedeliveryWindow(t *testing.T) {
-	cfg := app.Defaults(app.RoleConsumer)
-	cfg.DSN, cfg.Brokers, cfg.KafkaInsecure, cfg.PartnerTopic, cfg.PartnerDLQ, cfg.Group = "postgres://x", []string{"b:9092"}, true, "p", "p.dlq", "g"
-	cfg.RawStore.Bucket, cfg.RawStore.Region = "gateway-interactions", "us-east-1"
+	cfg, err := app.FromEnv(app.RoleConsumer, lookup(consumerVariables()...))
+	if err != nil {
+		t.Fatalf("FromEnv() = %v", err)
+	}
 	cfg.Policies.InboxRetention = time.Hour
 
 	if err := cfg.Validate(); !errors.Is(err, app.ErrInvalidPolicy) || !strings.Contains(err.Error(), "INB-14") {

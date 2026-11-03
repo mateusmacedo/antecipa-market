@@ -127,6 +127,15 @@ func TestTheInternalHandlersRefuseWhatIsNotTheirContractWithoutAUnitOfWork(t *te
 		"handover of another payload": {app.NormalizationHandler, func(t *testing.T) envelope.Envelope {
 			return packed(t, "com.company.gateway.external-interaction-stored.v1", &eventv1.ExternalCommandDispatchRequested{IdempotencyKey: "idem-1"})
 		}},
+		"mismatch without connector": {app.SchemaMismatchHandler, func(t *testing.T) envelope.Envelope {
+			return packed(t, schemaMismatchType, &eventv1.ExternalSchemaMismatchDetected{InteractionId: "int-1", Operation: "submitEffect"})
+		}},
+		"mismatch without operation": {app.SchemaMismatchHandler, func(t *testing.T) envelope.Envelope {
+			return packed(t, schemaMismatchType, &eventv1.ExternalSchemaMismatchDetected{InteractionId: "int-1", ConnectorKey: "prt-1:production"})
+		}},
+		"mismatch of another type": {app.SchemaMismatchHandler, func(t *testing.T) envelope.Envelope {
+			return packed(t, "com.company.gateway.external-command-confirmed.v1", &eventv1.ExternalCommandConfirmed{IdempotencyKey: "idem-1"})
+		}},
 	}
 	for name, tt := range tests {
 		t.Run(name, func(t *testing.T) {

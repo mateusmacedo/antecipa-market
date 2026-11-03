@@ -237,6 +237,7 @@ func newHarness(t *testing.T, options ...option) *harness {
 			DispatchInbox:       tx.Inbox(application.DispatchConsumer),
 			InteractionInbox:    tx.Inbox(application.InteractionConsumer),
 			NormalizationInbox:  tx.Inbox(application.NormalizationConsumer),
+			EventsInbox:         tx.Inbox(application.EventsConsumer),
 		}
 	}
 	commandReader := commandsTable.Reader(h.store)

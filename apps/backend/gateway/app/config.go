@@ -55,6 +55,11 @@ const (
 	envInteractionDLQ     = "KAFKA_GATEWAY_INTERACTIONS_DLQ"
 	envNormalizationTopic = "KAFKA_GATEWAY_NORMALIZATIONS_TOPIC"
 	envNormalizationDLQ   = "KAFKA_GATEWAY_NORMALIZATIONS_DLQ"
+
+	envGatewayGroup       = "KAFKA_GATEWAY_EVENTS_GROUP"
+	envDispatchGroup      = "KAFKA_GATEWAY_DISPATCH_GROUP"
+	envInteractionGroup   = "KAFKA_GATEWAY_INTERACTIONS_GROUP"
+	envNormalizationGroup = "KAFKA_GATEWAY_NORMALIZATIONS_GROUP"
 	envPartnerTopic       = "KAFKA_PARTNER_TOPIC"
 	envPartnerDLQ         = "KAFKA_PARTNER_DLQ"
 	envPartnerSource      = "PARTNER_SOURCE"
@@ -84,8 +89,8 @@ type Config struct {
 	Group     string
 
 	// GatewayTopic, DispatchTopic, InteractionTopic and NormalizationTopic
-	// address the four channels the relay publishes to; PartnerTopic the one
-	// the consumer reads.
+	// address the four channels the relay publishes to, which the consumer
+	// reads back besides PartnerTopic.
 	GatewayTopic       string
 	GatewayDLQ         string
 	DispatchTopic      string
@@ -96,6 +101,15 @@ type Config struct {
 	NormalizationDLQ   string
 	PartnerTopic       string
 	PartnerDLQ         string
+
+	// GatewayGroup, DispatchGroup, InteractionGroup and NormalizationGroup
+	// are the consumer groups of the four channels of this context the
+	// consumer reads, one per channel, so the rebalance of one never pauses
+	// the others; Group stays the one of partner.events.
+	GatewayGroup       string
+	DispatchGroup      string
+	InteractionGroup   string
+	NormalizationGroup string
 
 	// PartnerSource is the producer the consumer admits on partner.events, by
 	// the envelope's source attribute (CTX-27, IDN-04).
@@ -178,6 +192,10 @@ func FromEnv(role Role, lookup func(string) string) (Config, error) {
 	cfg.PartnerDLQ = lookup(envPartnerDLQ)
 	cfg.PartnerSource = envconfig.OrDefault(lookup(envPartnerSource), cfg.PartnerSource)
 	cfg.Group = lookup(envGroup)
+	cfg.GatewayGroup = lookup(envGatewayGroup)
+	cfg.DispatchGroup = lookup(envDispatchGroup)
+	cfg.InteractionGroup = lookup(envInteractionGroup)
+	cfg.NormalizationGroup = lookup(envNormalizationGroup)
 	if cfg.RawStore, err = readRawStoreEnv(lookup, cfg.RawStore); err != nil {
 		return Config{}, err
 	}
@@ -230,8 +248,12 @@ func (c Config) Validate() error {
 	}
 	// INB-14: an entry purged before the broker stops redelivering its message
 	// would let that message through as new.
-	if window := PartnerChannel(c).Redelivery.UpperBound; c.Role == RoleConsumer && c.Policies.InboxRetention < window {
-		return fmt.Errorf("%w: InboxRetention %v is below the redelivery window %v (INB-14)", ErrInvalidPolicy, c.Policies.InboxRetention, window)
+	if c.Role == RoleConsumer {
+		for _, ch := range consumedChannels(c).all() {
+			if window := ch.Redelivery.UpperBound; c.Policies.InboxRetention < window {
+				return fmt.Errorf("%w: InboxRetention %v is below the redelivery window %v of %s (INB-14)", ErrInvalidPolicy, c.Policies.InboxRetention, window, ch.Name)
+			}
+		}
 	}
 	if c.opensRawStore() {
 		if err := c.RawStore.Validate(); err != nil {
@@ -271,6 +293,18 @@ func (c Config) requirements() ([]string, error) {
 		require(envPartnerTopic, c.PartnerTopic == "")
 		require(envPartnerDLQ, c.PartnerDLQ == "")
 		require(envGroup, c.Group == "")
+		require(envGatewayTopic, c.GatewayTopic == "")
+		require(envGatewayDLQ, c.GatewayDLQ == "")
+		require(envGatewayGroup, c.GatewayGroup == "")
+		require(envDispatchTopic, c.DispatchTopic == "")
+		require(envDispatchDLQ, c.DispatchDLQ == "")
+		require(envDispatchGroup, c.DispatchGroup == "")
+		require(envInteractionTopic, c.InteractionTopic == "")
+		require(envInteractionDLQ, c.InteractionDLQ == "")
+		require(envInteractionGroup, c.InteractionGroup == "")
+		require(envNormalizationTopic, c.NormalizationTopic == "")
+		require(envNormalizationDLQ, c.NormalizationDLQ == "")
+		require(envNormalizationGroup, c.NormalizationGroup == "")
 		missing = append(missing, c.KafkaAuth.Missing(c.KafkaInsecure)...)
 		return append(missing, c.RawStore.Missing()...), nil
 	default:

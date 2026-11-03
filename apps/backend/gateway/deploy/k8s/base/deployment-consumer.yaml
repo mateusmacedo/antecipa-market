@@ -1,5 +1,6 @@
-# O consumer é um membro do consumer group do canal partner.events: a réplica extra
-# rebalanceia partições, e o canal de referência tem uma só.
+# O consumer é membro de um consumer group por canal que lê (partner.events e os
+# quatro canais próprios): a réplica extra rebalanceia partições, e cada canal de
+# referência tem uma só.
 apiVersion: apps/v1
 kind: Deployment
 metadata:
