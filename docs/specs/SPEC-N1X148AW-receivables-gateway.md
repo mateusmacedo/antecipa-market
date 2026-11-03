@@ -33,10 +33,10 @@ created: 2026-10-12
 
 ## Origem e bloqueios externos
 
-- **Fontes**: `docs/prd/04-prd-receivables-gateway.md`; `docs/design/04-design-receivables-gateway.md` §2 a §7 (capacidades, portas, erros, quebra de contrato, reprocessamento, webhook); `docs/design/00-arquitetura-tecnica.md` §7 (ciclo do comando externo, idempotência, resiliência); `docs/design/90-modelo-de-dados.md` §2.1 (`ExternalReference`); `docs/design/92-schemas-eventos.md` §4; `docs/prd/14-catalogo-contratos-eventos.md`. Normas do kernel DMPF `1.0.0-rc.7`: ADR-070 (ciclo de comando externo de saída, SPEC-5AQHHMJ0), ADR-067 (leitura relacional na UoW com guarda, SPEC-HFDSHFR1), ADR-068 (acesso entre tenants, SPEC-QVDGV6J0) e ADR-056 (idempotência de comando pela inbox).
-- **Situação**: `parcial`, em duas fatias. A primeira constrói já: conector, perfil, autorização de consulta, criação e cancelamento de comando, intenção de despacho e varredura. A segunda depende da porta de object storage do kernel (SPEC-CWBA4BPV, DEVS-95), porque toda interação exige a referência do bruto: envio com captura da resposta, consulta de estado, webhook, replay e leituras externas. Os adaptadores reais dependem ainda do mapeamento de provedores (#5); o simulador de parceiro (04:G12) cobre os testes.
+- **Fontes**: `docs/prd/04-prd-receivables-gateway.md`; `docs/design/04-design-receivables-gateway.md` §2 a §7 (capacidades, portas, erros, quebra de contrato, reprocessamento, webhook); `docs/design/00-arquitetura-tecnica.md` §7 (ciclo do comando externo, idempotência, resiliência); `docs/design/90-modelo-de-dados.md` §2.1 (`ExternalReference`); `docs/design/92-schemas-eventos.md` §4; `docs/prd/14-catalogo-contratos-eventos.md`. Normas do kernel DMPF `1.0.0-rc.7`: ADR-070 (ciclo de comando externo de saída, SPEC-5AQHHMJ0), ADR-067 (leitura relacional na UoW com guarda, SPEC-HFDSHFR1), ADR-068 (acesso entre tenants, SPEC-QVDGV6J0) e ADR-056 (idempotência de comando pela inbox). A segunda fatia adota a `1.0.0-rc.8`, que traz a ADR-073 (porta de object storage e provider S3 com Object Lock, SPEC-CWBA4BPV).
+- **Situação**: `parcial`, em duas fatias. A primeira constrói já: conector, perfil, autorização de consulta, criação e cancelamento de comando, intenção de despacho e varredura. A segunda depende da porta de object storage do kernel (SPEC-CWBA4BPV, DEVS-95), porque toda interação exige a referência do bruto: envio com captura da resposta, consulta de estado, webhook, replay e leituras externas. A porta saiu na `1.0.0-rc.8` do kernel (SPEC-CWBA4BPV `done` em 2026-11-02), e a segunda fatia (DEVS-174) a adota. Os adaptadores reais dependem ainda do mapeamento de provedores (#5); o simulador de parceiro (04:G12) cobre os testes.
 - **Fase de entrega**: 1 (cartão); 2 (escriturador); 4 (múltiplas infraestruturas).
-- **Dependências**: duro, Partner Management (`SPEC-9TEQ9EV9`: `CapabilityEnabled`, `CapabilitySuspended`; `IntegrationProfileRegistered` e o consumo de `ExternalSchemaMismatchDetected` chegam pela DEVS-171); duro só para a segunda fatia, a porta de object storage do kernel (`SPEC-CWBA4BPV`, DEVS-95, em `planning` no kernel e fora da `1.0.0-rc.7`); brando, Consent & Mandates (`ConsentGranted`, `ConsentRevoked`, que travam a consulta em modo fail-closed). `depends_on` declara a fundação e a aresta dura reduzida. A porta do kernel fica fora dele, na tabela de bloqueios, porque a spec só entra em `building` com todas as dependências `done` e a primeira fatia não usa a porta; a SPEC-9TEQ9EV9 trata a mesma porta assim. Consent depende do Gateway (`AuthorizationPort`), então o consumo de eventos de Consent é aresta de retroalimentação e não entra em `depends_on`. O ciclo de comando externo de saída e a leitura relacional com guarda já estão na `1.0.0-rc.7`, adotada na DEVS-136.
+- **Dependências**: duro, Partner Management (`SPEC-9TEQ9EV9`: `CapabilityEnabled`, `CapabilitySuspended`; `IntegrationProfileRegistered` e o consumo de `ExternalSchemaMismatchDetected` chegam pela DEVS-171); duro só para a segunda fatia, a porta de object storage do kernel (`SPEC-CWBA4BPV`, DEVS-95, `done` no kernel e publicada na `1.0.0-rc.8`); brando, Consent & Mandates (`ConsentGranted`, `ConsentRevoked`, que travam a consulta em modo fail-closed). `depends_on` declara a fundação e a aresta dura reduzida. A porta do kernel fica fora dele, na tabela de bloqueios, porque a spec só entra em `building` com todas as dependências `done` e a primeira fatia não usa a porta; a SPEC-9TEQ9EV9 trata a mesma porta assim. Consent depende do Gateway (`AuthorizationPort`), então o consumo de eventos de Consent é aresta de retroalimentação e não entra em `depends_on`. O ciclo de comando externo de saída e a leitura relacional com guarda já estão na `1.0.0-rc.7`, adotada na DEVS-136.
 - **Bloqueios externos**:
 
 | ID | o que trava | parte do contexto afetada |
@@ -50,7 +50,7 @@ created: 2026-10-12
 | #1 (A1) | Autorização do Banco Central (transversal) | Existencial para o produto inteiro |
 | #12 (E4) | Volumetria real (transversal) | Dimensionamento, não bloqueia construção |
 | B6 (`docs/resumo-executivo-apuracao.md` §B.2) | Prazo típico e máximo de confirmação de um efeito | Valor de `ambiguityDeadline` dos perfis reais; o simulador declara o próprio |
-| SPEC-CWBA4BPV (DEVS-95, kernel) | Porta de object storage com `versionId` e retenção WORM, provider S3 | Gravação do bruto de `ExternalInteraction` |
+| SPEC-CWBA4BPV (DEVS-95, kernel) — resolvido na `1.0.0-rc.8` | Porta de object storage com `versionId` e retenção WORM, provider S3 | Gravação do bruto de `ExternalInteraction` |
 | DEVS-171 (Partner) | Evento `IntegrationProfileRegistered` e consumo de `ExternalSchemaMismatchDetected` | Cadastro do conector por evento e a camada de suspensão do Partner; o simulador e o RPC `RegisterConnector` cobrem os testes |
 
 - **Decisões de produto abertas**: nenhuma própria. Técnica: retenção do bruto (04:G11).
@@ -66,7 +66,19 @@ created: 2026-10-12
   9. Abrir o circuito gera só telemetria, sem evento de domínio.
   10. O tempo do ciclo (reenvio depois da quiescência, consulta de estado e prazo de espera) é da varredura `SweepExternalCommands`, acionada por agendador externo, sem timer no kernel.
   11. O `CapabilityProfile` do Gateway é a fonte do protocolo, dos limites técnicos e do calendário da integração (04 §2.1); o Partner guarda a política comercial e operacional. O perfil é declarado por `DeclareCapabilityProfile`, operado pela plataforma na homologação do conector.
-- **Condição para entrar em `building`**: a primeira fatia entra com a fundação `SPEC-GXGASP24` e o Partner Management `SPEC-9TEQ9EV9` concluídos, os dois já `done`, e o núcleo construível com o simulador de parceiro (04:G12). A segunda fatia espera a SPEC-CWBA4BPV no kernel. Adaptadores reais só depois de #5.
+- **Decisões da fatia 2** (DEVS-174, 2026-11-03):
+  12. O orçamento de reenvio é `maxSubmissions`, declarado por operação no perfil e copiado ao comando. Sem teto, o ciclo `unknown_outcome` → `FindingAbsent` → `retryable_failure` → `RequestResend` → envio não termina: cada `retryable_failure` encerra o episódio de espera, então o `ambiguityDeadline` não vence, e o `maxQueries` do kernel conta por tentativa. O `retry` que encontra o orçamento esgotado leva a `final_failure` com `resend_budget_exhausted`, que o `ExternalCommandFailed` já leva a Effects, Ops e Ledger. A ausência confirmada reabre a série da `businessKey`, como o cancelamento.
+  13. Conflito e saturação da observação ficam visíveis. `ResolveUnknownOutcome` lê o `ports.Observed` do kernel: `ObserveConflict` → `receivables-gateway/external-command/observation-conflict`; `ObserveSaturated` → `receivables-gateway/external-command/observation-saturated`; `ObserveDuplicate` → `Accepted` com o status atual. As rejeições voltam como desfecho, nunca como erro, para a transação fazer commit: o registro do ledger sobrevive e o replay da chave devolve a mesma rejeição (`application.RunIdempotent` grava a rejeição na inbox). No callback, no arquivo e na consulta de estado, o `Resolve` corre em UoW própria depois da conclusão da interação; conflito não muda o comando (decisão 7) e fica visível pelo registro no ledger e pela métrica e pelo log do kernel (`ports.MarkExternalConflict`); saturação é só telemetria (`ports.MarkExternalSaturation`). Para a linha do ledger não saturar antes do teto de consultas, `maxQueries` é menor que `ports.MaxAttemptEntries` (64).
+  14. O despacho fica retido enquanto a operação está suspensa. O handler de `gateway.dispatch` lê o comando e o conector antes de `application.Dispatch`: comando fora de `created` e `retryable_failure` (cancelado, terminal ou em espera) recebe `Ack` sem envio; operação suspensa não envia, executa `HoldDispatch` e dá `Ack`. A reentrega não serve, porque a suspensão dura até a re-homologação e esgotaria a reentrega na quarentena. A varredura libera o comando retido cuja operação não está mais suspensa por `RequestResend`, que grava a intenção com o mesmo `IntentID`. A suspensão que chega entre a leitura e o envio não desfaz o envio, como no cancelamento.
+  15. `FindExternalCommandsByStatus` aceita só os status não terminais (`created`, `acknowledged`, `retryable_failure`, `unknown_outcome`); status terminal é entrada inválida. Os conjuntos não terminais são limitados pelo volume em voo. A relação do kernel não tem ordem nem limite, e o `snapshot` leva o `payload`, então paginação e projeção sem payload ficam como pendência no kernel.
+  16. O bruto vive na porta `ports.ObjectStore` do kernel, pelo provider `s3` (ADR-073 do DMPF). A loja tem escopo `tenant`, porque toda chamada corre no tenant da plataforma (decisão 1), cifra `AES256` por padrão ou KMS pelo ARN da chave, e o contexto recebe só `ObjectWriter` e `ObjectReader`, nunca `RetentionManager` nem `ObjectPurger`. Sem retenção até 04:G11: a loja não declara teto e nenhum `Put` leva retenção, então a proteção até lá é a versão do objeto e o privilégio. O bucket é versionado, com Object Lock e sem retenção padrão, provisionado fora do contexto; o `Ready` do provider recusa outro. A chave é `interactions/<connectorId>/<interactionId>/request` ou `.../response`; `requestRef` e `responseRef` são a chave, `requestVersionId` e `responseVersionId` a versão devolvida pelo `Put` cujo registro fez commit, e `requestHash` e `responseHash` o SHA-256 hexadecimal do conteúdo, conferido pela porta na escrita. A porta não tem escrita condicional: repetir o `Put` cria versão nova, e a anterior fica órfã, o que é aceito. `ErrIntegrity` e chave inválida são defeito; loja indisponível ou não pronta é dependência transiente; `ErrPutOutcomeUnknown` não é repetido pela loja, e o fluxo repete com a versão anterior órfã.
+  17. A resposta do envio é capturada por um coletor por mensagem. O `Submit` do kernel devolve só classe, observação e erro, então o handler do despacho cria um coletor que o adaptador do envio preenche e o `Apply` lê. O adaptador cunha o `interactionId` de saída a cada chamada, grava o pedido na porta antes de chamar o parceiro e a resposta depois; sem o pedido gravado, não chama o parceiro e devolve `ClassRetryableTransport`. Falha ao gravar a resposta não muda o desfecho: o passo é aplicado sem `responseCapture`, sem interação de saída, e vira métrica.
+  18. A normalização é assíncrona. `RecordExternalInteraction` (fora de `duplicate`) e `ReprocessInteraction` gravam na outbox `ExternalInteractionStored` (interno), no canal `gateway.normalizations`. O consumer lê o bruto pela versão, normaliza pelo adaptador da conexão (o simulador de parceiro nos testes), executa `ConcludeInteraction` e, depois do commit, entrega o achado ao kernel (`application.Resolve`) quando a leitura traz o desfecho de um comando não terminal, com `Observation.ID = <interactionId>.r<normalizationRevision>`, para o reprocessamento ser observação nova e não `ObserveDuplicate`. A captura de saída (`ExternalResponseCaptured`, canal `gateway.interactions`) só registra a interação; na revisão 1 o desfecho segue o passo capturado (`suspend` → `schema_mismatch` com os campos de quebra da captura; os demais → `normalized`) e nenhuma observação vai ao kernel, porque o `Dispatch` já aplicou o passo. A consulta de estado da varredura grava o bruto e registra a interação, e o achado chega ao comando pelo mesmo consumer.
+  19. O webhook entra pelo RPC `ReceivePartnerInteraction`, que o `bff` chama. O RPC leva `connectorKey`, `operation`, `source: callback | file`, `partnerEventId`, `businessDate`, `contentType` e o corpo bruto até `maxPayloadBytes` da operação. O contexto calcula o hash, grava o bruto e executa `RecordExternalInteraction` com `direction = inbound`, deduplicando por `partnerEventId`. O `bff` responde ao parceiro só depois do commit; com falha, o parceiro reenvia e a deduplicação absorve. A rota REST do `bff` segue no Escopo fora.
+  20. As leituras externas são genéricas até #5. Sem o mapeamento de provedores, as respostas não têm forma tipada, então as onze leituras das portas entram por um RPC `ReadExternal`, com `operation` do vocabulário, a guarda da porta e uma resposta com `interactionId`, `asOf`, `providerId`, `externalReference`, `reading` (JSON canônico da leitura normalizada) e `readingHash`. Os RPCs tipados por porta chegam com os adaptadores reais.
+  21. O papel `consumer` roda, além dos consumers de `partner.events` e `gateway.events`, o handler de `gateway.dispatch`, os consumers de `gateway.interactions` e `gateway.normalizations` e a varredura de tentativas do kernel (`app.RunSweep` com `SweepExternalAttempts`), com o mesmo corte do `Dispatch` (`app.ExternalBudget.StaleAfter`). `SweepExternalCommands` segue acionado pelo agendador externo.
+  22. O consumo de `ConsentGranted` e `ConsentRevoked` espera o contrato do Consent (SPEC-Z3YR96YS, em `backlog`, sem contexto publicado) e fica numa terceira fatia. Até lá a autorização de consulta entra pelos RPCs `GrantQueryAuthorization` e `RevokeQueryAuthorization`, que já travam a consulta em modo fail-closed.
+- **Condição para entrar em `building`**: a primeira fatia entra com a fundação `SPEC-GXGASP24` e o Partner Management `SPEC-9TEQ9EV9` concluídos, os dois já `done`, e o núcleo construível com o simulador de parceiro (04:G12). A segunda fatia esperava a SPEC-CWBA4BPV no kernel, `done` desde 2026-11-02, e entra com a adoção da `1.0.0-rc.8`. Adaptadores reais só depois de #5.
 
 ## Agregados
 
@@ -97,14 +109,14 @@ Seis agregados. As tentativas de entrega não são do domínio: o kernel as regi
 - **Identidade**: `natural` por `profileKey` (`<connectorKey>:<version>`)
 - **Campos**:
   - `connectorId: id`, `version: int`, `effectiveFrom: instant`
-  - `operations: list<OperationCapability>` - coleção indispensável (04 §2.1). Elemento: `operation: string`; `supported: bool`; `protocol: sync_http | async_callback | file_batch | polling`; `stateQuerySupported: bool`; `idempotencySupport: native | key_header | none`; `partialResultSupported: bool`; `assetTypes: list<string>`; `maxItemsPerRequest`, `maxRequestsPerMinute`, `maxPayloadBytes: int`; `businessCalendar`, `cutoffTime`, `processingWindow: string`; `encumbranceCoverage: complete | partial | unavailable`; `positionFreshnessSla: int` (segundos, opcional: ausente quando a fonte não declara, B5); `efficacy: on_submit | by_observation`, `quiescence: int` (ns), `authoritativeAbsence: bool`, `maxQueries: int`, `keyAlphabet: string`, `keyMaxLength: int` - declaração do parceiro do `RES-44` (`ports.ExternalProfile`), com `idempotencySupport` como `KeySemantics` (`native` → `KeyNative`, `key_header` → `KeyHeader`, `none` → `KeyNone`); `queryInterval: int` (segundos; intervalo entre consultas de estado, que é de quem chama pelo ADR-070 do DMPF, item 6); `ambiguityDeadline: int` (segundos; prazo da espera em `acknowledged` ou `unknown_outcome` até escalar a caso operacional, 00 §7.2.5; valor real depende de B6)
+  - `operations: list<OperationCapability>` - coleção indispensável (04 §2.1). Elemento: `operation: string`; `supported: bool`; `protocol: sync_http | async_callback | file_batch | polling`; `stateQuerySupported: bool`; `idempotencySupport: native | key_header | none`; `partialResultSupported: bool`; `assetTypes: list<string>`; `maxItemsPerRequest`, `maxRequestsPerMinute`, `maxPayloadBytes: int`; `businessCalendar`, `cutoffTime`, `processingWindow: string`; `encumbranceCoverage: complete | partial | unavailable`; `positionFreshnessSla: int` (segundos, opcional: ausente quando a fonte não declara, B5); `efficacy: on_submit | by_observation`, `quiescence: int` (ns), `authoritativeAbsence: bool`, `maxQueries: int`, `keyAlphabet: string`, `keyMaxLength: int` - declaração do parceiro do `RES-44` (`ports.ExternalProfile`), com `idempotencySupport` como `KeySemantics` (`native` → `KeyNative`, `key_header` → `KeyHeader`, `none` → `KeyNone`); `queryInterval: int` (segundos; intervalo entre consultas de estado, que é de quem chama pelo ADR-070 do DMPF, item 6); `ambiguityDeadline: int` (segundos; prazo da espera em `acknowledged` ou `unknown_outcome` até escalar a caso operacional, 00 §7.2.5; valor real depende de B6); `maxSubmissions: int` (envios por comando, contando o primeiro: o orçamento do reenvio do `RES-42`, que é de quem chama pelo ADR-070 do DMPF, item 6; decisão 12; valor real dos perfis de produção **[A CONFIRMAR: #5]**)
 - **Estados**: nenhum. Cada versão é imutável; mudança de capacidade é nova versão.
 - **Transições permitidas**: nenhuma.
 - **Invariantes de estado**:
   - Um perfil declara ao menos uma operação - `receivables-gateway/capability-profile/operations-empty`.
   - Uma versão não é redeclarada - `receivables-gateway/capability-profile/already-declared`.
-  - A declaração do parceiro de cada operação passa em `application.ValidateExternalProfile` - `receivables-gateway/capability-profile/external-profile-invalid`.
-  - Operação de escrita (`activateOptIn`, `revokeOptIn`, `submitEffect`, `requestRelease`) declara `ambiguityDeadline` maior que zero - `receivables-gateway/capability-profile/ambiguity-deadline-missing` - e, com `stateQuerySupported`, `queryInterval` maior que zero - `receivables-gateway/capability-profile/query-interval-missing`.
+  - A declaração do parceiro de cada operação passa em `application.ValidateExternalProfile` e declara `maxQueries` menor que `ports.MaxAttemptEntries` (decisão 13) - `receivables-gateway/capability-profile/external-profile-invalid`.
+  - Operação de escrita (`activateOptIn`, `revokeOptIn`, `submitEffect`, `requestRelease`) declara `ambiguityDeadline` maior que zero - `receivables-gateway/capability-profile/ambiguity-deadline-missing` -, `maxSubmissions` maior que zero - `receivables-gateway/capability-profile/max-submissions-missing` - e, com `stateQuerySupported`, `queryInterval` maior que zero - `receivables-gateway/capability-profile/query-interval-missing`.
   - O perfil vigente em um instante é o de maior `version` com `effectiveFrom` menor ou igual a ele.
 
 ### QueryAuthorization
@@ -124,10 +136,10 @@ Projeção local do consentimento de consulta; existe para a trava fail-closed d
 - **Campos**:
   - `tenantId: id` (tenant de negócio que originou o comando; na fase 1 é dado, não escopo, decisão 1), `connectorId: id`, `operation: string`, `assetType: string`, `businessKey: string`, `payloadVersion: int`, `seriesKey: string` (`<connectorKey>:<operation>:<businessKey>`, chave da série de versões)
   - `payload: string` (JSON canônico, opaco ao domínio, classe `CONFIDENTIAL`, vai no `snapshot`), `payloadHash: string`
-  - `profile: CommandProfile` - a declaração da operação no perfil vigente, copiada inteira na criação, para que uma versão nova do perfil não mude a chave de um comando em voo: `profileVersion`, `stateQuerySupported` (efetivo: o mais restritivo entre o perfil e a capacidade homologada no Partner, decisão 6), `idempotencySupport`, `partialResultSupported`, `efficacy`, `quiescence`, `authoritativeAbsence`, `maxQueries`, `keyAlphabet`, `keyMaxLength`, `queryInterval`, `ambiguityDeadline`
-  - `status`, `failureCategory: string` (opcional; categoria do último desfecho que não é sucesso), `createdAt: instant`, `submissions: int` (envios aplicados), `lastSubmittedAt: instant` (opcional), `waitingSince: instant` (opcional; início do episódio de espera atual), `acknowledgedNotified: bool` e `unknownNotified: bool` (eventos de espera já emitidos no episódio), `nextQueryAt: instant` (opcional), `resendAfter: instant` (opcional), `reconciliationRequired: bool`, `ambiguityExpiredAt: instant` (opcional), `confirmedAt: instant` (opcional), `externalReferenceId: id` (opcional)
+  - `profile: CommandProfile` - a declaração da operação no perfil vigente, copiada inteira na criação, para que uma versão nova do perfil não mude a chave de um comando em voo: `profileVersion`, `stateQuerySupported` (efetivo: o mais restritivo entre o perfil e a capacidade homologada no Partner, decisão 6), `idempotencySupport`, `partialResultSupported`, `efficacy`, `quiescence`, `authoritativeAbsence`, `maxQueries`, `keyAlphabet`, `keyMaxLength`, `queryInterval`, `ambiguityDeadline`, `maxSubmissions`
+  - `status`, `failureCategory: string` (opcional; categoria do último desfecho que não é sucesso), `createdAt: instant`, `submissions: int` (envios aplicados), `lastSubmittedAt: instant` (opcional), `waitingSince: instant` (opcional; início do episódio de espera atual), `acknowledgedNotified: bool` e `unknownNotified: bool` (eventos de espera já emitidos no episódio), `nextQueryAt: instant` (opcional), `resendAfter: instant` (opcional), `dispatchHeldSince: instant` (opcional; despacho retido pela suspensão da operação, decisão 14), `reconciliationRequired: bool`, `ambiguityExpiredAt: instant` (opcional), `confirmedAt: instant` (opcional), `externalReferenceId: id` (opcional)
 - **Estados**: `created`, `acknowledged`, `confirmed`, `retryable_failure`, `final_failure`, `unknown_outcome`, `cancelled`. Diverge do design: `SENT` (04 §4) não persiste. No ciclo do kernel o envio e o passo que ele produz são aplicados na mesma UoW de consumo; o fato do envio fica em `submissions`, em `ExternalCommandSubmitted` e no ledger de tentativas. `retryable_failure` é só o estado depois de achado `FindingAbsent` (o parceiro não recebeu): as classes retentáveis do envio não chegam ao domínio (ver `ApplyExternalStep`).
-- **Transições permitidas**: entram por comando `CreateExternalCommand`, `CancelExternalCommand`, `RequestResend`, `ResolveUnknownOutcome` e `ExpireAmbiguity` (`RequestResend` e `ExpireAmbiguity` pela varredura `SweepExternalCommands`); as transições do envio e da observação são efeitos de `ApplyExternalStep`, chamado pelo kernel com o passo de `application.NextStep` (ADR-070 do DMPF, item 6):
+- **Transições permitidas**: entram por comando `CreateExternalCommand`, `CancelExternalCommand`, `HoldDispatch`, `RequestResend`, `ResolveUnknownOutcome` e `ExpireAmbiguity` (`HoldDispatch` pelo handler do despacho; `RequestResend` e `ExpireAmbiguity` pela varredura `SweepExternalCommands`; `HoldDispatch` não muda o status); as transições do envio e da observação são efeitos de `ApplyExternalStep`, chamado pelo kernel com o passo de `application.NextStep` (ADR-070 do DMPF, item 6):
   - (novo) → `created` - `CreateExternalCommand`; `created` → `cancelled` - `CancelExternalCommand`
   - `created`, `retryable_failure` ou `cancelled` (corrida com o envio) → `confirmed`, `acknowledged`, `final_failure` ou `unknown_outcome` - `ApplyExternalStep` com o passo do envio
   - `acknowledged` ou `unknown_outcome` → `confirmed`, `acknowledged`, `retryable_failure`, `final_failure` ou `unknown_outcome` - `ApplyExternalStep` com o passo de uma observação (consulta de estado, callback, arquivo ou reconciliação humana por `ResolveUnknownOutcome`)
@@ -144,9 +156,9 @@ Projeção local do consentimento de consulta; existe para a trava fail-closed d
 
 - **Identidade**: `generated`, cunhada por quem registra a interação (caso de uso, handler do despacho ou varredura) antes do registro e informada em `RecordExternalInteraction`, porque o mesmo id serve de `Observation.ID` e de base da chave de idempotência do comando
 - **Campos**:
-  - `connectorId: id`, `operation: string`, `direction: outbound | inbound`, `commandId: id` (opcional)
+  - `connectorId: id`, `operation: string`, `direction: outbound | inbound`, `source: submit_response | state_query | callback | file | external_read`, `commandId: id` (opcional), `contentType: string`, `capturedStep: string` (opcional; só na captura de saída, o passo que o `Dispatch` aplicou)
   - `partnerEventId: string` (opcional; identificador do parceiro, chave de deduplicação), `businessDate: string` (opcional; data de negócio informada pelo parceiro)
-  - `requestRef: string`, `requestVersionId: string`, `requestHash: string`, `responseRef: string`, `responseVersionId: string`, `responseHash: string` - o bruto vive na porta de object storage do kernel (provider S3, ADR-022 linha 12; SPEC-CWBA4BPV, DEVS-95), nunca por SDK direto, e o domínio guarda referência, `versionId` e hash do conteúdo (ADR-018). O bruto é gravado pela porta antes do registro da interação: pelo caso de uso no callback, no arquivo, na consulta de estado e na leitura externa; pelo adaptador do envio na resposta de um comando (ver `ApplyExternalStep`).
+  - `requestRef: string`, `requestVersionId: string`, `requestHash: string`, `responseRef: string`, `responseVersionId: string`, `responseHash: string` - o bruto vive na porta de object storage do kernel (provider S3, ADR-022 linha 12; SPEC-CWBA4BPV, DEVS-95), nunca por SDK direto, e o domínio guarda referência, `versionId` e hash do conteúdo (ADR-018). O bruto é gravado pela porta antes do registro da interação: pelo RPC de entrada no callback e no arquivo (`ReceivePartnerInteraction`, decisão 19), pela varredura na consulta de estado, pelo caso de uso na leitura externa e pelo adaptador do envio na resposta de um comando (ver `ApplyExternalStep`; decisões 16 e 17).
   - `status`, `normalizationRevision: int`, `readingHash: string` (opcional; hash da leitura normalizada, inclusive o achado sobre o comando), `previousOutcome: normalized | uncorrelated | schema_mismatch` e `previousReadingHash: string` (opcionais; leitura anterior ao último reprocessamento), `mismatchKind: structure | missing_field | type | version` (opcional), `mismatchDetail: string` (opcional), `receivedAt: instant`
 - **Estados**: `stored`, `duplicate`, `normalized`, `uncorrelated`, `schema_mismatch`
 - **Transições permitidas**:
@@ -210,8 +222,9 @@ O tempo do ciclo é de quem chama, não do kernel (ADR-070 do DMPF, item 6: quie
 - **Pré-condições**:
   - `operations` não vazio → `receivables-gateway/capability-profile/operations-empty`
   - versão ainda não declarada → `receivables-gateway/capability-profile/already-declared`
-  - declaração do parceiro de cada operação válida em `application.ValidateExternalProfile` → `receivables-gateway/capability-profile/external-profile-invalid`
+  - declaração do parceiro de cada operação válida em `application.ValidateExternalProfile`, com `maxQueries` menor que `ports.MaxAttemptEntries` → `receivables-gateway/capability-profile/external-profile-invalid`
   - operação de escrita com `ambiguityDeadline` maior que zero → `receivables-gateway/capability-profile/ambiguity-deadline-missing`
+  - operação de escrita com `maxSubmissions` maior que zero → `receivables-gateway/capability-profile/max-submissions-missing`
   - operação de escrita com `stateQuerySupported` e `queryInterval` maior que zero → `receivables-gateway/capability-profile/query-interval-missing`
 - **Efeitos sobre o estado**: todos os campos ← entrada
 - **Eventos emitidos**: nenhum
@@ -244,7 +257,7 @@ O tempo do ciclo é de quem chama, não do kernel (ADR-070 do DMPF, item 6: quie
   - `businessKey` não vazio → `receivables-gateway/external-command/business-key-empty`
   - `payload` não vazio → `receivables-gateway/external-command/payload-empty`
   - chave já existente com `payloadHash` diferente → `receivables-gateway/external-command/idempotency-key-conflict`
-  - `seriesOpen` falso → `receivables-gateway/external-command/content-changed-after-send`. O caso de uso lê a série na UoW, sob a guarda `external_commands.series_key`: `seriesOpen` é falso quando um comando da mesma série com `payloadVersion` diferente existe e não terminou em `cancelled` nem em `final_failure` por `final_validation`, inclusive em `created` (parado na reentrega, na quarentena ou na fila) e em `retryable_failure`. Duas versões da mesma série nunca seguem para o parceiro: a anterior ainda em `created` é cancelada antes, e a enviada exige revisão, não reenvio (00 §7.3).
+  - `seriesOpen` falso → `receivables-gateway/external-command/content-changed-after-send`. O caso de uso lê a série na UoW, sob a guarda `external_commands.series_key`: `seriesOpen` é falso quando um comando da mesma série com `payloadVersion` diferente existe e não terminou em `cancelled` nem em `final_failure` por `final_validation` ou `resend_budget_exhausted` (a ausência confirmada, decisão 12), inclusive em `created` (parado na reentrega, na quarentena ou na fila) e em `retryable_failure`. Duas versões da mesma série nunca seguem para o parceiro: a anterior ainda em `created` é cancelada antes, e a enviada exige revisão, não reenvio (00 §7.3).
 - **Efeitos sobre o estado**: quando ausente: campos ← entrada, `seriesKey ← <connectorKey>:<operation>:<businessKey>`, `status ← created`, `createdAt ← at`, `submissions ← 0`, `reconciliationRequired ← false`, e a intenção de despacho (`ExternalCommandDispatchRequested`, com `IntentID = idempotencyKey`) vai à outbox na mesma UoW (`RES-45`); quando presente com o mesmo `payloadHash`: nenhum, devolve o comando existente
 - **Eventos emitidos**: nenhum de integração; só a intenção de despacho, interna ao contexto
 - **Resposta**: `idempotencyKey: string`, `status`
@@ -266,30 +279,41 @@ As classes retentáveis do envio (`ClassRetryableTransport`, `ClassRetryableUpst
 - **Pré-condições**:
   - `origin = submit` exige `status` em `created`, `retryable_failure` ou `cancelled`; `origin = observation` exige `status` em `acknowledged` ou `unknown_outcome` → `receivables-gateway/external-command/not-in-flight`
 - **Efeitos sobre o estado**:
-  - `origin = submit`: `submissions ← submissions + 1`, `lastSubmittedAt ← at`, e então o passo. Um comando `cancelled` só recebe envio na corrida com o handler do despacho; o fato externo prevalece e o comando segue o passo.
+  - `origin = submit`: `submissions ← submissions + 1`, `lastSubmittedAt ← at`, `dispatchHeldSince` zerado, e então o passo. Um comando `cancelled` só recebe envio na corrida com o handler do despacho; o fato externo prevalece e o comando segue o passo.
   - `confirm` → `status ← confirmed`, `confirmedAt ← at`; `externalReferenceId ← entrada` quando informado, preservando a referência gravada no aceite quando a resolução humana não a traz.
   - `await` → `status ← acknowledged`; `externalReferenceId ← entrada` quando informado; com consulta de estado, `nextQueryAt ← at + queryInterval` (convertido a ns).
-  - `retry` (só por achado `FindingAbsent`) → `status ← retryable_failure`, `failureCategory` vazia, `resendAfter ← at + quiescence`; o reenvio, com a mesma chave de saída, é pedido pela varredura (`RequestResend`, `RES-42`).
+  - `retry` (só por achado `FindingAbsent`) → com `submissions` menor que `maxSubmissions`: `status ← retryable_failure`, `failureCategory` vazia, `resendAfter ← at + quiescence`; o reenvio, com a mesma chave de saída, é pedido pela varredura (`RequestResend`, `RES-42`). Com `submissions` maior ou igual a `maxSubmissions` (orçamento de reenvio esgotado, decisão 12): `status ← final_failure`, `failureCategory ← resend_budget_exhausted`, sem `resendAfter`. O achado de ausência garante que o parceiro não tem o comando, então parar não deixa efeito pendente; reenviar depois disso exige comando novo, como na linha `Final*` da tabela do kernel.
   - `fail` → `status ← final_failure`; `failureCategory ← final_validation | final_business | final_authorization` pela classe, ou `final_business` pelo achado `FindingRejected` (recusa pela regra do parceiro, `ERR-28`).
   - `query` → `status ← unknown_outcome`, `failureCategory ←` categoria da classe registrada, `nextQueryAt ← at + queryInterval` (convertido a ns).
   - `reconcile` → `status ← unknown_outcome`, `failureCategory ←` categoria da classe registrada, `reconciliationRequired ← true`, `nextQueryAt` zerado.
   - `suspend` → `status ← unknown_outcome`, `failureCategory ← schema_mismatch`, `reconciliationRequired ← não stateQuerySupported`, `nextQueryAt ← at` quando há consulta. A retomada reentra como `ClassUnknownAmbiguous` (`RES-43`): a varredura só consulta comandos de operação não suspensa, então a consulta volta sozinha quando `EnableOperation` levanta a suspensão; sem consulta, o comando já está na reconciliação.
   - Início de episódio de espera (entrada no conjunto {`acknowledged`, `unknown_outcome`} vinda de fora dele): `waitingSince ← at`. Fim do episódio (saída do conjunto): `waitingSince`, `nextQueryAt`, `ambiguityExpiredAt`, `reconciliationRequired`, `acknowledgedNotified` e `unknownNotified` zerados.
-  - Mapa de `ports.ExternalClass` para `failureCategory`, 1 para 1: `ClassFinalValidation` → `final_validation`, `ClassFinalBusiness` → `final_business`, `ClassFinalAuthorization` → `final_authorization`, `ClassUnknownSent` → `unknown_sent`, `ClassUnknownAmbiguous` e classe zero → `unknown_ambiguous`, `ClassSchemaMismatch` → `schema_mismatch`, `ClassAccepted` → vazia.
-  - Com `responseCapture`, a mesma UoW grava na outbox `ExternalResponseCaptured` (interno), com `interactionId`, `commandId`, as referências do bruto e o passo. O consumer do próprio contexto registra a interação de saída (`RecordExternalInteraction`, `direction = outbound`) e, quando o passo foi `suspend`, a conclui em `schema_mismatch` (`ConcludeInteraction`), o que dispara a suspensão (decisão 2). Os dois comandos entram pela inbox de comando com chave derivada de `interactionId`, então a reentrega é segura.
+  - Mapa de `ports.ExternalClass` para `failureCategory`, 1 para 1: `ClassFinalValidation` → `final_validation`, `ClassFinalBusiness` → `final_business`, `ClassFinalAuthorization` → `final_authorization`, `ClassUnknownSent` → `unknown_sent`, `ClassUnknownAmbiguous` e classe zero → `unknown_ambiguous`, `ClassSchemaMismatch` → `schema_mismatch`, `ClassAccepted` → vazia. Fora do mapa, o `retry` com o orçamento esgotado grava `resend_budget_exhausted`.
+  - Com `responseCapture`, a mesma UoW grava na outbox `ExternalResponseCaptured` (interno), com `interactionId`, `commandId`, as referências do bruto e o passo. O consumer do próprio contexto registra a interação de saída (`RecordExternalInteraction`, `direction = outbound`, `source = submit_response`, com o passo capturado), e o consumer da normalização a conclui (decisão 18): quando o passo foi `suspend`, em `schema_mismatch` (`ConcludeInteraction`), o que dispara a suspensão (decisão 2). Os dois comandos entram pela inbox de comando com chave derivada de `interactionId` (`record.<interactionId>` e `conclude.<interactionId>.<normalizationRevision>`), então a reentrega é segura.
 - **Eventos emitidos**: `ExternalCommandSubmitted` quando `origin = submit`; depois, pela chegada: em `confirmed` → `ExternalCommandConfirmed`; primeira entrada em `acknowledged` no episódio → `ExternalCommandAcknowledged` (`acknowledgedNotified ← true`); em `final_failure` → `ExternalCommandFailed`; primeira entrada em `unknown_outcome` no episódio → `ExternalOutcomeUnknown` (`unknownNotified ← true`); em `retryable_failure` → nenhum, porque o achado de ausência é intermediário e o evento é fato concluído (14, regra 1).
 - **Resposta**: nenhuma; o kernel encerra a tentativa no ledger.
 
+### HoldDispatch
+
+Chamado pelo handler de `gateway.dispatch` quando a operação do comando está suspensa no momento do envio (decisão 14). Entra pela inbox de comando com chave `hold.<idempotencyKey>.<messageId>`.
+
+- **Agregado**: `ExternalCommand`; exige existente
+- **Entrada**: nenhuma além da identidade
+- **Pré-condições**: `status` em `created` ou `retryable_failure` (nada em voo) → `receivables-gateway/external-command/not-holdable`
+- **Efeitos sobre o estado**: `dispatchHeldSince ← at` quando vazio; quando presente, nenhum. O status não muda, e o comando retido segue cancelável em `created`; não abre episódio de espera.
+- **Eventos emitidos**: nenhum
+- **Resposta**: `idempotencyKey: string`
+
 ### RequestResend
 
-Chamado pela varredura `SweepExternalCommands`, um comando por UoW. A quiescência antes do reenvio é de quem chama (ADR-070 do DMPF, item 6).
+Chamado pela varredura `SweepExternalCommands`, um comando por UoW. A quiescência antes do reenvio é de quem chama (ADR-070 do DMPF, item 6). Também libera o despacho retido, quando a operação deixou de estar suspensa (decisão 14).
 
 - **Agregado**: `ExternalCommand`; exige existente
 - **Entrada**: nenhuma além da identidade
 - **Pré-condições**:
-  - `status = retryable_failure` → `receivables-gateway/external-command/not-resendable`
-  - `resendAfter` presente e menor ou igual a `at` (quiescência cumprida, `RES-42`) → `receivables-gateway/external-command/quiescence-not-elapsed`
-- **Efeitos sobre o estado**: `resendAfter` zerado; a intenção de despacho (`ExternalCommandDispatchRequested`, com o mesmo `IntentID` e a mesma geração, logo a mesma chave de saída) vai à outbox na mesma UoW
+  - `status = retryable_failure`, ou `status = created` com `dispatchHeldSince` presente → `receivables-gateway/external-command/not-resendable`
+  - sem `dispatchHeldSince`, `resendAfter` presente e menor ou igual a `at` (quiescência cumprida, `RES-42`) → `receivables-gateway/external-command/quiescence-not-elapsed`
+- **Efeitos sobre o estado**: `resendAfter` e `dispatchHeldSince` zerados; a intenção de despacho (`ExternalCommandDispatchRequested`, com o mesmo `IntentID` e a mesma geração, logo a mesma chave de saída) vai à outbox na mesma UoW
 - **Eventos emitidos**: nenhum de integração
 - **Resposta**: `idempotencyKey: string`
 
@@ -318,7 +342,8 @@ Reconciliação humana (`RES-43`): a decisão volta ao kernel como `ports.Observ
   - `justification` não vazia → `receivables-gateway/external-command/justification-missing`
   - `queryInteractionId` presente: a decisão humana se apoia numa consulta ou evidência registrada (17 §5; 94 C9.3) → `receivables-gateway/external-command/query-evidence-missing`
   - `partial = true` só se `partialResultSupported` → `receivables-gateway/external-command/partial-result-not-supported`
-- **Efeitos sobre o estado**: a resolução vira achado (`confirmed` → `FindingApplied`, `final_failure` → `FindingRejected`, `not_received` → `FindingAbsent`), e o passo segue a tabela do kernel. `not_received` leva a `retryable_failure` com a mesma chave (00 §7.2.3): voltar a `created` apagaria o fato do envio, e `final_failure` impediria o reenvio. Com `idempotencySupport = none` e sem `authoritativeAbsence`, o kernel devolve `reconcile` e o comando segue em `unknown_outcome`. `reconciliationRequired ← false` quando o passo não é `reconcile`.
+  - o ledger do kernel grava a observação: achado terminal contrário ao gravado → `receivables-gateway/external-command/observation-conflict`; linha da tentativa cheia → `receivables-gateway/external-command/observation-saturated`. As duas voltam como desfecho do caso de uso, e a transação faz commit com o registro do ledger (decisão 13); a observação repetida (`ObserveDuplicate`) responde com o status atual.
+- **Efeitos sobre o estado**: a resolução vira achado (`confirmed` → `FindingApplied`, `final_failure` → `FindingRejected`, `not_received` → `FindingAbsent`), e o passo segue a tabela do kernel. `not_received` leva a `retryable_failure` com a mesma chave (00 §7.2.3): voltar a `created` apagaria o fato do envio, e `final_failure` impediria o reenvio. Com o orçamento de reenvio esgotado, o mesmo `retry` leva a `final_failure` com `resend_budget_exhausted` (decisão 12). Com `idempotencySupport = none` e sem `authoritativeAbsence`, o kernel devolve `reconcile` e o comando segue em `unknown_outcome`. `reconciliationRequired ← false` quando o passo não é `reconcile`.
 - **Eventos emitidos**: os de `ApplyExternalStep`
 - **Resposta**: `idempotencyKey: string`, `status`
 
@@ -335,10 +360,10 @@ Reconciliação humana (`RES-43`): a decisão volta ao kernel como `ports.Observ
 ### RecordExternalInteraction
 
 - **Agregado**: `ExternalInteraction`; **cria**
-- **Entrada**: `interactionId: id`, `connectorId: id`, `operation: string`, `direction`, `commandId: id` (opcional), `partnerEventId: string` (opcional), `businessDate: string` (opcional), `requestRef`, `requestVersionId`, `requestHash`, `responseRef`, `responseVersionId`, `responseHash` (opcionais), `duplicateOf: id` (opcional, resolvido pelo caso de uso por `FindExternalInteractionByPartnerEvent`)
+- **Entrada**: `interactionId: id`, `connectorId: id`, `operation: string`, `direction`, `source`, `contentType: string`, `commandId: id` (opcional), `partnerEventId: string` (opcional), `businessDate: string` (opcional), `requestRef`, `requestVersionId`, `requestHash`, `responseRef`, `responseVersionId`, `responseHash` (opcionais), `capturedStep` e, quando ele é `suspend`, `mismatchKind`, `mismatchDetail` e `partnerDeclaredVersion` (opcionais; só na captura de saída), `duplicateOf: id` (opcional, resolvido pelo caso de uso por `FindExternalInteractionByPartnerEvent`)
 - **Pré-condições**: ao menos uma referência de payload bruto → `receivables-gateway/external-interaction/raw-payload-missing`
-- **Efeitos sobre o estado**: campos ← entrada; `status ← duplicate` quando `duplicateOf` informado, senão `stored`; `normalizationRevision ← 1`; `receivedAt ← at`. O bruto é persistido sempre, antes de deduplicar e de interpretar (04 §7, passos 2 e 3).
-- **Eventos emitidos**: nenhum
+- **Efeitos sobre o estado**: campos ← entrada; `status ← duplicate` quando `duplicateOf` informado, senão `stored`; `normalizationRevision ← 1`; `receivedAt ← at`. O bruto é persistido sempre, antes de deduplicar e de interpretar (04 §7, passos 2 e 3). Em `stored`, `ExternalInteractionStored` (interno) vai à outbox na mesma UoW, e o consumer de `gateway.normalizations` conclui a interação (decisão 18).
+- **Eventos emitidos**: nenhum de integração; só `ExternalInteractionStored`, interno ao contexto
 - **Resposta**: `interactionId: id`, `status`
 
 ### ConcludeInteraction
@@ -352,7 +377,7 @@ Reconciliação humana (`RES-43`): a decisão volta ao kernel como `ports.Observ
 - **Eventos emitidos**: na revisão 1, `ExternalSchemaMismatchDetected` quando `schema_mismatch` e `ExternalInteractionUncorrelated` quando `uncorrelated` (abre caso no Backoffice, 04 §7; decisão 5). Na revisão maior que 1, `ExternalInteractionReprocessed` sempre, com `outcomeChanged` verdadeiro quando o desfecho difere de `previousOutcome` ou `readingHash` difere de `previousReadingHash`, e `terminalCommandAffected = outcomeChanged e commandTerminal`; os eventos de `schema_mismatch` e `uncorrelated` só saem com `outcomeChanged` (decisões 7 e 8; ver `ReprocessInteraction`).
 - **Resposta**: `interactionId: id`, `status`
 - **Suspensão da operação afetada**: por coreografia, sem segunda UoW no caso de uso. `ExternalSchemaMismatchDetected` vai à outbox na UoW de `ConcludeInteraction`, e o próprio contexto o consome pela inbox (ADR-036) e executa `SuspendOperation` com `cause = schema_mismatch` (decisão 2). O Partner consome o mesmo evento (DEVS-171).
-- **Desfecho de comando por callback ou arquivo**: quando a interação normalizada traz o desfecho de um comando que não é terminal, o caso de uso entrega o achado ao kernel como `ports.Observation` (`application.Resolve`), depois do commit de `ConcludeInteraction`, com o `interactionId` como `Observation.ID`. O ledger grava a observação uma vez só (`ObserveDuplicate` na repetição; `ObserveConflict` é só um achado terminal contrário a outro), então repetir o caso de uso é seguro; o comando que ficar sem desfecho cai na varredura, que consulta o estado ou escala a espera. Comando terminal nunca é alterado (decisão 7).
+- **Desfecho de comando por callback ou arquivo**: quando a interação normalizada traz o desfecho de um comando que não é terminal, o consumer da normalização entrega o achado ao kernel como `ports.Observation` (`application.Resolve`), depois do commit de `ConcludeInteraction`, com `<interactionId>.r<normalizationRevision>` como `Observation.ID` (decisão 18). A captura de saída na revisão 1 não entrega observação, porque o `Dispatch` já aplicou o passo. O ledger grava a observação uma vez só (`ObserveDuplicate` na repetição; `ObserveConflict` é só um achado terminal contrário a outro), então repetir o caso de uso é seguro; o comando que ficar sem desfecho cai na varredura, que consulta o estado ou escala a espera. Comando terminal nunca é alterado (decisão 7).
 
 ### ReprocessInteraction
 
@@ -362,8 +387,8 @@ Reconciliação humana (`RES-43`): a decisão volta ao kernel como `ports.Observ
   - `status` é `normalized`, `uncorrelated` ou `schema_mismatch` → `receivables-gateway/external-interaction/not-concluded`
   - `justification` não vazia (operação de backoffice, 04 §6) → `receivables-gateway/external-interaction/justification-missing`
   - referência do bruto presente → `receivables-gateway/external-interaction/raw-payload-missing`
-- **Efeitos sobre o estado**: `previousOutcome ← status`, `previousReadingHash ← readingHash`, `status ← stored`, `normalizationRevision ← normalizationRevision + 1`. Reexecuta só a normalização e a publicação; nunca reenvia comando externo.
-- **Eventos emitidos**: nenhum; o resultado do reprocessamento é publicado por `ConcludeInteraction` (`ExternalInteractionReprocessed`)
+- **Efeitos sobre o estado**: `previousOutcome ← status`, `previousReadingHash ← readingHash`, `status ← stored`, `normalizationRevision ← normalizationRevision + 1`, e `ExternalInteractionStored` (interno) vai à outbox na mesma UoW. Reexecuta só a normalização e a publicação; nunca reenvia comando externo.
+- **Eventos emitidos**: nenhum de integração; o resultado do reprocessamento é publicado por `ConcludeInteraction` (`ExternalInteractionReprocessed`)
 - **Resposta**: `interactionId: id`, `normalizationRevision: int`
 - **Reemissão**: reprocessar sem mudar a leitura não emite evento de negócio. Leitura nova emite evento novo, com `eventId` novo, porque a correção nunca reaproveita `eventId` (92 §5.3; 14, regra 8). O PRD e o catálogo prevalecem sobre 04 §6, que fala em "mesmos eventos, deduplicados pelo inbox".
 - **Comando terminal**: leitura nova sobre comando terminal não altera o comando (04 §6: o histórico da interpretação errada fica). `ExternalInteractionReprocessed` sai com `terminalCommandAffected = outcomeChanged e commandTerminal` verdadeiro, e o Backoffice abre o caso (decisões 7 e 8). Sobre comando não terminal, a leitura nova entra no kernel como `ports.Observation`, como no callback.
@@ -398,7 +423,7 @@ Os nove abaixo são publicados no canal `gateway.events`; a intenção de despac
 
 ### ExternalCommandFailed
 
-- **Campos**: `idempotencyKey`, `tenantId`, `connectorId`, `operation`, `businessKey`; `category: final_validation | final_business | final_authorization`; `partnerCode: string`; `partnerMessage: string`; `interactionId: id`; `at: instant ← at`
+- **Campos**: `idempotencyKey`, `tenantId`, `connectorId`, `operation`, `businessKey`; `category: final_validation | final_business | final_authorization | resend_budget_exhausted`; `partnerCode: string`; `partnerMessage: string`; `interactionId: id`; `at: instant ← at`
 
 ### ExternalOutcomeUnknown
 
@@ -425,6 +450,11 @@ Os nove abaixo são publicados no canal `gateway.events`; a intenção de despac
 - **Canal**: `gateway.interactions`, um tipo só (`KFK-03`), consumido só pelo próprio contexto.
 - **Campos**: `interactionId: id`; `commandId: id ← idempotencyKey`; `connectorId: id`; `operation: string`; `requestRef`, `requestVersionId`, `requestHash`, `responseRef`, `responseVersionId`, `responseHash`; `step`; `mismatchKind`, `mismatchDetail` e `partnerDeclaredVersion` (quando o passo foi `suspend`); `at: instant`
 
+### ExternalInteractionStored (interno)
+
+- **Canal**: `gateway.normalizations`, um tipo só (`KFK-03`), consumido só pelo próprio contexto (decisão 18).
+- **Campos**: `interactionId: id`; `connectorId: id`; `operation: string`; `direction`; `source`; `commandId: id` (opcional); `normalizationRevision: int`; `at: instant ← at`. O bruto não viaja: o consumer o lê da porta pela versão gravada na interação.
+
 ### ExternalCommandDispatchRequested (interno)
 
 - **Canal**: `gateway.dispatch`, um tipo só (`KFK-03`), consumido só pelo handler do despacho do próprio contexto.
@@ -440,14 +470,14 @@ Locais, fora da UoW:
 - `FindQueryAuthorizationByOrganization` - filtros: `organizationId`; cardinalidade: `many`
 - `FindExternalCommand` - filtros: `idempotencyKey`; cardinalidade: `one`
 - `FindExternalCommandsByBusinessKey` - filtros: `connectorId`, `businessKey`; cardinalidade: `many`
-- `FindExternalCommandsByStatus` - filtros: `status`, `connectorId` (opcional); cardinalidade: `many` (acompanhamento e varredura `SweepExternalCommands`: reenvio, consulta e prazo)
+- `FindExternalCommandsByStatus` - filtros: `status` (só não terminal: `created`, `acknowledged`, `retryable_failure`, `unknown_outcome`; terminal é entrada inválida, decisão 15), `connectorId` (opcional); cardinalidade: `many` (acompanhamento e varredura `SweepExternalCommands`: reenvio, liberação do despacho retido, consulta e prazo)
 - `FindExternalInteraction` - filtros: `interactionId`; cardinalidade: `one`
 - `FindExternalInteractionByPartnerEvent` - filtros: `connectorId`, `partnerEventId`; cardinalidade: `one` (deduplicação)
 - `FindExternalInteractionsByCommand` - filtros: `commandId`; cardinalidade: `many`
 - `FindExternalReference` - filtros: `referenceKey`; cardinalidade: `one`
 - `FindExternalReferencesBySubject` - filtros: `subjectType`, `subjectId`; cardinalidade: `many`
 
-Leituras externas pelas portas canônicas (04 §3). Como gravam interação, são casos de uso de escrita, não consultas do kernel (`UOW-11`): entram pela inbox de comando com chave (`kernelgrpc.WithCommands`, `application.Execute`; ADR-056). Cada uma corre em ordem: guarda local, chamada ao adaptador (bloco `provider`), e só então `application.Execute`, que envolve `RecordExternalInteraction`. Toda saída carrega `asOf`, `providerId` e a referência externa. Leitura que expira por tempo é erro recuperável (00 §7.4). No replay da mesma chave de comando o adaptador é chamado de novo e o kernel devolve o desfecho já gravado; o bruto dessa segunda leitura não é gravado, o que é aceitável porque a leitura não muda o estado do parceiro.
+Leituras externas pelas portas canônicas (04 §3). Como gravam interação, são casos de uso de escrita, não consultas do kernel (`UOW-11`): entram pela inbox de comando com chave (`kernelgrpc.WithCommands`, `application.Execute`; ADR-056). Cada uma corre em ordem: guarda local, chamada ao adaptador (bloco `provider`), e só então `application.Execute`, que envolve `RecordExternalInteraction`. Toda saída carrega `asOf`, `providerId` e a referência externa. Leitura que expira por tempo é erro recuperável (00 §7.4). No replay da mesma chave de comando o adaptador é chamado de novo e o kernel devolve o desfecho já gravado; o bruto dessa segunda leitura fica gravado como versão órfã, porque a porta não tem escrita condicional (decisão 16), o que é aceitável porque a leitura não muda o estado do parceiro. Até #5 as leituras entram pelo RPC genérico `ReadExternal`, e o desfecho guardado na inbox leva a leitura normalizada, limitada a `maxPayloadBytes` da operação (decisão 20).
 
 - `ReceivablesQueryPort`: `DiscoverSchedule`, `QueryAsset`, `QueryOwnership`, `QueryEncumbrances` - guarda: `QueryAuthorization` ativa para a organização e o tipo de ativo → `receivables-gateway/query-authorization/consent-not-active`; perfil suporta a operação e a operação não está suspensa → `receivables-gateway/connector/capability-not-enabled`
 - `AuthorizationPort` (leituras): `QueryOptInStatus`, `ListAuthorizations` - guarda de capacidade; sem guarda de consentimento, porque o opt-in externo antecede a autorização de consulta
@@ -474,8 +504,9 @@ Leituras externas pelas portas canônicas (04 §3). Como gravam interação, sã
   - Consumidores: `Submitted` → Ledger; `Acknowledged` → Ledger (PRD 12, req. 1); `Confirmed` → Effects, Funding, Ledger; `Failed` → Effects, Ops, Ledger; `OutcomeUnknown` → Effects, Funding, Ops, Ledger; `SchemaMismatchDetected` → Partner (DEVS-171), o próprio Gateway (suspensão), Ops, Ledger; `InteractionUncorrelated` → Ops, Ledger; `InteractionReprocessed` → Ledger, e Ops quando `terminalCommandAffected`; `CommandAmbiguityExpired` → Ops, Ledger.
   - `Acknowledged`, `InteractionUncorrelated`, `InteractionReprocessed` e `CommandAmbiguityExpired` faltam em 92 §4. O contrato é o `.proto` desta spec (ADR-022, linha 6), e o addendum do catálogo 92 e 14 fica para issue de documentação, como no Partner.
   - Consent não consome eventos do Gateway: o provider do Consent chama a `AuthorizationPort` (`activateOptIn`, `revokeOptIn`, `queryOptInStatus`) e resolve o desfecho desconhecido pela consulta, nunca por reenvio (SPEC-Z3YR96YS, Integração). Com protocolo `async_callback`, o Consent consulta até o desfecho.
-- **Interno**: `ExternalCommandDispatchRequested` no canal `gateway.dispatch`, consumido pelo handler do despacho, que chama `application.Dispatch` (`RES-45`); `ExternalResponseCaptured` no canal `gateway.interactions`, consumido para registrar e concluir a interação de saída. Cada canal interno leva um tipo só (`KFK-03`).
+- **Interno**: `ExternalCommandDispatchRequested` no canal `gateway.dispatch`, consumido pelo handler do despacho, que chama `application.Dispatch` (`RES-45`); `ExternalResponseCaptured` no canal `gateway.interactions`, consumido para registrar a interação de saída; `ExternalInteractionStored` no canal `gateway.normalizations`, consumido para normalizar e concluir toda interação gravada e entregar o achado ao kernel (decisão 18). Cada canal interno leva um tipo só (`KFK-03`), e os três rodam no papel `consumer` (decisão 21).
 - **Consome** (disposições de consumo: FND-04 §6.4; efeito de broker só depois do retorno da transação; `janela_redelivery` declarada, ADR-020):
+  - Consumo de Consent na terceira fatia (decisão 22), **[A CONFIRMAR: contrato do Consent]**:
   - `company.consent.event.v1.ConsentGranted` → `GrantQueryAuthorization`. Mapa: `consentId`, `organizationId`, `version` → `consentVersion`, `scope.assetTypes` → `assetTypes`, `scope.periodFrom` → `periodFromDate`, `scope.periodUntil` → `periodUntilDate`. Só `consentType = RECEIVABLES_OPT_IN`; os demais são descartados.
   - `company.consent.event.v1.ConsentRevoked` → `RevokeQueryAuthorization`. Mapa: `consentId`, `effectiveAt`. Consentimento ainda desconhecido: disposição de espera ou falha de FND-04 §6.4.
   - Canal `partner.events`, com 11 tipos: `Sink` de conjunto fechado no bloco `app`, no padrão do app de referência `reservations` do kernel (`apps/backend/reservations/app/sink.go`), aceitando `capability-enabled`, `capability-suspended` e `integration-profile-registered`; os demais tipos recebem `Ack` sem inbox. O catálogo do canal do Partner ainda declara só `partner-registered` (DEVS-171).
@@ -489,7 +520,7 @@ Leituras externas pelas portas canônicas (04 §3). Como gravam interação, sã
 
 ## Borda e persistência
 
-- **Borda**: só gRPC, `company.gateway.service.v1.GatewayService`, um RPC por comando e por consulta, atrás da cadeia de interceptors do kernel: os comandos acima menos `ApplyExternalStep` (efeito interno do ciclo de comando externo), `RequestResend` e `ExpireAmbiguity` (servidos pelo RPC `SweepExternalCommands`, método de comando comum: grava, então não é método de plataforma do `WithPlatformMethods`, que só lê entre tenants), as 12 consultas locais e as leituras externas das portas. Todas as chamadas correm no tenant único da plataforma (decisão 1); o tenant de negócio viaja como dado, no `tenantId` de `CreateExternalCommand`. Webhook de entrada, mTLS de origem e a resposta em menos de 200 ms (p95) são do `bff` (91 §5.1); o `bff` entrega o bruto ao contexto por `RecordExternalInteraction`.
+- **Borda**: só gRPC, `company.gateway.service.v1.GatewayService`, um RPC por comando e por consulta, atrás da cadeia de interceptors do kernel: os comandos acima menos `ApplyExternalStep` (efeito interno do ciclo de comando externo), `HoldDispatch` (do handler do despacho, decisão 14), `RecordExternalInteraction` e `ConcludeInteraction` (internos ao ciclo da interação: entram pelo RPC de entrada, pela leitura externa, pela varredura e pelos consumers internos, decisões 18 e 19), `RequestResend` e `ExpireAmbiguity` (servidos pelo RPC `SweepExternalCommands`, método de comando comum: grava, então não é método de plataforma do `WithPlatformMethods`, que só lê entre tenants), as 12 consultas locais e as leituras externas das portas. Todas as chamadas correm no tenant único da plataforma (decisão 1); o tenant de negócio viaja como dado, no `tenantId` de `CreateExternalCommand`. Webhook de entrada, mTLS de origem e a resposta em menos de 200 ms (p95) são do `bff` (91 §5.1); o `bff` entrega o bruto ao contexto pelo RPC `ReceivePartnerInteraction`, que grava o bruto e executa `RecordExternalInteraction` (decisão 19). Além dos comandos, a borda serve `ReceivePartnerInteraction` e `ReadExternal` (decisão 20), os dois com chave de comando.
 - **Banco**: database e role `gateway`, schema `public`, tabelas `connectors`, `capability_profiles`, `query_authorizations`, `external_commands`, `external_interactions` e `external_references`, com `tenant_id` à frente da chave. Persistência híbrida; colunas tipadas só onde uma consulta filtra: `capability_profiles.connector_id` e `version` (`FindEffectiveCapabilityProfile`); `query_authorizations.organization_id`; `external_commands.connector_id`, `business_key`, `series_key` e `status`; `external_interactions.connector_id`, `partner_event_id` e `command_id`; `external_references.subject_type` e `subject_id`. O resto do estado vai em `snapshot` `jsonb`. Guardas da leitura relacional (ADR-067 do DMPF): `capability_profiles.connector_id`, `external_commands.series_key` e `external_interactions.command_id`. O ledger de tentativas `external_attempt` é tabela de plataforma do kernel, com o tenant na chave (ADR-070 do DMPF, item 10). O payload bruto fica fora do banco, na porta de object storage do kernel (SPEC-CWBA4BPV, DEVS-95); o banco guarda referência, `versionId` e hash.
 - **Instante**: inteiro de nanossegundos no domínio. Diverge do design: `00 §8` fala em milissegundo; segue o DMPF. A data de negócio do parceiro é `businessDate`, separada de `receivedAt`.
 - **Diverge do design**: o doc 92 §1 (envelope JSON, `schemaUri`) cede ao contrato Protobuf e ao CloudEvents montado pelo relay; o broker é Kafka, a confirmar na decisão D4 da fundação (`SPEC-GXGASP24`).
@@ -563,6 +594,10 @@ ENTÃO rejeita com receivables-gateway/capability-profile/ambiguity-deadline-mis
 DADO uma operação submitEffect com stateQuerySupported e sem queryInterval
 QUANDO DeclareCapabilityProfile chega
 ENTÃO rejeita com receivables-gateway/capability-profile/query-interval-missing
+
+DADO uma operação submitEffect sem maxSubmissions
+QUANDO DeclareCapabilityProfile chega
+ENTÃO rejeita com receivables-gateway/capability-profile/max-submissions-missing
 
 DADO um consentimento RECEIVABLES_OPT_IN concedido
 QUANDO GrantQueryAuthorization chega
@@ -667,6 +702,10 @@ ENTÃO o comando não é consultado até EnableOperation levantar a suspensão
 DADO um comando unknown_outcome com idempotencySupport key_header
 QUANDO a consulta de estado devolve FindingAbsent
 ENTÃO o comando vai a retryable_failure com resendAfter = at + quiescence e nenhum evento é emitido
+
+DADO um comando unknown_outcome com idempotencySupport key_header e submissions igual a maxSubmissions
+QUANDO a consulta de estado devolve FindingAbsent
+ENTÃO o comando vai a final_failure com failureCategory resend_budget_exhausted, sem resendAfter, e ExternalCommandFailed vai à outbox
 
 DADO um comando retryable_failure com resendAfter vencido
 QUANDO SweepExternalCommands roda
@@ -795,12 +834,83 @@ ENTÃO rejeita com receivables-gateway/external-reference/already-linked
 DADO qualquer entrada
 QUANDO LinkExternalReference chega com reference vazia
 ENTÃO rejeita com receivables-gateway/external-reference/reference-empty
+
+DADO uma operação com maxQueries igual a ports.MaxAttemptEntries
+QUANDO DeclareCapabilityProfile chega
+ENTÃO rejeita com receivables-gateway/capability-profile/external-profile-invalid
+
+DADO um comando final_failure por resend_budget_exhausted na série de uma businessKey
+QUANDO CreateExternalCommand chega com payloadVersion diferente na mesma série
+ENTÃO o comando novo nasce em created e a intenção de despacho vai à outbox
+
+DADO um comando unknown_outcome cuja tentativa já tem FindingApplied gravado no ledger
+QUANDO ResolveUnknownOutcome chega com resolution final_failure, queryInteractionId e justificativa
+ENTÃO rejeita com receivables-gateway/external-command/observation-conflict, o conflito fica gravado no ledger e a repetição com a mesma chave devolve a mesma rejeição
+
+DADO um comando unknown_outcome cuja tentativa tem a linha do ledger cheia
+QUANDO ResolveUnknownOutcome chega com resolution not_received, queryInteractionId e justificativa
+ENTÃO rejeita com receivables-gateway/external-command/observation-saturated e o comando não muda
+
+DADO um comando created cuja operação foi suspensa depois da criação
+QUANDO o handler de gateway.dispatch recebe a intenção
+ENTÃO nenhuma chamada externa sai, HoldDispatch grava dispatchHeldSince e a mensagem recebe Ack
+
+DADO um comando created com dispatchHeldSince e a operação habilitada de novo
+QUANDO SweepExternalCommands roda
+ENTÃO RequestResend zera dispatchHeldSince e grava a intenção de despacho com o mesmo IntentID
+
+DADO um comando cancelled
+QUANDO o handler de gateway.dispatch recebe a intenção
+ENTÃO nenhuma chamada externa sai e a mensagem recebe Ack
+
+DADO um status terminal
+QUANDO FindExternalCommandsByStatus chega com ele
+ENTÃO a consulta é recusada como entrada inválida
+
+DADO um comando created e o simulador de parceiro que aceita o envio
+QUANDO o handler de gateway.dispatch o envia
+ENTÃO o pedido e a resposta ficam gravados na porta de object storage, ExternalResponseCaptured vai à outbox na UoW do passo, e o consumer registra a interação de saída com requestVersionId e responseVersionId da porta
+
+DADO a porta de object storage indisponível ao gravar o pedido do envio
+QUANDO o handler de gateway.dispatch processa a intenção
+ENTÃO nenhuma chamada externa sai e a mensagem volta à reentrega com a mesma chave
+
+DADO uma interação de saída registrada com capturedStep suspend
+QUANDO o consumer de gateway.normalizations a processa
+ENTÃO ConcludeInteraction a conclui em schema_mismatch, ExternalSchemaMismatchDetected vai à outbox e nenhuma observação vai ao kernel
+
+DADO um callback do parceiro com o desfecho confirmado de um comando acknowledged
+QUANDO ReceivePartnerInteraction chega e a normalização conclui a interação
+ENTÃO o bruto fica gravado na porta, a interação vai a normalized e o comando vai a confirmed pelo Resolve com Observation.ID = <interactionId>.r1
+
+DADO um callback com partnerEventId já recebido
+QUANDO ReceivePartnerInteraction chega de novo
+ENTÃO a interação nova nasce duplicate, ExternalInteractionStored não é gravado e o comando não muda
+
+DADO um corpo maior que maxPayloadBytes da operação
+QUANDO ReceivePartnerInteraction chega
+ENTÃO rejeita com receivables-gateway/external-interaction/payload-too-large e nada é gravado na porta
+
+DADO uma interação normalized cuja leitura deixou o comando em acknowledged por erro de normalização
+QUANDO ReprocessInteraction chega e a normalização corrigida lê o desfecho confirmado
+ENTÃO a observação entra no kernel com Observation.ID = <interactionId>.r2, o comando vai a confirmed e ExternalInteractionReprocessed vai à outbox com outcomeChanged verdadeiro
+
+DADO um comando unknown_outcome com consulta de estado e nextQueryAt vencido
+QUANDO SweepExternalCommands roda
+ENTÃO o bruto da consulta fica gravado na porta, a interação state_query é registrada, e o achado chega ao comando pelo consumer de gateway.normalizations
+
+DADO uma QueryAuthorization ativa e o simulador de parceiro
+QUANDO ReadExternal chega com queryAsset
+ENTÃO a resposta traz interactionId, asOf, providerId, externalReference, reading e readingHash, e a interação external_read fica registrada com o bruto na porta
 ```
 
 ## Escopo fora
 
-- **REST do bff**: recepção de webhook (verificação de origem, resposta em menos de 200 ms, absorver e enfileirar) e qualquer rota pública são do `bff` (91 §5.1 e §6); o contexto serve só gRPC.
-- **Adaptadores reais de registradora e escriturador**: dependem de #5 (mapeamento de provedores, códigos de erro, homologação); esta versão entrega portas, taxonomia, suspensão, webhook, replay e o simulador de parceiro, com as partes que gravam bruto depois da porta de object storage do kernel (DEVS-95; ver Situação).
+- **REST do bff**: recepção de webhook (verificação de origem, resposta em menos de 200 ms, absorver e enfileirar) e qualquer rota pública são do `bff` (91 §5.1 e §6), com spec própria; o contexto serve só gRPC e entrega `ReceivePartnerInteraction` para o `bff` chamar (decisão 19).
+- **RPCs tipados das leituras externas**: chegam com os adaptadores reais (#5); até lá, `ReadExternal` genérico (decisão 20).
+- **Consumo de `ConsentGranted` e `ConsentRevoked`**: terceira fatia, quando o Consent publicar o contrato (decisão 22).
+- **Paginação e projeção sem payload na listagem por status**: pendência na relação do kernel (decisão 15).
+- **Adaptadores reais de registradora e escriturador**: dependem de #5 (mapeamento de provedores, códigos de erro, homologação); esta versão entrega portas, taxonomia, suspensão, webhook, replay e o simulador de parceiro, com as partes que gravam bruto na segunda fatia (DEVS-174), sobre a porta de object storage da `1.0.0-rc.8` do kernel (ver Situação).
 - **Verdade de negócio do portfólio e decisão de elegibilidade**: pertencem a Portfolio e Eligibility; o Gateway só devolve posições com proveniência.
 - **Decisão de elegibilidade do parceiro e homologação**: Partner Management; o Gateway apenas aplica `CapabilityEnabled`, `CapabilitySuspended` e `IntegrationProfileRegistered`.
 - **Caso operacional** por `schema_mismatch`, interação não correlacionada, prazo de ambiguidade vencido e reprocessamento que muda a leitura de comando terminal: Backoffice (17); o Gateway só publica o fato.
@@ -810,5 +920,5 @@ ENTÃO rejeita com receivables-gateway/external-reference/reference-empty
 - **Evento de abertura de circuito**: só telemetria (decisão 9).
 - **Rollout por tenant**: `CapabilityRolloutChanged` não é consumido (decisão 4).
 - **Fases posteriores**: escriturador (fase 2) e múltiplas infraestruturas simultâneas (fase 4, B14); recebíveis futuros dependem de B11.
-- **Retenção do payload bruto**: sem política até 04:G11 e #8 (retenção); o armazenamento de objetos depende da porta do kernel (SPEC-CWBA4BPV, DEVS-95).
+- **Retenção do payload bruto**: sem política até 04:G11 e #8 (retenção); o armazenamento usa a porta do kernel da `1.0.0-rc.8` (SPEC-CWBA4BPV), sem retenção nem legal hold até lá (decisão 16).
 - **Composition root**: o esqueleto de `app/`, o `cmd/` com `--role` e o `project.json` nascem do generator; o harness escreve o conteúdo de domínio dentro deles.
