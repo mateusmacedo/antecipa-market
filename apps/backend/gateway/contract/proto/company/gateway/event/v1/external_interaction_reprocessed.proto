@@ -1,0 +1,26 @@
+syntax = "proto3";
+
+package company.gateway.event.v1;
+
+import "company/gateway/event/v1/types.proto";
+import "google/protobuf/timestamp.proto";
+
+// The raw payload of an interaction was normalized again under a new revision;
+// a terminal command is never changed by it, so the Backoffice opens a case
+// when the new reading affects one (decisions 7 and 8).
+// Envelope type: com.company.gateway.external-interaction-reprocessed.v1 (PTB-03).
+message ExternalInteractionReprocessed {
+  string interaction_id = 1;
+  string connector_id = 2;
+  string partner_id = 3;
+  string operation = 4;
+  string command_id = 5;
+  int32 previous_revision = 6;
+  int32 normalization_revision = 7;
+  InteractionOutcome previous_outcome = 8;
+  InteractionOutcome outcome = 9;
+  // The outcome or the hash of the reading differs from the previous revision.
+  bool outcome_changed = 10;
+  bool terminal_command_affected = 11;
+  google.protobuf.Timestamp at = 12;
+}

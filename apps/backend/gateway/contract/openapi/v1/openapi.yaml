@@ -585,6 +585,227 @@ paths:
           $ref: '#/components/responses/Timeout'
         default:
           $ref: '#/components/responses/Failure'
+  /gateway/connectors/{connectorKey}/external-interactions:
+    get:
+      operationId: findExternalInteractionByPartnerEvent
+      summary: Read the first reception of an event of the partner
+      description: >-
+        The interaction that deduplicates the partner event; a repeated
+        reception is an interaction of its own, which names this one in
+        duplicateOf.
+      parameters:
+        - $ref: '#/components/parameters/ConnectorKey'
+        - $ref: '#/components/parameters/PartnerEventIDQuery'
+        - $ref: '#/components/parameters/CorrelationID'
+      responses:
+        '200':
+          description: The interaction of the first reception
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ExternalInteraction'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '429':
+          $ref: '#/components/responses/AdmissionRefused'
+        '503':
+          $ref: '#/components/responses/Unavailable'
+        '504':
+          $ref: '#/components/responses/Timeout'
+        default:
+          $ref: '#/components/responses/Failure'
+  /gateway/external-commands/{commandKey}/external-interactions:
+    get:
+      operationId: findExternalInteractionsByCommand
+      summary: List the interactions with the partner about an external command
+      parameters:
+        - $ref: '#/components/parameters/CommandKey'
+        - $ref: '#/components/parameters/CorrelationID'
+      responses:
+        '200':
+          description: The interactions of the command, empty when none
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/ExternalInteraction'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '429':
+          $ref: '#/components/responses/AdmissionRefused'
+        '503':
+          $ref: '#/components/responses/Unavailable'
+        '504':
+          $ref: '#/components/responses/Timeout'
+        default:
+          $ref: '#/components/responses/Failure'
+  /gateway/external-interactions/{interactionId}:
+    get:
+      operationId: findExternalInteraction
+      summary: Read an interaction with a partner, without its raw payload
+      parameters:
+        - $ref: '#/components/parameters/InteractionID'
+        - $ref: '#/components/parameters/CorrelationID'
+      responses:
+        '200':
+          description: Current snapshot of the interaction
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ExternalInteraction'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '429':
+          $ref: '#/components/responses/AdmissionRefused'
+        '503':
+          $ref: '#/components/responses/Unavailable'
+        '504':
+          $ref: '#/components/responses/Timeout'
+        default:
+          $ref: '#/components/responses/Failure'
+  /gateway/external-interactions/{interactionId}/reprocessing:
+    post:
+      operationId: reprocessInteraction
+      summary: Normalize again the raw payload of a concluded interaction
+      description: >-
+        A backoffice operation with a justification. The interaction gets a new
+        revision and is normalized again from the raw payload kept in the
+        object store; no external command is ever resent, and a terminal
+        command is never changed by the new reading.
+      parameters:
+        - $ref: '#/components/parameters/InteractionID'
+        - $ref: '#/components/parameters/IdempotencyKey'
+        - $ref: '#/components/parameters/CorrelationID'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ReprocessInteractionRequest'
+      responses:
+        '200':
+          description: The interaction is stored again for normalization under a new revision
+          headers:
+            Idempotent-Replayed:
+              $ref: '#/components/headers/IdempotentReplayed'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ReprocessedInteractionResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/VersionConflict'
+        '422':
+          $ref: '#/components/responses/Rejected'
+        '429':
+          $ref: '#/components/responses/AdmissionRefused'
+        '503':
+          $ref: '#/components/responses/Unavailable'
+        '504':
+          $ref: '#/components/responses/Timeout'
+        default:
+          $ref: '#/components/responses/Failure'
+  /gateway/external-references:
+    post:
+      operationId: linkExternalReference
+      summary: Link a reference of an external system to an internal object
+      description: >-
+        The reference is kept exactly as received, beside a normalized form. A
+        reference points to one internal object only; linking it again to the
+        same object renews asOf and observedVersion when asOf is more recent.
+      parameters:
+        - $ref: '#/components/parameters/IdempotencyKey'
+        - $ref: '#/components/parameters/CorrelationID'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LinkExternalReferenceRequest'
+      responses:
+        '200':
+          description: Reference linked, renewed or kept as it was
+          headers:
+            Idempotent-Replayed:
+              $ref: '#/components/headers/IdempotentReplayed'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ReferenceKeyResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '409':
+          $ref: '#/components/responses/VersionConflict'
+        '422':
+          $ref: '#/components/responses/Rejected'
+        '429':
+          $ref: '#/components/responses/AdmissionRefused'
+        '503':
+          $ref: '#/components/responses/Unavailable'
+        '504':
+          $ref: '#/components/responses/Timeout'
+        default:
+          $ref: '#/components/responses/Failure'
+    get:
+      operationId: findExternalReferencesBySubject
+      summary: List the external references of an internal object
+      parameters:
+        - $ref: '#/components/parameters/SubjectTypeQuery'
+        - $ref: '#/components/parameters/SubjectIDQuery'
+        - $ref: '#/components/parameters/CorrelationID'
+      responses:
+        '200':
+          description: The references of the object, empty when none
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/ExternalReference'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '429':
+          $ref: '#/components/responses/AdmissionRefused'
+        '503':
+          $ref: '#/components/responses/Unavailable'
+        '504':
+          $ref: '#/components/responses/Timeout'
+        default:
+          $ref: '#/components/responses/Failure'
+  /gateway/external-references/{referenceKey}:
+    get:
+      operationId: findExternalReference
+      summary: Read the link of an external reference
+      parameters:
+        - $ref: '#/components/parameters/ReferenceKey'
+        - $ref: '#/components/parameters/CorrelationID'
+      responses:
+        '200':
+          description: Current snapshot of the link
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ExternalReference'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '429':
+          $ref: '#/components/responses/AdmissionRefused'
+        '503':
+          $ref: '#/components/responses/Unavailable'
+        '504':
+          $ref: '#/components/responses/Timeout'
+        default:
+          $ref: '#/components/responses/Failure'
 components:
   securitySchemes:
     bearerAuth:
@@ -670,6 +891,37 @@ components:
       in: query
       required: false
       description: When absent, every connector
+      schema:
+        $ref: '#/components/schemas/Identifier'
+    InteractionID:
+      name: interactionId
+      in: path
+      required: true
+      schema:
+        $ref: '#/components/schemas/Identifier'
+    ReferenceKey:
+      name: referenceKey
+      in: path
+      required: true
+      description: '<providerId>:<system>:<referenceType>:<reference>, URL-encoded'
+      schema:
+        $ref: '#/components/schemas/ReferenceKey'
+    PartnerEventIDQuery:
+      name: partnerEventId
+      in: query
+      required: true
+      schema:
+        $ref: '#/components/schemas/Identifier'
+    SubjectTypeQuery:
+      name: subjectType
+      in: query
+      required: true
+      schema:
+        $ref: '#/components/schemas/Identifier'
+    SubjectIDQuery:
+      name: subjectId
+      in: query
+      required: true
       schema:
         $ref: '#/components/schemas/Identifier'
   headers:
@@ -797,6 +1049,35 @@ components:
     Resolution:
       type: string
       enum: [confirmed, final_failure, not_received]
+    InteractionDirection:
+      type: string
+      enum: [outbound, inbound]
+    InteractionSource:
+      type: string
+      enum: [submit_response, state_query, callback, file, external_read]
+    InteractionStatus:
+      type: string
+      enum: [stored, duplicate, normalized, uncorrelated, schema_mismatch]
+    Finding:
+      type: string
+      enum: [applied, rejected, absent, pending, inconclusive]
+      description: Absent when the reading said nothing on a command
+    MismatchKind:
+      type: string
+      enum: [structure, missing_field, type, version]
+    Step:
+      type: string
+      enum: [confirm, await, retry, fail, query, reconcile, suspend]
+    ExternalSystem:
+      type: string
+      enum: [registry, bookkeeper, acquirer, funder, depository]
+    ReferenceType:
+      type: string
+      enum: [asset, effect, authorization, command, settlement]
+    ReferenceKey:
+      type: string
+      minLength: 1
+      maxLength: 512
     Rejection:
       type: object
       required: [code, message]
@@ -1280,3 +1561,138 @@ components:
           type: integer
           format: int32
           description: Commands the next sweep retries
+    ReprocessInteractionRequest:
+      type: object
+      additionalProperties: false
+      required: [justification]
+      properties:
+        justification:
+          $ref: '#/components/schemas/Text'
+    ReprocessedInteractionResponse:
+      type: object
+      required: [interactionId, normalizationRevision]
+      properties:
+        interactionId:
+          $ref: '#/components/schemas/Identifier'
+        normalizationRevision:
+          type: integer
+          format: int32
+    LinkExternalReferenceRequest:
+      type: object
+      additionalProperties: false
+      required: [providerId, system, referenceType, reference, subjectType, subjectId, asOf]
+      properties:
+        providerId:
+          $ref: '#/components/schemas/Identifier'
+        system:
+          $ref: '#/components/schemas/ExternalSystem'
+        referenceType:
+          $ref: '#/components/schemas/ReferenceType'
+        reference:
+          type: string
+          maxLength: 256
+          description: Exactly as the partner sent it; it is never normalized in place
+        normalizedReference:
+          type: string
+          maxLength: 256
+          description: Derived from the reference by trimming and upper-casing when absent
+        subjectType:
+          $ref: '#/components/schemas/Identifier'
+        subjectId:
+          $ref: '#/components/schemas/Identifier'
+        asOf:
+          $ref: '#/components/schemas/Instant'
+        observedVersion:
+          type: string
+          maxLength: 128
+    ReferenceKeyResponse:
+      type: object
+      required: [referenceKey]
+      properties:
+        referenceKey:
+          $ref: '#/components/schemas/ReferenceKey'
+    ExternalInteraction:
+      type: object
+      description: >-
+        An interaction with a partner. The raw payloads live in the object
+        store: the interaction keeps their key, version and SHA-256, never the
+        bytes.
+      properties:
+        interactionId:
+          type: string
+        connectorId:
+          type: string
+        operation:
+          type: string
+        direction:
+          $ref: '#/components/schemas/InteractionDirection'
+        source:
+          $ref: '#/components/schemas/InteractionSource'
+        commandId:
+          type: string
+        contentType:
+          type: string
+        capturedStep:
+          $ref: '#/components/schemas/Step'
+        partnerEventId:
+          type: string
+        businessDate:
+          type: string
+        requestRef:
+          type: string
+        requestVersionId:
+          type: string
+        requestHash:
+          type: string
+        responseRef:
+          type: string
+        responseVersionId:
+          type: string
+        responseHash:
+          type: string
+        duplicateOf:
+          type: string
+        status:
+          $ref: '#/components/schemas/InteractionStatus'
+        normalizationRevision:
+          type: integer
+          format: int32
+        readingHash:
+          type: string
+        finding:
+          $ref: '#/components/schemas/Finding'
+        previousOutcome:
+          $ref: '#/components/schemas/InteractionStatus'
+        previousReadingHash:
+          type: string
+        mismatchKind:
+          $ref: '#/components/schemas/MismatchKind'
+        mismatchDetail:
+          type: string
+        partnerDeclaredVersion:
+          type: string
+        receivedAt:
+          $ref: '#/components/schemas/Instant'
+    ExternalReference:
+      type: object
+      properties:
+        referenceKey:
+          $ref: '#/components/schemas/ReferenceKey'
+        providerId:
+          type: string
+        system:
+          $ref: '#/components/schemas/ExternalSystem'
+        referenceType:
+          $ref: '#/components/schemas/ReferenceType'
+        reference:
+          type: string
+        normalizedReference:
+          type: string
+        subjectType:
+          type: string
+        subjectId:
+          type: string
+        asOf:
+          $ref: '#/components/schemas/Instant'
+        observedVersion:
+          type: string

@@ -1,0 +1,27 @@
+syntax = "proto3";
+
+package company.gateway.event.v1;
+
+import "company/gateway/event/v1/types.proto";
+import "google/protobuf/timestamp.proto";
+
+// A partner answered outside the contract of an operation. The gateway itself
+// suspends the operation on it, and the Partner suspends the capability until a
+// new homologation (decision 2); partner_id and environment make it
+// self-contained (92 §2).
+// Envelope type: com.company.gateway.external-schema-mismatch-detected.v1 (PTB-03).
+message ExternalSchemaMismatchDetected {
+  string interaction_id = 1;
+  string connector_id = 2;
+  string connector_key = 3;
+  string partner_id = 4;
+  Environment environment = 5;
+  string operation = 6;
+  // The asset type of the command of the interaction; empty without one.
+  string asset_type = 7;
+  string command_id = 8;
+  MismatchKind mismatch_kind = 9;
+  string mismatch_detail = 10;
+  string partner_declared_version = 11;
+  google.protobuf.Timestamp at = 12;
+}

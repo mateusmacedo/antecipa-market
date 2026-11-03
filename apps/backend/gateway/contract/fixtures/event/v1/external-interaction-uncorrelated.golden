@@ -1,0 +1,151 @@
+{
+  "format_version": "1",
+  "identity": {
+    "fixture": "gateway/event/v1/external-interaction-uncorrelated",
+    "contract": {
+      "package": "company.gateway.event.v1",
+      "message": "ExternalInteractionUncorrelated"
+    },
+    "type": "com.company.gateway.external-interaction-uncorrelated.v1",
+    "dataschema": "type.googleapis.com/company.gateway.event.v1.ExternalInteractionUncorrelated"
+  },
+  "covers": {
+    "profile_major": "1",
+    "contract_major": "v1"
+  },
+  "cases": [
+    {
+      "name": "all-conditionals-present",
+      "doc": "Caminho típico com os três atributos condicionais presentes (aggregateversion, tenantid, tracestate).",
+      "envelope": {
+        "aggregateversion": "7",
+        "causationid": "evt-0001",
+        "correlationid": "corr-0001",
+        "datacontenttype": "application/protobuf",
+        "dataschema": "type.googleapis.com/company.gateway.event.v1.ExternalInteractionUncorrelated",
+        "id": "evt-0001",
+        "partitionkey": "c-42",
+        "source": "urn:dmpf:reference-gateway",
+        "specversion": "1.0",
+        "subject": "int-1001",
+        "tenantid": "tenant-a",
+        "time": "2026-09-02T12:00:00Z",
+        "traceparent": "00-0af7651916cd43dd8448eb211c80319c-b7ad6b7169203331-01",
+        "tracestate": "vendor=1",
+        "type": "com.company.gateway.external-interaction-uncorrelated.v1"
+      },
+      "payload": {
+        "at": "2026-09-02T12:00:00Z",
+        "business_date": "2026-09-02",
+        "connector_id": "prt-1:production",
+        "connector_key": "prt-1:production",
+        "environment": "ENVIRONMENT_PRODUCTION",
+        "interaction_id": "int-1001",
+        "operation": "submitEffect",
+        "partner_event_id": "evt-p-1",
+        "partner_id": "prt-1",
+        "received_at": "2026-09-02T11:59:59Z"
+      },
+      "payload_bytes_hex": "0a08696e742d3130303112107072742d313a70726f64756374696f6e1a107072742d313a70726f64756374696f6e22057072742d312804320c7375626d69744566666563743a076576742d702d31420a323032362d30392d30324a0608bf9fe0d406520608c09fe0d406",
+      "payload_hash": "4a774f5a15ffbb145f9ceec47e84d0d4fd82f0df19e826c157adfb484458879b"
+    },
+    {
+      "name": "all-conditionals-absent",
+      "doc": "Os três condicionais ausentes: nenhum entra no mapa de atributos (ENV-12, sem valor de preenchimento).",
+      "envelope": {
+        "causationid": "evt-0001",
+        "correlationid": "corr-0001",
+        "datacontenttype": "application/protobuf",
+        "dataschema": "type.googleapis.com/company.gateway.event.v1.ExternalInteractionUncorrelated",
+        "id": "evt-0002",
+        "partitionkey": "c-42",
+        "source": "urn:dmpf:reference-gateway",
+        "specversion": "1.0",
+        "subject": "int-1001",
+        "time": "2026-09-02T12:00:00Z",
+        "traceparent": "00-0af7651916cd43dd8448eb211c80319c-b7ad6b7169203331-01",
+        "type": "com.company.gateway.external-interaction-uncorrelated.v1"
+      },
+      "payload": {
+        "at": "2026-09-02T12:00:01Z",
+        "business_date": "",
+        "connector_id": "prt-1:homologation",
+        "connector_key": "prt-1:homologation",
+        "environment": "ENVIRONMENT_HOMOLOGATION",
+        "interaction_id": "int-1002",
+        "operation": "queryAsset",
+        "partner_event_id": "",
+        "partner_id": "prt-1",
+        "received_at": "2026-09-02T12:00:00Z"
+      },
+      "payload_bytes_hex": "0a08696e742d3130303212127072742d313a686f6d6f6c6f676174696f6e1a127072742d313a686f6d6f6c6f676174696f6e22057072742d312803320a717565727941737365744a0608c09fe0d406520608c19fe0d406",
+      "payload_hash": "8c656395b0017e42b9133045f9cc464837044991ceed698a6fb6e32893f37844"
+    }
+  ],
+  "discriminators": [
+    {
+      "name": "unknown-field",
+      "doc": "Bytes canônicos mais um campo de número 99 (varint 42) que o contrato não conhece: a desserialização o preserva (PTB-10) e o hash o cobre (ENV-17).",
+      "envelope": {
+        "causationid": "evt-0001",
+        "correlationid": "corr-0001",
+        "datacontenttype": "application/protobuf",
+        "dataschema": "type.googleapis.com/company.gateway.event.v1.ExternalInteractionUncorrelated",
+        "id": "evt-2001",
+        "partitionkey": "c-42",
+        "source": "urn:dmpf:reference-gateway",
+        "specversion": "1.0",
+        "subject": "int-1001",
+        "time": "2026-09-02T12:00:00Z",
+        "traceparent": "00-0af7651916cd43dd8448eb211c80319c-b7ad6b7169203331-01",
+        "type": "com.company.gateway.external-interaction-uncorrelated.v1"
+      },
+      "payload": {
+        "at": "2026-09-02T12:00:02Z",
+        "business_date": "2026-09-01",
+        "connector_id": "prt-2:integration",
+        "connector_key": "prt-2:integration",
+        "environment": "ENVIRONMENT_INTEGRATION",
+        "interaction_id": "int-2001",
+        "operation": "requestRelease",
+        "partner_event_id": "evt-p-2",
+        "partner_id": "prt-2",
+        "received_at": "2026-09-02T12:00:01Z"
+      },
+      "payload_bytes_hex": "0a08696e742d3230303112117072742d323a696e746567726174696f6e1a117072742d323a696e746567726174696f6e22057072742d322802320e7265717565737452656c656173653a076576742d702d32420a323032362d30392d30314a0608c19fe0d406520608c29fe0d40698062a",
+      "payload_hash": "d58195f6fbf62790d995e0bd82637c9bf588bbc0b4c12b80a60f14b69b401286"
+    },
+    {
+      "name": "non-canonical-field-order",
+      "doc": "Campos em ordem decrescente de número, o instante como sub-mensagem: decodifica no mesmo valor, mas o hash é o dos bytes transportados e difere do hash de uma reserialização (ENV-18). Campo repetido fica vazio e booleano fica falso, porque o codificador não canônico do kit cobre só strings, inteiros, enums e mensagens.",
+      "envelope": {
+        "causationid": "evt-0001",
+        "correlationid": "corr-0001",
+        "datacontenttype": "application/protobuf",
+        "dataschema": "type.googleapis.com/company.gateway.event.v1.ExternalInteractionUncorrelated",
+        "id": "evt-2002",
+        "partitionkey": "c-42",
+        "source": "urn:dmpf:reference-gateway",
+        "specversion": "1.0",
+        "subject": "int-1001",
+        "time": "2026-09-02T12:00:00Z",
+        "traceparent": "00-0af7651916cd43dd8448eb211c80319c-b7ad6b7169203331-01",
+        "type": "com.company.gateway.external-interaction-uncorrelated.v1"
+      },
+      "payload": {
+        "at": "2026-09-02T12:00:03.123456789Z",
+        "business_date": "2026-09-02",
+        "connector_id": "prt-2:development",
+        "connector_key": "prt-2:development",
+        "environment": "ENVIRONMENT_DEVELOPMENT",
+        "interaction_id": "int-2002",
+        "operation": "submitEffect",
+        "partner_event_id": "evt-p-3",
+        "partner_id": "prt-2",
+        "received_at": "2026-09-02T12:00:02.5Z"
+      },
+      "payload_bytes_hex": "520b08c39fe0d40610959aef3a4a0c08c29fe0d4061080cab5ee01420a323032362d30392d30323a076576742d702d33320c7375626d6974456666656374280122057072742d321a117072742d323a646576656c6f706d656e7412117072742d323a646576656c6f706d656e740a08696e742d32303032",
+      "payload_hash": "dd09d5aeb5086d7b5b407c1a125c1b55f3f13f32c6ca471f64cb140014d1a6f8"
+    }
+  ]
+}

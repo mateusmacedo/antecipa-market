@@ -1,0 +1,159 @@
+{
+  "format_version": "1",
+  "identity": {
+    "fixture": "gateway/event/v1/external-interaction-reprocessed",
+    "contract": {
+      "package": "company.gateway.event.v1",
+      "message": "ExternalInteractionReprocessed"
+    },
+    "type": "com.company.gateway.external-interaction-reprocessed.v1",
+    "dataschema": "type.googleapis.com/company.gateway.event.v1.ExternalInteractionReprocessed"
+  },
+  "covers": {
+    "profile_major": "1",
+    "contract_major": "v1"
+  },
+  "cases": [
+    {
+      "name": "all-conditionals-present",
+      "doc": "Caminho típico com os três atributos condicionais presentes (aggregateversion, tenantid, tracestate).",
+      "envelope": {
+        "aggregateversion": "7",
+        "causationid": "evt-0001",
+        "correlationid": "corr-0001",
+        "datacontenttype": "application/protobuf",
+        "dataschema": "type.googleapis.com/company.gateway.event.v1.ExternalInteractionReprocessed",
+        "id": "evt-0001",
+        "partitionkey": "c-42",
+        "source": "urn:dmpf:reference-gateway",
+        "specversion": "1.0",
+        "subject": "int-1001",
+        "tenantid": "tenant-a",
+        "time": "2026-09-02T12:00:00Z",
+        "traceparent": "00-0af7651916cd43dd8448eb211c80319c-b7ad6b7169203331-01",
+        "tracestate": "vendor=1",
+        "type": "com.company.gateway.external-interaction-reprocessed.v1"
+      },
+      "payload": {
+        "at": "2026-09-02T12:00:00Z",
+        "command_id": "prt-1:production:submitEffect:eff-1",
+        "connector_id": "prt-1:production",
+        "interaction_id": "int-1001",
+        "normalization_revision": "2",
+        "operation": "submitEffect",
+        "outcome": "INTERACTION_OUTCOME_NORMALIZED",
+        "outcome_changed": "true",
+        "partner_id": "prt-1",
+        "previous_outcome": "INTERACTION_OUTCOME_NORMALIZED",
+        "previous_revision": "1",
+        "terminal_command_affected": "true"
+      },
+      "payload_bytes_hex": "0a08696e742d3130303112107072742d313a70726f64756374696f6e1a057072742d31220c7375626d69744566666563742a237072742d313a70726f64756374696f6e3a7375626d69744566666563743a6566662d31300138024001480150015801620608c09fe0d406",
+      "payload_hash": "e4ab189ed5925347b5494127eb5bae7d2800b7b89f398eaa3374f20c4278ca2e"
+    },
+    {
+      "name": "all-conditionals-absent",
+      "doc": "Os três condicionais ausentes: nenhum entra no mapa de atributos (ENV-12, sem valor de preenchimento).",
+      "envelope": {
+        "causationid": "evt-0001",
+        "correlationid": "corr-0001",
+        "datacontenttype": "application/protobuf",
+        "dataschema": "type.googleapis.com/company.gateway.event.v1.ExternalInteractionReprocessed",
+        "id": "evt-0002",
+        "partitionkey": "c-42",
+        "source": "urn:dmpf:reference-gateway",
+        "specversion": "1.0",
+        "subject": "int-1001",
+        "time": "2026-09-02T12:00:00Z",
+        "traceparent": "00-0af7651916cd43dd8448eb211c80319c-b7ad6b7169203331-01",
+        "type": "com.company.gateway.external-interaction-reprocessed.v1"
+      },
+      "payload": {
+        "at": "2026-09-02T12:00:01Z",
+        "command_id": "",
+        "connector_id": "prt-1:production",
+        "interaction_id": "int-1002",
+        "normalization_revision": "3",
+        "operation": "submitEffect",
+        "outcome": "INTERACTION_OUTCOME_UNCORRELATED",
+        "outcome_changed": "true",
+        "partner_id": "prt-1",
+        "previous_outcome": "INTERACTION_OUTCOME_SCHEMA_MISMATCH",
+        "previous_revision": "2",
+        "terminal_command_affected": "false"
+      },
+      "payload_bytes_hex": "0a08696e742d3130303212107072742d313a70726f64756374696f6e1a057072742d31220c7375626d697445666665637430023803400348025001620608c19fe0d406",
+      "payload_hash": "e333168c921f66bbfdc19395c29c2dbe66b76b6a3fbda3016d4e6411decf4408"
+    }
+  ],
+  "discriminators": [
+    {
+      "name": "unknown-field",
+      "doc": "Bytes canônicos mais um campo de número 99 (varint 42) que o contrato não conhece: a desserialização o preserva (PTB-10) e o hash o cobre (ENV-17).",
+      "envelope": {
+        "causationid": "evt-0001",
+        "correlationid": "corr-0001",
+        "datacontenttype": "application/protobuf",
+        "dataschema": "type.googleapis.com/company.gateway.event.v1.ExternalInteractionReprocessed",
+        "id": "evt-2001",
+        "partitionkey": "c-42",
+        "source": "urn:dmpf:reference-gateway",
+        "specversion": "1.0",
+        "subject": "int-1001",
+        "time": "2026-09-02T12:00:00Z",
+        "traceparent": "00-0af7651916cd43dd8448eb211c80319c-b7ad6b7169203331-01",
+        "type": "com.company.gateway.external-interaction-reprocessed.v1"
+      },
+      "payload": {
+        "at": "2026-09-02T12:00:02Z",
+        "command_id": "",
+        "connector_id": "prt-2:production",
+        "interaction_id": "int-2001",
+        "normalization_revision": "2",
+        "operation": "queryAsset",
+        "outcome": "INTERACTION_OUTCOME_SCHEMA_MISMATCH",
+        "outcome_changed": "true",
+        "partner_id": "prt-2",
+        "previous_outcome": "INTERACTION_OUTCOME_UNCORRELATED",
+        "previous_revision": "1",
+        "terminal_command_affected": "false"
+      },
+      "payload_bytes_hex": "0a08696e742d3230303112107072742d323a70726f64756374696f6e1a057072742d32220a7175657279417373657430013802400248035001620608c29fe0d40698062a",
+      "payload_hash": "8f00b736d34058caf8387a165f2b30cbc2f07a169c14683e3319f4d26fd2ba6c"
+    },
+    {
+      "name": "non-canonical-field-order",
+      "doc": "Campos em ordem decrescente de número, o instante como sub-mensagem: decodifica no mesmo valor, mas o hash é o dos bytes transportados e difere do hash de uma reserialização (ENV-18). Campo repetido fica vazio e booleano fica falso, porque o codificador não canônico do kit cobre só strings, inteiros, enums e mensagens.",
+      "envelope": {
+        "causationid": "evt-0001",
+        "correlationid": "corr-0001",
+        "datacontenttype": "application/protobuf",
+        "dataschema": "type.googleapis.com/company.gateway.event.v1.ExternalInteractionReprocessed",
+        "id": "evt-2002",
+        "partitionkey": "c-42",
+        "source": "urn:dmpf:reference-gateway",
+        "specversion": "1.0",
+        "subject": "int-1001",
+        "time": "2026-09-02T12:00:00Z",
+        "traceparent": "00-0af7651916cd43dd8448eb211c80319c-b7ad6b7169203331-01",
+        "type": "com.company.gateway.external-interaction-reprocessed.v1"
+      },
+      "payload": {
+        "at": "2026-09-02T12:00:03.123456789Z",
+        "command_id": "prt-2:homologation:submitEffect:eff-4",
+        "connector_id": "prt-2:homologation",
+        "interaction_id": "int-2002",
+        "normalization_revision": "4",
+        "operation": "submitEffect",
+        "outcome": "INTERACTION_OUTCOME_NORMALIZED",
+        "outcome_changed": "false",
+        "partner_id": "prt-2",
+        "previous_outcome": "INTERACTION_OUTCOME_NORMALIZED",
+        "previous_revision": "3",
+        "terminal_command_affected": "false"
+      },
+      "payload_bytes_hex": "620b08c39fe0d40610959aef3a48014001380430032a257072742d323a686f6d6f6c6f676174696f6e3a7375626d69744566666563743a6566662d34220c7375626d69744566666563741a057072742d3212127072742d323a686f6d6f6c6f676174696f6e0a08696e742d32303032",
+      "payload_hash": "3cd52badfb3699e05d9f31e816c32c525eb1fc9c7dbcdb2b37a018af0b3c2a72"
+    }
+  ]
+}

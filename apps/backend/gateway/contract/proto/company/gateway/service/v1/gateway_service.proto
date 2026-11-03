@@ -28,6 +28,15 @@ service GatewayService {
   rpc FindExternalCommand(FindExternalCommandRequest) returns (FindExternalCommandResponse);
   rpc FindExternalCommandsByBusinessKey(FindExternalCommandsByBusinessKeyRequest) returns (FindExternalCommandsByBusinessKeyResponse);
   rpc FindExternalCommandsByStatus(FindExternalCommandsByStatusRequest) returns (FindExternalCommandsByStatusResponse);
+  // A backoffice operation: the raw payload of a concluded interaction is
+  // normalized again under a new revision, and no external command is resent.
+  rpc ReprocessInteraction(ReprocessInteractionRequest) returns (ReprocessInteractionResponse);
+  rpc LinkExternalReference(LinkExternalReferenceRequest) returns (LinkExternalReferenceResponse);
+  rpc FindExternalInteraction(FindExternalInteractionRequest) returns (FindExternalInteractionResponse);
+  rpc FindExternalInteractionByPartnerEvent(FindExternalInteractionByPartnerEventRequest) returns (FindExternalInteractionByPartnerEventResponse);
+  rpc FindExternalInteractionsByCommand(FindExternalInteractionsByCommandRequest) returns (FindExternalInteractionsByCommandResponse);
+  rpc FindExternalReference(FindExternalReferenceRequest) returns (FindExternalReferenceResponse);
+  rpc FindExternalReferencesBySubject(FindExternalReferencesBySubjectRequest) returns (FindExternalReferencesBySubjectResponse);
 }
 
 message Rejection {
@@ -416,6 +425,139 @@ message CommandProfile {
   int32 max_submissions = 13;
 }
 
+message ReprocessInteractionRequest {
+  string interaction_id = 1;
+  string justification = 2;
+}
+
+message ReprocessInteractionResponse {
+  oneof result {
+    ReprocessedInteraction reprocessed = 1;
+    Rejection rejection = 2;
+  }
+}
+
+message ReprocessedInteraction {
+  string interaction_id = 1;
+  int32 normalization_revision = 2;
+}
+
+message LinkExternalReferenceRequest {
+  string provider_id = 1;
+  ExternalSystem system = 2;
+  ReferenceType reference_type = 3;
+  // Exactly as the partner sent it; it is never normalized in place.
+  string reference = 4;
+  // Derived from the reference by trimming and upper-casing when empty.
+  string normalized_reference = 5;
+  string subject_type = 6;
+  string subject_id = 7;
+  int64 as_of = 8;
+  string observed_version = 9;
+}
+
+message LinkExternalReferenceResponse {
+  oneof result {
+    LinkedExternalReference linked = 1;
+    Rejection rejection = 2;
+  }
+}
+
+message LinkedExternalReference {
+  string reference_key = 1;
+}
+
+message FindExternalInteractionRequest {
+  string interaction_id = 1;
+}
+
+message FindExternalInteractionResponse {
+  ExternalInteraction interaction = 1;
+}
+
+message FindExternalInteractionByPartnerEventRequest {
+  string connector_id = 1;
+  string partner_event_id = 2;
+}
+
+// The first reception of the partner event; its duplicates name it in
+// duplicate_of.
+message FindExternalInteractionByPartnerEventResponse {
+  ExternalInteraction interaction = 1;
+}
+
+message FindExternalInteractionsByCommandRequest {
+  string command_id = 1;
+}
+
+message FindExternalInteractionsByCommandResponse {
+  repeated ExternalInteraction interactions = 1;
+}
+
+message FindExternalReferenceRequest {
+  string reference_key = 1;
+}
+
+message FindExternalReferenceResponse {
+  ExternalReference reference = 1;
+}
+
+message FindExternalReferencesBySubjectRequest {
+  string subject_type = 1;
+  string subject_id = 2;
+}
+
+message FindExternalReferencesBySubjectResponse {
+  repeated ExternalReference references = 1;
+}
+
+// An interaction with a partner. The raw payloads live in the object store:
+// the interaction keeps their key, version and SHA-256, never the bytes.
+message ExternalInteraction {
+  string interaction_id = 1;
+  string connector_id = 2;
+  string operation = 3;
+  InteractionDirection direction = 4;
+  InteractionSource source = 5;
+  string command_id = 6;
+  string content_type = 7;
+  // The step the dispatch applied, on the capture of a submission only.
+  Step captured_step = 8;
+  string partner_event_id = 9;
+  string business_date = 10;
+  string request_ref = 11;
+  string request_version_id = 12;
+  string request_hash = 13;
+  string response_ref = 14;
+  string response_version_id = 15;
+  string response_hash = 16;
+  string duplicate_of = 17;
+  InteractionStatus status = 18;
+  int32 normalization_revision = 19;
+  string reading_hash = 20;
+  // The finding on the command the conclusion recorded.
+  Finding finding = 21;
+  InteractionStatus previous_outcome = 22;
+  string previous_reading_hash = 23;
+  MismatchKind mismatch_kind = 24;
+  string mismatch_detail = 25;
+  string partner_declared_version = 26;
+  int64 received_at = 27;
+}
+
+message ExternalReference {
+  string reference_key = 1;
+  string provider_id = 2;
+  ExternalSystem system = 3;
+  ReferenceType reference_type = 4;
+  string reference = 5;
+  string normalized_reference = 6;
+  string subject_type = 7;
+  string subject_id = 8;
+  int64 as_of = 9;
+  string observed_version = 10;
+}
+
 enum Environment {
   ENVIRONMENT_UNSPECIFIED = 0;
   ENVIRONMENT_DEVELOPMENT = 1;
@@ -492,4 +634,75 @@ enum Resolution {
   RESOLUTION_CONFIRMED = 1;
   RESOLUTION_FINAL_FAILURE = 2;
   RESOLUTION_NOT_RECEIVED = 3;
+}
+
+enum InteractionDirection {
+  INTERACTION_DIRECTION_UNSPECIFIED = 0;
+  INTERACTION_DIRECTION_OUTBOUND = 1;
+  INTERACTION_DIRECTION_INBOUND = 2;
+}
+
+enum InteractionSource {
+  INTERACTION_SOURCE_UNSPECIFIED = 0;
+  INTERACTION_SOURCE_SUBMIT_RESPONSE = 1;
+  INTERACTION_SOURCE_STATE_QUERY = 2;
+  INTERACTION_SOURCE_CALLBACK = 3;
+  INTERACTION_SOURCE_FILE = 4;
+  INTERACTION_SOURCE_EXTERNAL_READ = 5;
+}
+
+enum InteractionStatus {
+  INTERACTION_STATUS_UNSPECIFIED = 0;
+  INTERACTION_STATUS_STORED = 1;
+  INTERACTION_STATUS_DUPLICATE = 2;
+  INTERACTION_STATUS_NORMALIZED = 3;
+  INTERACTION_STATUS_UNCORRELATED = 4;
+  INTERACTION_STATUS_SCHEMA_MISMATCH = 5;
+}
+
+// UNSPECIFIED is no finding: the reading said nothing on a command.
+enum Finding {
+  FINDING_UNSPECIFIED = 0;
+  FINDING_APPLIED = 1;
+  FINDING_REJECTED = 2;
+  FINDING_ABSENT = 3;
+  FINDING_PENDING = 4;
+  FINDING_INCONCLUSIVE = 5;
+}
+
+enum MismatchKind {
+  MISMATCH_KIND_UNSPECIFIED = 0;
+  MISMATCH_KIND_STRUCTURE = 1;
+  MISMATCH_KIND_MISSING_FIELD = 2;
+  MISMATCH_KIND_TYPE = 3;
+  MISMATCH_KIND_VERSION = 4;
+}
+
+enum Step {
+  STEP_UNSPECIFIED = 0;
+  STEP_CONFIRM = 1;
+  STEP_AWAIT = 2;
+  STEP_RETRY = 3;
+  STEP_FAIL = 4;
+  STEP_QUERY = 5;
+  STEP_RECONCILE = 6;
+  STEP_SUSPEND = 7;
+}
+
+enum ExternalSystem {
+  EXTERNAL_SYSTEM_UNSPECIFIED = 0;
+  EXTERNAL_SYSTEM_REGISTRY = 1;
+  EXTERNAL_SYSTEM_BOOKKEEPER = 2;
+  EXTERNAL_SYSTEM_ACQUIRER = 3;
+  EXTERNAL_SYSTEM_FUNDER = 4;
+  EXTERNAL_SYSTEM_DEPOSITORY = 5;
+}
+
+enum ReferenceType {
+  REFERENCE_TYPE_UNSPECIFIED = 0;
+  REFERENCE_TYPE_ASSET = 1;
+  REFERENCE_TYPE_EFFECT = 2;
+  REFERENCE_TYPE_AUTHORIZATION = 3;
+  REFERENCE_TYPE_COMMAND = 4;
+  REFERENCE_TYPE_SETTLEMENT = 5;
 }
