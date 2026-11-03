@@ -141,21 +141,24 @@ type RecordExternalInteraction struct {
 	At             kernel.Instant
 }
 
-// ConcludeInteraction carries the reading of the revision it concludes and, as
+// ConcludeInteraction carries the reading of the revision it concludes, with
+// the instant and the external reference its finding comes with, and, as
 // facts read in the unit of work, whether the linked command is terminal and
 // what the events take from the connector and the command (92 §2).
 type ConcludeInteraction struct {
-	Revision        int
-	Outcome         InteractionStatus
-	CommandID       IdempotencyKey
-	ReadingHash     string
-	Finding         Finding
-	Mismatch        Mismatch
-	CommandTerminal bool
-	PartnerID       PartnerID
-	Environment     Environment
-	AssetType       string
-	At              kernel.Instant
+	Revision           int
+	Outcome            InteractionStatus
+	CommandID          IdempotencyKey
+	ReadingHash        string
+	Finding            Finding
+	FindingAsOf        kernel.Instant
+	FindingExternalRef string
+	Mismatch           Mismatch
+	CommandTerminal    bool
+	PartnerID          PartnerID
+	Environment        Environment
+	AssetType          string
+	At                 kernel.Instant
 }
 
 type ReprocessInteraction struct {

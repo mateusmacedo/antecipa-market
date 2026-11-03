@@ -113,3 +113,43 @@ func TestLinkWithAnEmptyReferenceIsRefused(t *testing.T) {
 		t.Fatalf("snapshot = %+v, want nothing linked", s)
 	}
 }
+
+// A provider with a colon makes the key ambiguous: "p" with the reference
+// "x:registry:asset:y" and "p:registry:asset:x" with "y" compose the same key,
+// so the second is refused and the first, which holds the colon in its
+// reference, keeps its link.
+func TestLinkOfAProviderWithAColonIsRefusedBecauseItsKeyIsAmbiguous(t *testing.T) {
+	first := link()
+	first.ProviderID, first.Reference = "p", "x:registry:asset:y"
+	second := link()
+	second.ProviderID, second.Reference, second.SubjectID = "p:registry:asset:x", "y", "ast-2"
+	key := domain.ReferenceKeyOf(first.ProviderID, first.System, first.ReferenceType, first.Reference)
+	if other := domain.ReferenceKeyOf(second.ProviderID, second.System, second.ReferenceType, second.Reference); other != key {
+		t.Fatalf("ReferenceKeyOf() = %q and %q, want the same key for both", key, other)
+	}
+	r := domain.NewExternalReference(key)
+
+	_, rej := r.Link(first)
+	tb.RequireAccepted(t, rej)
+	before := r.Snapshot()
+
+	acc, rej := r.Link(second)
+
+	tb.RequireRejected(t, acc, rej, domain.CodeExternalReferenceProviderInvalid)
+	if after := r.Snapshot(); !before.Equal(after) || after.ProviderID != "p" || after.Reference != "x:registry:asset:y" {
+		t.Fatalf("snapshot = %+v, want the first link intact", after)
+	}
+}
+
+func TestLinkOfAProviderWithAColonIsRefusedOnANewReference(t *testing.T) {
+	cmd := link()
+	cmd.ProviderID = "prt-1:production"
+	r := domain.NewExternalReference(domain.ReferenceKeyOf(cmd.ProviderID, cmd.System, cmd.ReferenceType, cmd.Reference))
+
+	acc, rej := r.Link(cmd)
+
+	tb.RequireRejected(t, acc, rej, domain.CodeExternalReferenceProviderInvalid)
+	if s := r.Snapshot(); s.SubjectID != "" {
+		t.Fatalf("snapshot = %+v, want nothing linked", s)
+	}
+}

@@ -60,8 +60,8 @@ func (s Server) LinkExternalReference(ctx context.Context, req *servicev1.LinkEx
 		})
 }
 
-// linkOf bounds the form only: an empty reference is the domain's refusal,
-// with the code the spec declares.
+// linkOf bounds the form only: an empty reference and a provider with a colon
+// are the domain's refusals, with the codes the spec declares.
 func linkOf(req *servicev1.LinkExternalReferenceRequest) (application.LinkExternalReference, error) {
 	var none application.LinkExternalReference
 	system, err := enumFromTheWire("system", systemsFromTheWire, req.GetSystem())

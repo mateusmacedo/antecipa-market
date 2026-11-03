@@ -38,8 +38,9 @@ const (
 	CodeExternalInteractionJustificationMissing  kernel.Code = "receivables-gateway/external-interaction/justification-missing"
 	CodeExternalInteractionPayloadTooLarge       kernel.Code = "receivables-gateway/external-interaction/payload-too-large"
 
-	CodeExternalReferenceReferenceEmpty kernel.Code = "receivables-gateway/external-reference/reference-empty"
-	CodeExternalReferenceAlreadyLinked  kernel.Code = "receivables-gateway/external-reference/already-linked"
+	CodeExternalReferenceReferenceEmpty  kernel.Code = "receivables-gateway/external-reference/reference-empty"
+	CodeExternalReferenceProviderInvalid kernel.Code = "receivables-gateway/external-reference/provider-invalid"
+	CodeExternalReferenceAlreadyLinked   kernel.Code = "receivables-gateway/external-reference/already-linked"
 
 	CodeQueryAuthorizationConsentNotActive kernel.Code = "receivables-gateway/query-authorization/consent-not-active"
 	CodeConnectorCapabilityNotEnabled      kernel.Code = "receivables-gateway/connector/capability-not-enabled"

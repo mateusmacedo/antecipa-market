@@ -32,7 +32,8 @@ type SubjectID string
 
 // ReferenceKey is "<providerId>:<system>:<referenceType>:<reference>", the
 // natural identity of an ExternalReference: one reference of a provider names
-// one internal object.
+// one internal object. The provider holds no colon and the system and the type
+// are enumerations, so the rest of the key is the reference, colons included.
 type ReferenceKey string
 
 func ReferenceKeyOf(provider PartnerID, system ExternalSystem, kind ReferenceType, reference string) ReferenceKey {
@@ -124,6 +125,12 @@ func (r *ExternalReference) Link(cmd LinkExternalReference) (kernel.Accepted[Ref
 	return kernel.DecideOver(r, (*ExternalReference).clone, func(next *ExternalReference) (kernel.Accepted[ReferenceResponse], *kernel.Rejection) {
 		if cmd.Reference == "" {
 			return kernel.Refuse[ReferenceResponse](CodeExternalReferenceReferenceEmpty, "reference must not be empty")
+		}
+		// INVARIANT: a provider with a colon composes the key of another link,
+		// so it is refused before the loaded reference is looked at.
+		if strings.Contains(string(cmd.ProviderID), ":") {
+			return kernel.Refuse[ReferenceResponse](CodeExternalReferenceProviderInvalid, "the provider must not hold a colon",
+				kernel.Detail{Key: "providerId", Value: string(cmd.ProviderID)})
 		}
 		response := ReferenceResponse{ReferenceKey: next.key}
 		if next.subjectID == "" {

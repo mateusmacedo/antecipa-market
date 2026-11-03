@@ -27,6 +27,8 @@ type interactionState struct {
 	NormalizationRevision int           `json:"normalizationRevision"`
 	ReadingHash           string        `json:"readingHash"`
 	Finding               string        `json:"finding"`
+	FindingAsOf           int64         `json:"findingAsOf"`
+	FindingExternalRef    string        `json:"findingExternalRef"`
 	PreviousOutcome       string        `json:"previousOutcome"`
 	PreviousReadingHash   string        `json:"previousReadingHash"`
 	Mismatch              mismatchShape `json:"mismatch"`
@@ -125,6 +127,7 @@ func stateOfInteraction(s domain.ExternalInteractionSnapshot) interactionState {
 		CapturedStep: string(s.CapturedStep), BusinessDate: s.BusinessDate,
 		Request: rawShapeOf(s.Request), Response: rawShapeOf(s.Response), DuplicateOf: string(s.DuplicateOf),
 		Status: string(s.Status), NormalizationRevision: s.NormalizationRevision, ReadingHash: s.ReadingHash, Finding: string(s.Finding),
+		FindingAsOf: int64(s.FindingAsOf), FindingExternalRef: s.FindingExternalRef,
 		PreviousOutcome: string(s.PreviousOutcome), PreviousReadingHash: s.PreviousReadingHash,
 		Mismatch: mismatchShape{
 			Kind: string(s.Mismatch.Kind), Detail: s.Mismatch.Detail, PartnerDeclaredVersion: s.Mismatch.PartnerDeclaredVersion,
@@ -139,8 +142,8 @@ func interactionOf(state interactionState) domain.ExternalInteractionSnapshot {
 		ContentType: state.ContentType, CapturedStep: domain.Step(state.CapturedStep), BusinessDate: state.BusinessDate,
 		Request: rawPayloadOf(state.Request), Response: rawPayloadOf(state.Response), DuplicateOf: domain.InteractionID(state.DuplicateOf),
 		Status: domain.InteractionStatus(state.Status), NormalizationRevision: state.NormalizationRevision, ReadingHash: state.ReadingHash,
-		Finding: domain.Finding(state.Finding), PreviousOutcome: domain.InteractionStatus(state.PreviousOutcome),
-		PreviousReadingHash: state.PreviousReadingHash,
+		Finding: domain.Finding(state.Finding), FindingAsOf: kernel.Instant(state.FindingAsOf), FindingExternalRef: state.FindingExternalRef,
+		PreviousOutcome: domain.InteractionStatus(state.PreviousOutcome), PreviousReadingHash: state.PreviousReadingHash,
 		Mismatch: domain.Mismatch{
 			Kind: domain.MismatchKind(state.Mismatch.Kind), Detail: state.Mismatch.Detail, PartnerDeclaredVersion: state.Mismatch.PartnerDeclaredVersion,
 		},

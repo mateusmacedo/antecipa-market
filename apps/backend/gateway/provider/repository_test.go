@@ -71,7 +71,8 @@ func interaction(marker int) domain.ExternalInteractionSnapshot {
 		Request:     domain.RawPayload{Ref: "interactions/prt-1:production/int-1/request", VersionID: "vq", Hash: "hq"},
 		Response:    domain.RawPayload{Ref: "interactions/prt-1:production/int-1/response", VersionID: "vs", Hash: "hs"},
 		DuplicateOf: "int-0", Status: domain.InteractionSchemaMismatch, NormalizationRevision: marker, ReadingHash: "rh-2",
-		Finding: domain.FindingApplied, PreviousOutcome: domain.InteractionNormalized, PreviousReadingHash: "rh-1",
+		Finding: domain.FindingApplied, FindingAsOf: 1_755_432_000_000_000_001, FindingExternalRef: "ext-1",
+		PreviousOutcome: domain.InteractionNormalized, PreviousReadingHash: "rh-1",
 		Mismatch:   domain.Mismatch{Kind: domain.MismatchType, Detail: "amount is a string", PartnerDeclaredVersion: "2.1"},
 		ReceivedAt: 1_755_432_000_000_000_002,
 	}

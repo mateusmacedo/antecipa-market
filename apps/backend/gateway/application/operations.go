@@ -151,15 +151,19 @@ type ReadExternal struct {
 }
 
 // ConcludeInteraction names the revision it concludes, which derives its
-// command key: a reprocessing is concluded under a key of its own.
+// command key: a reprocessing is concluded under a key of its own. The
+// finding comes with the instant and the external reference of its reading,
+// which a redelivery observes again.
 type ConcludeInteraction struct {
-	InteractionID domain.InteractionID
-	Revision      int
-	Outcome       domain.InteractionStatus
-	CommandID     domain.IdempotencyKey
-	ReadingHash   string
-	Finding       domain.Finding
-	Mismatch      domain.Mismatch
+	InteractionID      domain.InteractionID
+	Revision           int
+	Outcome            domain.InteractionStatus
+	CommandID          domain.IdempotencyKey
+	ReadingHash        string
+	Finding            domain.Finding
+	FindingAsOf        port.Instant
+	FindingExternalRef string
+	Mismatch           domain.Mismatch
 }
 
 type ReprocessInteraction struct {

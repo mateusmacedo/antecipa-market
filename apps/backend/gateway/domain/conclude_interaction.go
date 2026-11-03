@@ -29,9 +29,9 @@ func (i *ExternalInteraction) Conclude(cmd ConcludeInteraction) (kernel.Accepted
 		if cmd.CommandID != "" {
 			next.commandID = cmd.CommandID
 		}
-		next.finding = FindingNone
+		next.finding, next.findingAsOf, next.findingExternalRef = FindingNone, 0, ""
 		if cmd.Outcome == InteractionNormalized && next.commandID != "" {
-			next.finding = cmd.Finding
+			next.finding, next.findingAsOf, next.findingExternalRef = cmd.Finding, cmd.FindingAsOf, cmd.FindingExternalRef
 		}
 		next.mismatch = Mismatch{}
 		if cmd.Outcome == InteractionSchemaMismatch {

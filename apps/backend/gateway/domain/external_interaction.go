@@ -87,6 +87,8 @@ type ExternalInteraction struct {
 	normalizationRevision int
 	readingHash           string
 	finding               Finding
+	findingAsOf           kernel.Instant
+	findingExternalRef    string
 	previousOutcome       InteractionStatus
 	previousReadingHash   string
 	mismatch              Mismatch
@@ -117,6 +119,8 @@ type ExternalInteractionSnapshot struct {
 	NormalizationRevision int
 	ReadingHash           string
 	Finding               Finding
+	FindingAsOf           kernel.Instant
+	FindingExternalRef    string
 	PreviousOutcome       InteractionStatus
 	PreviousReadingHash   string
 	Mismatch              Mismatch
@@ -142,6 +146,8 @@ func FromExternalInteractionSnapshot(s ExternalInteractionSnapshot) *ExternalInt
 		normalizationRevision: s.NormalizationRevision,
 		readingHash:           s.ReadingHash,
 		finding:               s.Finding,
+		findingAsOf:           s.FindingAsOf,
+		findingExternalRef:    s.FindingExternalRef,
 		previousOutcome:       s.PreviousOutcome,
 		previousReadingHash:   s.PreviousReadingHash,
 		mismatch:              s.Mismatch,
@@ -168,6 +174,8 @@ func (i *ExternalInteraction) Snapshot() ExternalInteractionSnapshot {
 		NormalizationRevision: i.normalizationRevision,
 		ReadingHash:           i.readingHash,
 		Finding:               i.finding,
+		FindingAsOf:           i.findingAsOf,
+		FindingExternalRef:    i.findingExternalRef,
 		PreviousOutcome:       i.previousOutcome,
 		PreviousReadingHash:   i.previousReadingHash,
 		Mismatch:              i.mismatch,

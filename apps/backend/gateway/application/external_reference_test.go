@@ -132,3 +132,21 @@ func TestFindExternalInteractionsByCommandListsTheInteractionsOfTheCommand(t *te
 		t.Fatalf("FindExternalInteraction(int-2) = %+v, %v", one, err)
 	}
 }
+
+// The key of a provider with a colon is ambiguous: it is refused, and the
+// link it would have reached keeps the reference with the colon it holds.
+func TestLinkExternalReferenceOfAProviderWithAColonIsRefused(t *testing.T) {
+	h := newHarness(t)
+	first := registryAsset("ast-1")
+	first.ProviderID, first.Reference = "p", "x:registry:asset:y"
+	must(h.service.LinkExternalReference(withExecution(t), first)).accepted(t)
+	second := registryAsset("ast-2")
+	second.ProviderID, second.Reference = "p:registry:asset:x", "y"
+
+	must(h.service.LinkExternalReference(withExecution(t), second)).refused(t, string(domain.CodeExternalReferenceProviderInvalid))
+
+	found, err := h.service.FindExternalReference(withExecution(t), "p:registry:asset:x:registry:asset:y")
+	if err != nil || found.ProviderID != "p" || found.Reference != "x:registry:asset:y" || found.SubjectID != "ast-1" {
+		t.Fatalf("FindExternalReference() = %+v, %v; want the first link intact", found, err)
+	}
+}

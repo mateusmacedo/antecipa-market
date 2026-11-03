@@ -43,8 +43,9 @@ func (s Service) ConsumeResponseCaptured(ctx context.Context, cmd ConsumeRespons
 // ConsumeInteractionStored normalizes the revision a message hands over
 // (decision 18). A message of a revision a reprocessing has passed is late and
 // acknowledged. A revision already concluded is not read again: the kernel
-// gets the finding the conclusion recorded, so a new normalizer never
-// contradicts what an earlier delivery observed.
+// gets the finding the conclusion recorded, with the instant and the external
+// reference of its reading, so a new normalizer never contradicts what an
+// earlier delivery observed.
 func (s Service) ConsumeInteractionStored(ctx context.Context, cmd ConsumeInteractionStored) (usecase.Disposition, error) {
 	if err := s.Authorize(ctx, cmd); err != nil {
 		return usecase.Classify(err), err
@@ -64,9 +65,9 @@ func (s Service) normalization(ctx context.Context, cmd ConsumeInteractionStored
 	if interaction.NormalizationRevision != cmd.Revision {
 		return usecase.R2, nil
 	}
-	disposition, seen := usecase.R2, sighting{sourceAt: interaction.ReceivedAt}
+	disposition := usecase.R2
 	if interaction.Status == domain.InteractionStored {
-		if disposition, seen, err = s.normalize(ctx, cmd, interaction); err != nil || disposition == usecase.R4 {
+		if disposition, err = s.normalize(ctx, cmd, interaction); err != nil || disposition == usecase.R4 {
 			return disposition, err
 		}
 		if interaction, err = s.handedOver(ctx, cmd.InteractionID); err != nil {
@@ -76,7 +77,7 @@ func (s Service) normalization(ctx context.Context, cmd ConsumeInteractionStored
 	if !interaction.Status.Concluded() || interaction.NormalizationRevision != cmd.Revision {
 		return disposition, nil
 	}
-	if err := s.observe(ctx, interaction, seen); err != nil {
+	if err := s.observe(ctx, interaction); err != nil {
 		return usecase.Classify(err), err
 	}
 	return disposition, nil
@@ -93,34 +94,21 @@ func (s Service) handedOver(ctx context.Context, id domain.InteractionID) (domai
 	return interaction, err
 }
 
-// sighting is what the observation of a reading carries besides the finding
-// the conclusion recorded; a revision already concluded has only the instant
-// the raw payload came in.
-type sighting struct {
-	externalRef string
-	sourceAt    port.Instant
-}
-
 // normalize reads the raw payload by the version recorded and concludes the
 // revision. The references are linked before the conclusion: each link is
 // idempotent on its own key, and once the revision is concluded no
 // redelivery reads the payload again to find them.
-func (s Service) normalize(ctx context.Context, cmd ConsumeInteractionStored, interaction domain.ExternalInteractionSnapshot) (usecase.Disposition, sighting, error) {
-	seen := sighting{sourceAt: interaction.ReceivedAt}
+func (s Service) normalize(ctx context.Context, cmd ConsumeInteractionStored, interaction domain.ExternalInteractionSnapshot) (usecase.Disposition, error) {
 	reading, err := s.read(ctx, interaction)
 	if err != nil {
-		return usecase.Classify(err), seen, err
+		return usecase.Classify(err), err
 	}
-	if reading.AsOf != 0 {
-		seen.sourceAt = reading.AsOf
-	}
-	seen.externalRef = reading.ExternalRef
 	conclusion, err := s.conclusionOf(ctx, interaction, reading)
 	if err != nil {
-		return usecase.Classify(err), seen, err
+		return usecase.Classify(err), err
 	}
 	if err := s.linkReferences(ctx, interaction.ID, reading.References); err != nil {
-		return usecase.Classify(err), seen, err
+		return usecase.Classify(err), err
 	}
 	disposition, err := s.receive(ctx, normalizationInboxOf, cmd.Receipt, NormalizationConsumer, func(ctx context.Context, x executor) (string, error) {
 		outcome, err := s.conclude(ctx, x, conclusion)
@@ -129,7 +117,7 @@ func (s Service) normalize(ctx context.Context, cmd ConsumeInteractionStored, in
 		}
 		return concluded(outcome)
 	})
-	return disposition, seen, err
+	return disposition, err
 }
 
 // concluded keeps the refusal of a revision a concurrent delivery concluded
@@ -207,13 +195,12 @@ func (s Service) conclusionOf(ctx context.Context, interaction domain.ExternalIn
 			return conclusion, nil
 		}
 		conclusion.Outcome, conclusion.Mismatch = domain.InteractionNormalized, domain.Mismatch{}
-		conclusion.ReadingHash, conclusion.Finding = reading.ReadingHash, findingOf(reading.Finding)
-		return conclusion, nil
+		return conclusion.found(reading), nil
 	}
 	if reading.Outcome != domain.InteractionNormalized {
 		return conclusion, nil
 	}
-	conclusion.ReadingHash, conclusion.Finding = reading.ReadingHash, findingOf(reading.Finding)
+	conclusion = conclusion.found(reading)
 	if reading.CommandKey == "" {
 		return conclusion, nil
 	}
@@ -233,6 +220,14 @@ func (s Service) conclusionOf(ctx context.Context, interaction domain.ExternalIn
 		return conclusion, usecase.NewFailure(usecase.Unexpected, false,
 			fmt.Errorf("%w: %d commands under the outbound key of the reading", ErrAttemptWithoutCommand, len(commands)))
 	}
+}
+
+// found records the finding of a normalized reading with the instant and the
+// external reference it comes with.
+func (c ConcludeInteraction) found(reading ports.Reading) ConcludeInteraction {
+	c.ReadingHash, c.Finding = reading.ReadingHash, findingOf(reading.Finding)
+	c.FindingAsOf, c.FindingExternalRef = reading.AsOf, reading.ExternalRef
+	return c
 }
 
 // capturedSubmission is the first revision of the response the dispatch
@@ -264,11 +259,14 @@ func (s Service) linkReferences(ctx context.Context, id domain.InteractionID, re
 }
 
 // observe hands the finding the conclusion recorded to the kernel, after its
-// commit (decision 18). The observation id carries the revision, so a
-// reprocessing is a new observation and a redelivery a duplicate. A conflict
-// or a saturation leaves the command as it is: the kernel's ledger and metric
-// keep it, and here it is a warning, never a failure of the delivery.
-func (s Service) observe(ctx context.Context, interaction domain.ExternalInteractionSnapshot, seen sighting) error {
+// commit (decision 18). The observation is rebuilt from the interaction alone,
+// so a redelivery after a crash before the Resolve observes the same instant
+// and external reference the reading had. The observation id carries the
+// revision, so a reprocessing is a new observation and a redelivery a
+// duplicate. A conflict or a saturation leaves the command as it is: the
+// kernel's ledger and metric keep it, and here it is a warning, never a
+// failure of the delivery.
+func (s Service) observe(ctx context.Context, interaction domain.ExternalInteractionSnapshot) error {
 	source, observable := observationSourceOf(interaction.Source)
 	if !observable || interaction.Status != domain.InteractionNormalized || interaction.Finding == domain.FindingNone ||
 		interaction.CommandID == "" || capturedSubmission(interaction) {
@@ -287,8 +285,8 @@ func (s Service) observe(ctx context.Context, interaction domain.ExternalInterac
 		UoW:    s.UoW,
 		Ledger: ledgerOf,
 		Observation: port.Observation{
-			Key: cycle.Key, Finding: externalFinding(interaction.Finding), SourceAt: seen.sourceAt,
-			Provider: string(interaction.ConnectorKey), ExternalRef: seen.externalRef, ID: ObservationIDOf(interaction),
+			Key: cycle.Key, Finding: externalFinding(interaction.Finding), SourceAt: sourceAtOf(interaction),
+			Provider: string(interaction.ConnectorKey), ExternalRef: interaction.FindingExternalRef, ID: ObservationIDOf(interaction),
 		},
 		Profile:         cycle.Profile,
 		QueryAvailable:  cycle.QueryAvailable,
@@ -310,6 +308,15 @@ func (s Service) observe(ctx context.Context, interaction domain.ExternalInterac
 			slog.String("result", observed.Result.String()))
 	}
 	return nil
+}
+
+// sourceAtOf is the instant of the reading the finding comes from, or the
+// instant the raw payload came in when the reading states none.
+func sourceAtOf(interaction domain.ExternalInteractionSnapshot) port.Instant {
+	if interaction.FindingAsOf != 0 {
+		return interaction.FindingAsOf
+	}
+	return interaction.ReceivedAt
 }
 
 // ObservationIDOf is the id the kernel's ledger keeps for the observation of

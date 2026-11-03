@@ -171,6 +171,44 @@ func TestConcludeKeepsAFindingOnlyOnANormalizedReadingOfACommand(t *testing.T) {
 	}
 }
 
+// Decision 18: the finding keeps the instant and the external reference of
+// its reading, so a redelivery observes what the first delivery would have.
+func TestConcludeKeepsTheInstantAndTheExternalReferenceOfTheFinding(t *testing.T) {
+	i := recorded(t, callback())
+	cmd := conclusion(domain.InteractionNormalized)
+	cmd.CommandID, cmd.ReadingHash, cmd.Finding = commandKey, "rh-1", domain.FindingApplied
+	cmd.FindingAsOf, cmd.FindingExternalRef = at-second, "ext-9"
+
+	concluded(t, i, cmd)
+
+	if s := i.Snapshot(); s.FindingAsOf != at-second || s.FindingExternalRef != "ext-9" {
+		t.Fatalf("snapshot = %+v, want the instant and the external reference of the finding", s)
+	}
+}
+
+func TestConcludeKeepsNoInstantNorExternalReferenceWithoutAFinding(t *testing.T) {
+	cases := map[string]struct {
+		outcome domain.InteractionStatus
+		command domain.IdempotencyKey
+	}{
+		"normalized without command": {domain.InteractionNormalized, ""},
+		"uncorrelated":               {domain.InteractionUncorrelated, commandKey},
+	}
+	for name, c := range cases {
+		t.Run(name, func(t *testing.T) {
+			i := recorded(t, callback())
+			cmd := conclusion(c.outcome)
+			cmd.CommandID, cmd.Finding, cmd.FindingAsOf, cmd.FindingExternalRef = c.command, domain.FindingApplied, at-second, "ext-9"
+
+			concluded(t, i, cmd)
+
+			if s := i.Snapshot(); s.FindingAsOf != 0 || s.FindingExternalRef != "" {
+				t.Fatalf("snapshot = %+v, want no instant nor external reference without a finding", s)
+			}
+		})
+	}
+}
+
 func TestConcludeSchemaMismatchAnnouncesItSelfContained(t *testing.T) {
 	i := recorded(t, callback())
 	cmd := conclusion(domain.InteractionSchemaMismatch)

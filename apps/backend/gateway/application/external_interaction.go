@@ -101,8 +101,8 @@ func (s Service) conclude(ctx context.Context, x executor, cmd ConcludeInteracti
 		Input:     cmd,
 		Fingerprint: usecase.NewFingerprint(OperationConcludeInteraction).
 			String(string(cmd.InteractionID)).Int(int64(cmd.Revision)).String(string(cmd.Outcome)).String(string(cmd.CommandID)).
-			String(cmd.ReadingHash).String(string(cmd.Finding)).String(string(cmd.Mismatch.Kind)).String(cmd.Mismatch.Detail).
-			String(cmd.Mismatch.PartnerDeclaredVersion),
+			String(cmd.ReadingHash).String(string(cmd.Finding)).Int(int64(cmd.FindingAsOf)).String(cmd.FindingExternalRef).
+			String(string(cmd.Mismatch.Kind)).String(cmd.Mismatch.Detail).String(cmd.Mismatch.PartnerDeclaredVersion),
 		Codec: interactionCodec,
 		Run: func(ctx context.Context, res Resources, identity usecase.Identity) (usecase.Outcome[domain.InteractionResponse], error) {
 			facts, err := conclusionFactsOf(ctx, res, cmd)
@@ -114,7 +114,7 @@ func (s Service) conclude(ctx context.Context, x executor, cmd ConcludeInteracti
 				func(i *domain.ExternalInteraction) (kernel.Accepted[domain.InteractionResponse], *kernel.Rejection) {
 					return i.Conclude(domain.ConcludeInteraction{
 						Revision: cmd.Revision, Outcome: cmd.Outcome, CommandID: cmd.CommandID, ReadingHash: cmd.ReadingHash, Finding: cmd.Finding,
-						Mismatch: cmd.Mismatch, CommandTerminal: facts.terminal, PartnerID: facts.partner, Environment: facts.environment,
+						FindingAsOf: cmd.FindingAsOf, FindingExternalRef: cmd.FindingExternalRef, Mismatch: cmd.Mismatch, CommandTerminal: facts.terminal, PartnerID: facts.partner, Environment: facts.environment,
 						AssetType: facts.assetType, At: identity.OccurredAt,
 					})
 				})

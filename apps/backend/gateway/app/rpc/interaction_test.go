@@ -157,6 +157,26 @@ func linkRequest(subject string) *servicev1.LinkExternalReferenceRequest {
 	}
 }
 
+// The edge bounds the form of provider_id only; the colon that makes the key
+// ambiguous is the domain's refusal, with the code the spec declares.
+func TestLinkExternalReferenceOfAProviderWithAColonIsTheDomainsRefusal(t *testing.T) {
+	h := newHarness(t)
+	first := linkRequest("ast-1")
+	first.ProviderId, first.Reference = "p", "x:registry:asset:y"
+	var linked servicev1.LinkExternalReferenceResponse
+	if err := h.invoke(withKey(t), "LinkExternalReference", first, &linked); err != nil || linked.GetLinked().GetReferenceKey() != "p:registry:asset:x:registry:asset:y" {
+		t.Fatalf("LinkExternalReference(reference with colons) = %v, %v", &linked, err)
+	}
+
+	second := linkRequest("ast-2")
+	second.ProviderId, second.Reference = "p:registry:asset:x", "y"
+	var refused servicev1.LinkExternalReferenceResponse
+	err := h.invoke(withKey(t), "LinkExternalReference", second, &refused)
+	if err != nil || refused.GetRejection().GetCode() != string(domain.CodeExternalReferenceProviderInvalid) {
+		t.Fatalf("LinkExternalReference(provider with colons) = %v, %v; want the provider-invalid refusal", &refused, err)
+	}
+}
+
 func TestLinkExternalReferenceAndItsQueriesOnTheWire(t *testing.T) {
 	h := newHarness(t)
 

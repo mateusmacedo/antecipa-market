@@ -186,6 +186,35 @@ type harness struct {
 	commands     *identities[domain.IdempotencyKey]
 	interactions *identities[domain.InteractionID]
 	references   *identities[domain.ReferenceKey]
+	ledger       *observationLog
+}
+
+// observationLog keeps each observation the ledger of a unit of work recorded,
+// as the context handed it over.
+type observationLog struct {
+	mu       sync.Mutex
+	recorded []port.Observation
+}
+
+func (l *observationLog) observations() []port.Observation {
+	l.mu.Lock()
+	defer l.mu.Unlock()
+	return slices.Clone(l.recorded)
+}
+
+type observingLedger struct {
+	port.AttemptLedger
+	log *observationLog
+}
+
+func (l observingLedger) Observe(ctx context.Context, o port.Observation, now port.Instant) (port.Observed, error) {
+	observed, err := l.AttemptLedger.Observe(ctx, o, now)
+	if err == nil && observed.Result == port.ObserveRecorded {
+		l.log.mu.Lock()
+		l.log.recorded = append(l.log.recorded, o)
+		l.log.mu.Unlock()
+	}
+	return observed, err
 }
 
 type option func(*setup)
@@ -208,7 +237,7 @@ func newHarness(t *testing.T, options ...option) *harness {
 	h := &harness{
 		fakes: fakes, store: fakes.Store, clock: &clock{at: testOccurred},
 		profiles: &identities[domain.ProfileKey]{}, commands: &identities[domain.IdempotencyKey]{},
-		interactions: &identities[domain.InteractionID]{}, references: &identities[domain.ReferenceKey]{},
+		interactions: &identities[domain.InteractionID]{}, references: &identities[domain.ReferenceKey]{}, ledger: &observationLog{},
 	}
 	authorizations := &identities[domain.ConsentID]{}
 
@@ -230,7 +259,7 @@ func newHarness(t *testing.T, options ...option) *harness {
 			},
 			ProfilesByConnector: profilesByConnector{ids: h.profiles, load: profiles.Load},
 			CommandsBySeries:    commandsBy{ids: h.commands, load: commands.Load},
-			Ledger:              tx.Memory().AttemptLedger(),
+			Ledger:              observingLedger{AttemptLedger: tx.Memory().AttemptLedger(), log: h.ledger},
 			Outbox:              serviceskit.FaultyOutbox(tx.Outbox(), cfg.faults),
 			Commands:            tx.CommandInbox(application.CommandConsumer),
 			Inbox:               tx.Inbox("gateway"),

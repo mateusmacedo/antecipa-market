@@ -45,6 +45,7 @@ func TestRejectionCodesKeepTheirWireValues(t *testing.T) {
 		domain.CodeExternalInteractionPayloadTooLarge:         "receivables-gateway/external-interaction/payload-too-large",
 		domain.CodeExternalReferenceReferenceEmpty:            "receivables-gateway/external-reference/reference-empty",
 		domain.CodeExternalReferenceAlreadyLinked:             "receivables-gateway/external-reference/already-linked",
+		domain.CodeExternalReferenceProviderInvalid:           "receivables-gateway/external-reference/provider-invalid",
 		domain.CodeQueryAuthorizationConsentNotActive:         "receivables-gateway/query-authorization/consent-not-active",
 		domain.CodeConnectorCapabilityNotEnabled:              "receivables-gateway/connector/capability-not-enabled",
 	}

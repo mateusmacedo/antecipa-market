@@ -1,6 +1,7 @@
 package application_test
 
 import (
+	"context"
 	"errors"
 	"slices"
 	"testing"
@@ -172,6 +173,55 @@ func TestARedeliveryAfterAnotherNormalizerObservesNothingContradictory(t *testin
 	}
 	if i := d.interaction(t, "cb-1"); i.Finding != domain.FindingPending {
 		t.Fatalf("interaction = %+v, want the finding of its conclusion", i)
+	}
+}
+
+// commandsDown is the read of the command a process that crashed after the
+// commit of the conclusion never got to.
+type commandsDown struct{}
+
+var errCrashed = errors.New("the process crashed after the commit of the conclusion")
+
+func (commandsDown) Load(context.Context, domain.IdempotencyKey) (domain.ExternalCommandSnapshot, port.Version, error) {
+	return domain.ExternalCommandSnapshot{}, 0, errCrashed
+}
+
+// Decision 18: a crash between the commit of the conclusion and the Resolve
+// leaves the observation to the redelivery, which rebuilds it from what the
+// conclusion recorded, with the instant and the external reference the reading
+// had, not the instant the raw payload came in.
+func TestARedeliveryAfterACrashBeforeResolveObservesTheReadingAsItWas(t *testing.T) {
+	d, command := acknowledged(t)
+	stored := d.callback(t, "cb-1", partnersim.Notice{Key: port.OutboundKey(command.OutboundKey), Finding: port.FindingApplied, ExternalRef: "ext-9"})
+	readAt := testOccurred - 7*second
+	d.partners.normalizeWith(func(source domain.InteractionSource, exchange ports.RawExchange) (ports.Reading, error) {
+		reading, err := partnersim.Normalizer{}.Normalize(source, exchange)
+		reading.AsOf = readAt
+		return reading, err
+	})
+	reader := d.service.CommandReader
+	d.service.CommandReader = commandsDown{}
+	if _, err := d.normalize(t, "n-1", stored); !errors.Is(err, errCrashed) {
+		t.Fatalf("ConsumeInteractionStored(n-1) = %v, want the crash before the Resolve", err)
+	}
+	d.service.CommandReader = reader
+	if i := d.interaction(t, "cb-1"); i.Status != domain.InteractionNormalized || i.Finding != domain.FindingApplied {
+		t.Fatalf("interaction = %+v, want the conclusion committed before the crash", i)
+	}
+
+	d.normalized(t, "n-1", stored, usecase.R2)
+
+	var got []port.Observation
+	for _, o := range d.ledger.observations() {
+		if o.ID == "cb-1.r1" {
+			got = append(got, o)
+		}
+	}
+	if len(got) != 1 || got[0].SourceAt != readAt || got[0].ExternalRef != "ext-9" || got[0].Finding != port.FindingApplied {
+		t.Fatalf("observations of cb-1.r1 = %+v, want one with the instant %d and the external reference of the reading", got, readAt)
+	}
+	if s := d.command(t, testCommand); s.Status != domain.StatusConfirmed || s.ExternalReferenceID != "ext-9" {
+		t.Fatalf("command = %+v, want confirmed with the partner's reference", s)
 	}
 }
 
