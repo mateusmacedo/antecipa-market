@@ -47,6 +47,15 @@ func TestTwoDrainsPublishEveryDispatchIntentExactlyOnce(t *testing.T) {
 	tb.Require(t, dist.RelayVector(t, h, records))
 }
 
+// RES-43 over this context's database: the process killed with its partner
+// call in flight leaves the attempt begun, the sweep closes it as UnknownSent
+// and applies its step once, and neither the sweep nor a redelivery resends.
+func TestACrashBetweenBeginAndFinishIsSweptAsUnknownSentAndNeverResent(t *testing.T) {
+	h := dist.NewPostgres(t, distkit.Spec)
+
+	tb.Require(t, dist.CrashBetweenBeginAndFinishVector(t, h))
+}
+
 // The message context is required: the outbox claim drains only records whose
 // metadata names correlation, causation and traceparent.
 func enqueue(t *testing.T, pool *pgxpool.Pool, n int) {

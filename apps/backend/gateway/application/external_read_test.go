@@ -174,6 +174,26 @@ func TestAReadOfReceivablesQueryPortFailsClosedWithoutAnActiveAuthorization(t *t
 	}
 }
 
+// L611-613: discoverSchedule reads the query port too, so once the
+// authorization is revoked it fails closed before any call.
+func TestDiscoverScheduleFailsClosedOnceTheAuthorizationIsRevoked(t *testing.T) {
+	r := newReading(t, 1<<12)
+	r.enabled(t, "discoverSchedule", false, 1)
+	queryAsset, discover := simulatorOperation("queryAsset"), simulatorOperation("discoverSchedule")
+	queryAsset.MaxPayloadBytes, discover.MaxPayloadBytes = 1<<12, 1<<12
+	must(r.service.DeclareCapabilityProfile(withExecution(t), application.DeclareCapabilityProfile{
+		ConnectorKey: testConnector, Version: 4, EffectiveFrom: testOccurred,
+		Operations: []domain.OperationCapability{simulatorOperation("submitEffect"), queryAsset, discover},
+	})).accepted(t)
+	must(r.service.RevokeQueryAuthorization(withExecution(t), application.RevokeQueryAuthorization{ConsentID: "cns-1", EffectiveAt: testOccurred})).accepted(t)
+	read := readAsset(position)
+	read.Operation = "discoverSchedule"
+
+	must(r.service.ReadExternal(withKey(t, "read-1"), read)).refused(t, string(domain.CodeQueryAuthorizationConsentNotActive))
+
+	r.nothingRead(t, "read-1")
+}
+
 // L614-616: a read the profile does not support, or of an operation the
 // connector has suspended or never had enabled, is refused before any call.
 func TestAReadOfAnOperationNotEnabledIsRefusedWithoutCallingThePartner(t *testing.T) {

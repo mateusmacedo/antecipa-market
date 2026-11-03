@@ -15,16 +15,21 @@ import (
 // Spec runs the relay of this context from its own configuration. The harness
 // creates one topic and collects from it, so it carries the dispatch intents
 // the vector enqueues; the other channels go to the topics the test creates.
+// The kernel's crashing submit runs over this context's database, under the
+// runtime role and the grants this context declares.
 var Spec = dist.Spec{
 	Name: "gateway",
 	Pool: appkit.PoolOptions,
-	Roles: map[dist.Role]dist.RoleFunc{dist.RoleRelay: dist.Relay(func(ctx context.Context, getenv func(string) string) error {
-		cfg, err := app.FromEnv(app.RoleRelay, oneTopic(getenv))
-		if err != nil {
-			return err
-		}
-		return app.Run(ctx, cfg)
-	})},
+	Roles: map[dist.Role]dist.RoleFunc{
+		dist.RoleRelay: dist.Relay(func(ctx context.Context, getenv func(string) string) error {
+			cfg, err := app.FromEnv(app.RoleRelay, oneTopic(getenv))
+			if err != nil {
+				return err
+			}
+			return app.Run(ctx, cfg)
+		}),
+		dist.RoleExternalCrash: dist.SubmitThatNeverReturns,
+	},
 }
 
 // EnvEventsTopic and EnvEventsDLQ name the topic of gateway.events, and the

@@ -1,9 +1,11 @@
 package application_test
 
 import (
+	"fmt"
 	"testing"
 
 	usecase "github.com/mateusmacedo/dmpf/libs/backend/go/application"
+	port "github.com/mateusmacedo/dmpf/libs/backend/go/ports"
 
 	"github.com/mateusmacedo/antecipa-market/apps/backend/gateway/appkit/partnersim"
 	"github.com/mateusmacedo/antecipa-market/apps/backend/gateway/application"
@@ -160,5 +162,39 @@ func TestTheSweepQueriesOnlyACommandDueWithAStateQuery(t *testing.T) {
 
 	if report := d.sweep(t); report.StateQueried != 0 || report.Failed != 0 {
 		t.Fatalf("sweep of a command sent to the reconciliation = %+v, want no query", report)
+	}
+}
+
+// The gateway's side of L691-693: every state query that answers inconclusive
+// keeps the command in unknown_outcome with the next query scheduled, until
+// the ceiling of the profile sends it to the reconciliation. Reading a partial
+// confirmation as inconclusive is the adapter's, which comes with the
+// providers.
+func TestInconclusiveQueriesKeepTheCommandWaitingUntilTheCeilingSendsItToTheReconciliation(t *testing.T) {
+	const maxQueries = 3
+	answers := make([]partnersim.Answer, maxQueries)
+	for i := range answers {
+		answers[i] = partnersim.Answer{Finding: "inconclusive"}
+	}
+	d, _ := unknown(t, answers...)
+
+	for round := 1; round <= maxQueries; round++ {
+		d.clock.advance(61 * second)
+		if report := d.sweep(t); report.StateQueried != 1 || report.Failed != 0 {
+			t.Fatalf("sweep %d = %+v, want one state query", round, report)
+		}
+		handovers := d.handovers()
+		d.normalized(t, port.MessageID(fmt.Sprintf("n-q-%d", round)), handovers[len(handovers)-1], usecase.R1D1)
+
+		got := d.command(t, testCommand)
+		if got.Status != domain.StatusUnknownOutcome || got.Submissions != 1 {
+			t.Fatalf("command after query %d = %+v, want unknown_outcome, never resent", round, got)
+		}
+		if reconcile := round == maxQueries; got.ReconciliationRequired != reconcile || (got.NextQueryAt == 0) == !reconcile {
+			t.Fatalf("command after query %d of %d = %+v, want the reconciliation only at the ceiling", round, maxQueries, got)
+		}
+	}
+	if report := d.sweep(t); report.StateQueried != 0 {
+		t.Fatalf("sweep past the ceiling = %+v, want no query", report)
 	}
 }
