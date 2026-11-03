@@ -50,10 +50,10 @@ func TestThePartnerChannelCarriesTheTypeTheMapperWrites(t *testing.T) {
 
 	ch := PartnerChannel(cfg)
 
-	if got := channel.EventTypeOf(ch); got != "com.company.partner.partner-registered.v1" {
-		t.Fatalf("EventTypeOf() = %q, want the type the outbox mapper writes", got)
+	if got := channel.WireTypes(ch); len(got) != 1 || got[0] != "com.company.partner.partner-registered.v1" {
+		t.Fatalf("WireTypes() = %v, want the type the outbox mapper writes", got)
 	}
-	if ch.ContractRef != "company/partner/event/v1/partner_registered.proto#PartnerRegistered" || ch.Containment != cfg.PartnerDLQ {
+	if ch.Events[0].ContractRef != "company/partner/event/v1/partner_registered.proto#PartnerRegistered" || ch.Containment != cfg.PartnerDLQ {
 		t.Fatalf("channel = %+v, want the PartnerRegistered contract and the DLQ as containment", ch)
 	}
 }
