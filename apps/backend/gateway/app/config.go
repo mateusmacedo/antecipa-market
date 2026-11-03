@@ -113,6 +113,10 @@ type Config struct {
 	ConsumerTimeout time.Duration
 
 	Policies kernelapp.Policies
+
+	// RawStore is the bucket the api and the consumer keep the raw payloads in;
+	// the relay never opens it.
+	RawStore RawStoreEnv
 }
 
 // Defaults are the values a role runs with when the environment says nothing.
@@ -145,6 +149,7 @@ func Defaults(role Role) Config {
 			PurgeInterval:        15 * time.Minute,
 			PurgeBatch:           1000,
 		},
+		RawStore: RawStoreEnv{ReadyAttempts: 5, ReadyInterval: 2 * time.Second},
 	}
 }
 
@@ -173,6 +178,9 @@ func FromEnv(role Role, lookup func(string) string) (Config, error) {
 	cfg.PartnerDLQ = lookup(envPartnerDLQ)
 	cfg.PartnerSource = envconfig.OrDefault(lookup(envPartnerSource), cfg.PartnerSource)
 	cfg.Group = lookup(envGroup)
+	if cfg.RawStore, err = readRawStoreEnv(lookup, cfg.RawStore); err != nil {
+		return Config{}, err
+	}
 
 	flags := []struct {
 		variable string
@@ -225,6 +233,11 @@ func (c Config) Validate() error {
 	if window := PartnerChannel(c).Redelivery.UpperBound; c.Role == RoleConsumer && c.Policies.InboxRetention < window {
 		return fmt.Errorf("%w: InboxRetention %v is below the redelivery window %v (INB-14)", ErrInvalidPolicy, c.Policies.InboxRetention, window)
 	}
+	if c.opensRawStore() {
+		if err := c.RawStore.Validate(); err != nil {
+			return err
+		}
+	}
 	return c.Relay.Validate()
 }
 
@@ -239,7 +252,8 @@ func (c Config) requirements() ([]string, error) {
 	switch c.Role {
 	case RoleAPI:
 		require(envMigrateDSN, c.Migrate && c.MigrateDSN == "")
-		return append(missing, c.API.Missing()...), nil
+		missing = append(missing, c.API.Missing()...)
+		return append(missing, c.RawStore.Missing()...), nil
 	case RoleRelay:
 		require(envBrokers, len(c.Brokers) == 0)
 		require(envGatewayTopic, c.GatewayTopic == "")
@@ -257,11 +271,16 @@ func (c Config) requirements() ([]string, error) {
 		require(envPartnerTopic, c.PartnerTopic == "")
 		require(envPartnerDLQ, c.PartnerDLQ == "")
 		require(envGroup, c.Group == "")
-		return append(missing, c.KafkaAuth.Missing(c.KafkaInsecure)...), nil
+		missing = append(missing, c.KafkaAuth.Missing(c.KafkaInsecure)...)
+		return append(missing, c.RawStore.Missing()...), nil
 	default:
 		return nil, fmt.Errorf("%w: %q (use one of %s)", ErrUnknownRole, c.Role, roleList())
 	}
 }
+
+// opensRawStore tells the roles that keep raw payloads: the relay only
+// publishes the outbox.
+func (c Config) opensRawStore() bool { return c.Role == RoleAPI || c.Role == RoleConsumer }
 
 func roleList() string {
 	names := make([]string, len(Roles))

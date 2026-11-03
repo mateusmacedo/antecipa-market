@@ -21,6 +21,7 @@ import (
 
 	"github.com/mateusmacedo/antecipa-market/apps/backend/gateway/app/rpc"
 	"github.com/mateusmacedo/antecipa-market/apps/backend/gateway/application"
+	gatewayports "github.com/mateusmacedo/antecipa-market/apps/backend/gateway/ports"
 	"github.com/mateusmacedo/antecipa-market/apps/backend/gateway/provider"
 )
 
@@ -35,7 +36,11 @@ func Run(ctx context.Context, cfg Config) error {
 func RunWith(ctx context.Context, cfg Config, rt *otelboot.Runtime) error {
 	switch cfg.Role {
 	case RoleAPI:
-		return serve.ServeAPI(ctx, rt, apiRole(cfg), api(cfg, rt))
+		raw, err := OpenRawStore(ctx, cfg.RawStore, rt)
+		if err != nil {
+			return err
+		}
+		return serve.ServeAPI(ctx, rt, apiRole(cfg), api(cfg, rt, raw))
 	case RoleRelay:
 		return runRelay(ctx, rt, cfg)
 	case RoleConsumer:
@@ -118,13 +123,17 @@ func DerivedKeyPolicy() application.DerivedKeyPolicy {
 
 func digest(canonical []byte) ports.Fingerprint { return sha256.Sum256(canonical) }
 
-func NewGatewayService(pool *pgxpool.Pool, rt *otelboot.Runtime, cfg Config) (application.Service, error) {
+// NewGatewayService is the service of the runtime: no partner adapter is
+// configured until the providers are mapped, so every way to a partner fails
+// closed as an unavailable dependency (decision 21).
+func NewGatewayService(pool *pgxpool.Pool, rt *otelboot.Runtime, cfg Config, raw gatewayports.RawStore) (application.Service, error) {
 	policy, err := kernelapp.IdempotencyPolicy(cfg.Policies.IdempotencyWait, cfg.Policies.IdempotencyRetention)
 	if err != nil {
 		return application.Service{}, err
 	}
 	service := NewService(pool, idclock.SystemClock{}, idclock.NewMessageIDs("gateway"), Waits{Message: cfg.Wait, Command: cfg.Policies.IdempotencyWait})
 	service.Idempotency = policy
+	service.Raw, service.Partners = raw, gatewayports.NoPartnerAdapters{}
 	service.Instrumentation = obsusecase.New(rt, audit.NewLogSink(rt.LoggerProvider()), ports.SubjectOf, usecase.CategoryOf)
 	return service, nil
 }
@@ -132,7 +141,7 @@ func NewGatewayService(pool *pgxpool.Pool, rt *otelboot.Runtime, cfg Config) (ap
 // grants is what the consumer waits for besides the kernel's tables.
 func grants() []postgres.Grant { return provider.Grants }
 
-func api(cfg Config, rt *otelboot.Runtime) serve.API {
+func api(cfg Config, rt *otelboot.Runtime, raw gatewayports.RawStore) serve.API {
 	return serve.API{
 		Desc: &rpc.ServiceDesc, Commands: rpc.Commands(), Schema: provider.Schema, Grants: provider.Grants, Uniques: provider.Uniques,
 		CommandConsumer: application.CommandConsumer,
@@ -140,7 +149,7 @@ func api(cfg Config, rt *otelboot.Runtime) serve.API {
 		// ResolveUnknownOutcome records its observation there.
 		ExternalCommands: true,
 		Register: func(server *grpc.Server, pool *pgxpool.Pool) error {
-			service, err := NewGatewayService(pool, rt, cfg)
+			service, err := NewGatewayService(pool, rt, cfg, raw)
 			if err != nil {
 				return err
 			}

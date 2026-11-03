@@ -2,6 +2,8 @@
 # gateway.dispatch, gateway.interactions e gateway.normalizations, o consumer lê
 # partner.events. Os opt-outs de TLS nascem
 # desligados e o transporte gRPC não tem default: o overlay declara um dos dois modos.
+# O bucket do bruto (S3_BUCKET, AWS_REGION e, com KMS, S3_KMS_KEY_ARN) é do
+# ambiente; as credenciais vêm da cadeia padrão do SDK (a identidade do pod).
 apiVersion: v1
 kind: ConfigMap
 metadata:
@@ -20,6 +22,8 @@ data:
   KAFKA_PARTNER_DLQ: partner.events.dlq
   KAFKA_GROUP: gateway
   KAFKA_INSECURE: 'false'
+  S3_INSECURE: 'false'
+  S3_PATH_STYLE: 'false'
   OTEL_SERVICE_NAME: gateway
   OTEL_EXPORTER_OTLP_PROTOCOL: grpc
   OTEL_EXPORTER_OTLP_ENDPOINT: http://otel-collector:4317

@@ -38,6 +38,7 @@ func serveAPI(t *testing.T) *grpc.ClientConn {
 	cfg := Defaults(RoleAPI)
 	cfg.DSN = dsn
 	cfg.API.GRPCAddr, cfg.API.GRPCInsecure = obstest.UnusedLoopbackAddr(t), true
+	cfg.RawStore = testRawStoreEnv(t, createBucket(t, lockedBucket))
 	runtime, err := otelboot.Start(context.Background(), otelboot.Config{
 		Disabled:   true,
 		Propagator: propagation.TraceContext{},

@@ -170,6 +170,9 @@ func PartnerBoundary(cfg Config, authenticated bool) kernelapp.Boundary {
 func runConsumer(ctx context.Context, cfg Config, rt *otelboot.Runtime) error {
 	ctx, abort := context.WithCancelCause(ctx)
 	defer abort(nil)
+	if _, err := OpenRawStore(ctx, cfg.RawStore, rt); err != nil {
+		return err
+	}
 	pool, err := postgres.NewPool(ctx, cfg.DSN, rt.Tracer(), postgres.WithMeterProvider(rt.MeterProvider()))
 	if err != nil {
 		return err

@@ -1,6 +1,9 @@
 package app
 
 import (
+	"context"
+	"time"
+
 	"github.com/jackc/pgx/v5/pgxpool"
 	port "github.com/mateusmacedo/dmpf/libs/backend/go/ports"
 	"github.com/mateusmacedo/dmpf/libs/backend/go/postgres"
@@ -17,4 +20,9 @@ func LockWaitAsConflict(u port.UnitOfWork[application.Resources]) port.UnitOfWor
 // edits, so a guarded race runs under the same decorator production does.
 func UnitOfWork(pool *pgxpool.Pool, bind func(*postgres.Tx) application.Resources) port.UnitOfWork[application.Resources] {
 	return unitOfWork(pool, bind)
+}
+
+// AwaitReady is the bounded wait for the bucket a role does at startup.
+func AwaitReady(ctx context.Context, store interface{ Ready(context.Context) error }, attempts int, interval time.Duration) error {
+	return awaitReady(ctx, store, attempts, interval)
 }

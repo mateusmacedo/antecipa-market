@@ -12,8 +12,10 @@ import (
 	"github.com/mateusmacedo/antecipa-market/apps/backend/gateway/app"
 )
 
+// lookup answers the pairs over the bucket that every role keeping raw
+// payloads needs since decision 21; a pair given overrides it.
 func lookup(pairs ...string) func(string) string {
-	values := map[string]string{}
+	values := map[string]string{"S3_BUCKET": "gateway-interactions", "AWS_REGION": "us-east-1"}
 	for i := 0; i+1 < len(pairs); i += 2 {
 		values[pairs[i]] = pairs[i+1]
 	}
@@ -45,6 +47,7 @@ func TestTheAPIRequiresATransportPolicy(t *testing.T) {
 func TestTheAPIRefusesANonPositivePurgeBatchUnderItsOwnSentinel(t *testing.T) {
 	cfg := app.Defaults(app.RoleAPI)
 	cfg.DSN, cfg.API.GRPCInsecure = "postgres://x", true
+	cfg.RawStore.Bucket, cfg.RawStore.Region = "gateway-interactions", "us-east-1"
 	cfg.Policies.PurgeBatch = 0
 
 	err := cfg.Validate()
@@ -109,6 +112,7 @@ func TestTheConsumerNamesEachMissingVariable(t *testing.T) {
 func TestTheConsumerKeepsItsInboxForTheWholeRedeliveryWindow(t *testing.T) {
 	cfg := app.Defaults(app.RoleConsumer)
 	cfg.DSN, cfg.Brokers, cfg.KafkaInsecure, cfg.PartnerTopic, cfg.PartnerDLQ, cfg.Group = "postgres://x", []string{"b:9092"}, true, "p", "p.dlq", "g"
+	cfg.RawStore.Bucket, cfg.RawStore.Region = "gateway-interactions", "us-east-1"
 	cfg.Policies.InboxRetention = time.Hour
 
 	if err := cfg.Validate(); !errors.Is(err, app.ErrInvalidPolicy) || !strings.Contains(err.Error(), "INB-14") {

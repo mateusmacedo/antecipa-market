@@ -67,6 +67,18 @@
       "versions": ">=1.36.12 <2",
       "entrypoints": ["google.golang.org/protobuf/proto"],
       "capability": "wire.codec"
+    },
+    {
+      "package": "github.com/aws/aws-sdk-go-v2",
+      "versions": ">=1.47.5 <2",
+      "entrypoints": ["github.com/aws/aws-sdk-go-v2/aws"],
+      "capability": "io.storage"
+    },
+    {
+      "package": "github.com/aws/aws-sdk-go-v2/config",
+      "versions": ">=1.33.13 <2",
+      "entrypoints": ["."],
+      "capability": "io.storage"
     }
   ],
   "exceptions": []

@@ -105,6 +105,11 @@ type Service struct {
 	DerivedKeys                  DerivedKeyPolicy
 	Consumer                     string
 
+	// Raw keeps the raw payloads and Partners resolves the partner adapters;
+	// the runtime has none until the providers are mapped (decision 21).
+	Raw      ports.RawStore
+	Partners ports.PartnerAdapters
+
 	Instrumentation port.Instrumentation
 }
 

@@ -1,7 +1,9 @@
 # Processos do gateway na topologia local (ADR-044): api gRPC, que aplica o
 # schema (MIGRATE=true), relay da própria outbox, com os canais gateway.events,
 # gateway.dispatch, gateway.interactions e gateway.normalizations, e consumer de
-# partner.events.
+# partner.events. O api e o consumer guardam o bruto das interações no S3 do
+# floci; o bucket (versionado, com Object Lock e sem retenção padrão) é
+# provisionado fora do contexto, e sem ele os dois papéis recusam a partida.
 x-image: &image
   build:
     context: ../../../..
@@ -11,6 +13,15 @@ x-image: &image
 x-env: &env
   OTEL_SERVICE_NAME: gateway
   PG_DSN: postgres://gateway:${GATEWAY_PG_PASSWORD:-gateway-local}@postgres:5432/gateway?sslmode=disable
+
+x-s3: &s3
+  S3_ENDPOINT: http://floci:4566
+  S3_BUCKET: ${GATEWAY_S3_BUCKET:-gateway-interactions}
+  AWS_REGION: us-east-1
+  AWS_ACCESS_KEY_ID: ${FLOCI_ACCESS_KEY_ID:-test}
+  AWS_SECRET_ACCESS_KEY: ${FLOCI_SECRET_ACCESS_KEY:-test}
+  S3_INSECURE: 'true'
+  S3_PATH_STYLE: 'true'
 
 x-kafka: &kafka
   KAFKA_SASL_USERNAME: gateway
@@ -25,7 +36,7 @@ services:
       service: dmpf-grpc-api
     stop_grace_period: 30s
     environment:
-      <<: *env
+      <<: [*env, *s3]
       OTEL_RESOURCE_ATTRIBUTES: ${OTEL_RESOURCE_ATTRIBUTES:-service.version=local,deployment.environment.name=local},service.instance.id=gateway-api,dmpf.process.role=api
       PG_MIGRATE_DSN: postgres://gateway_migrator:${GATEWAY_PG_MIGRATOR_PASSWORD:-gateway-migrator-local}@postgres:5432/gateway?sslmode=disable
       GRPC_TLS_CERT_FILE: /pki/dmpf-gateway-api.crt
@@ -35,6 +46,8 @@ services:
         condition: service_completed_successfully
       postgres-init:
         condition: service_completed_successfully
+      floci:
+        condition: service_healthy
       otel-collector:
         condition: service_started
 
@@ -70,12 +83,14 @@ services:
     stop_grace_period: 30s
     command: ['--role', 'consumer']
     environment:
-      <<: [*env, *kafka]
+      <<: [*env, *kafka, *s3]
       OTEL_RESOURCE_ATTRIBUTES: ${OTEL_RESOURCE_ATTRIBUTES:-service.version=local,deployment.environment.name=local},service.instance.id=gateway-consumer,dmpf.process.role=consumer
       KAFKA_PARTNER_TOPIC: ${KAFKA_PARTNER_TOPIC:-partner.events}
       KAFKA_PARTNER_DLQ: ${KAFKA_PARTNER_DLQ:-partner.events.dlq}
     depends_on:
       redpanda-init:
         condition: service_completed_successfully
+      floci:
+        condition: service_healthy
       dmpf-gateway-api:
         condition: service_started

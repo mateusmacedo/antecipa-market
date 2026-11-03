@@ -75,7 +75,13 @@ relay, `KAFKA_BROKERS`, `KAFKA_GATEWAY_TOPIC`, `KAFKA_GATEWAY_DLQ`,
 `KAFKA_GROUP`; no
 consumer, que lê `CapabilityEnabled` e `CapabilitySuspended` de
 `partner.events`, `KAFKA_BROKERS`, `KAFKA_PARTNER_TOPIC`, `KAFKA_PARTNER_DLQ` e
-`KAFKA_GROUP`. No `api`, os timeouts de sessão `lock_timeout` (2s) e
+`KAFKA_GROUP`. No `api` e no `consumer`, a loja do bruto das interações:
+`S3_BUCKET` e `AWS_REGION` (obrigatórias), `S3_ENDPOINT` (opcional; sem ele, o
+S3 da AWS), `S3_KMS_KEY_ARN` (opcional; sem ele, a cifra é `AES256`) e os
+opt-outs de desenvolvimento `S3_INSECURE` e `S3_PATH_STYLE`, para o emulador; as
+credenciais vêm da cadeia padrão do SDK. Antes de servir, o papel confere o
+bucket pelo `Ready` do provider, com até 5 tentativas a cada 2s, e recusa a
+partida se ele não for versionado, com Object Lock e sem retenção padrão. No `api`, os timeouts de sessão `lock_timeout` (2s) e
 `idle_in_transaction_session_timeout` (30s) entram no `PG_DSN` quando o ambiente
 não os define, porque o papel lê a série sob a guarda do ADR-067. As variáveis `GRPC_*` formam a seção `API` da `Config`, lida por
 `kernelgrpc.ReadAPIEnv`; o `requirements()` compõe o `Missing()` dela com o do
