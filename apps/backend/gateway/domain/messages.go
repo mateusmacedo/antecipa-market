@@ -76,6 +76,10 @@ type RequestResend struct {
 	At kernel.Instant
 }
 
+type HoldDispatch struct {
+	At kernel.Instant
+}
+
 // ExpireAmbiguity carries the partner of the connector, read in the unit of
 // work, so the escalation event is self-contained (92 §2).
 type ExpireAmbiguity struct {

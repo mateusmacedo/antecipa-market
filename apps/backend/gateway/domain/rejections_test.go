@@ -18,6 +18,7 @@ func TestRejectionCodesKeepTheirWireValues(t *testing.T) {
 		domain.CodeCapabilityProfileExternalProfileInvalid:    "receivables-gateway/capability-profile/external-profile-invalid",
 		domain.CodeCapabilityProfileAmbiguityDeadlineMissing:  "receivables-gateway/capability-profile/ambiguity-deadline-missing",
 		domain.CodeCapabilityProfileQueryIntervalMissing:      "receivables-gateway/capability-profile/query-interval-missing",
+		domain.CodeCapabilityProfileMaxSubmissionsMissing:     "receivables-gateway/capability-profile/max-submissions-missing",
 		domain.CodeExternalCommandCapabilityNotEnabled:        "receivables-gateway/external-command/capability-not-enabled",
 		domain.CodeExternalCommandOperationSuspended:          "receivables-gateway/external-command/operation-suspended",
 		domain.CodeExternalCommandBusinessKeyEmpty:            "receivables-gateway/external-command/business-key-empty",
@@ -33,6 +34,9 @@ func TestRejectionCodesKeepTheirWireValues(t *testing.T) {
 		domain.CodeExternalCommandQueryEvidenceMissing:        "receivables-gateway/external-command/query-evidence-missing",
 		domain.CodeExternalCommandPartialResultNotSupported:   "receivables-gateway/external-command/partial-result-not-supported",
 		domain.CodeExternalCommandAlreadySent:                 "receivables-gateway/external-command/already-sent",
+		domain.CodeExternalCommandNotHoldable:                 "receivables-gateway/external-command/not-holdable",
+		domain.CodeExternalCommandObservationConflict:         "receivables-gateway/external-command/observation-conflict",
+		domain.CodeExternalCommandObservationSaturated:        "receivables-gateway/external-command/observation-saturated",
 	}
 	for code, wire := range codes {
 		if string(code) != wire {
@@ -44,5 +48,14 @@ func TestRejectionCodesKeepTheirWireValues(t *testing.T) {
 func TestAlreadyDeclaredIsTheStaticRejectionOfTheProfileIdentity(t *testing.T) {
 	if got := domain.RejectCapabilityProfileAlreadyDeclared.Code(); got != domain.CodeCapabilityProfileAlreadyDeclared {
 		t.Fatalf("Code() = %q, want %q", got, domain.CodeCapabilityProfileAlreadyDeclared)
+	}
+}
+
+func TestTheObservationRefusalsAreTheStaticRejectionsOfTheLedger(t *testing.T) {
+	if got := domain.RejectExternalCommandObservationConflict.Code(); got != domain.CodeExternalCommandObservationConflict {
+		t.Fatalf("Code() = %q, want %q", got, domain.CodeExternalCommandObservationConflict)
+	}
+	if got := domain.RejectExternalCommandObservationSaturated.Code(); got != domain.CodeExternalCommandObservationSaturated {
+		t.Fatalf("Code() = %q, want %q", got, domain.CodeExternalCommandObservationSaturated)
 	}
 }

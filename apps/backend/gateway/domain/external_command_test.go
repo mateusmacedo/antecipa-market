@@ -56,6 +56,7 @@ func TestCommandProfileOfTakesTheMostRestrictiveStateQuery(t *testing.T) {
 	want := domain.CommandProfile{
 		ProfileVersion: 2, StateQuerySupported: true, IdempotencySupport: domain.IdempotencyKeyHeader, Efficacy: domain.EfficacyByObservation,
 		Quiescence: int64(30 * second), MaxQueries: 5, KeyAlphabet: "0123456789abcdef", KeyMaxLength: 64, QueryInterval: 60, AmbiguityDeadline: 3600,
+		MaxSubmissions: 3,
 	}
 	if got != want {
 		t.Fatalf("CommandProfileOf() = %+v, want %+v", got, want)
@@ -397,5 +398,128 @@ func TestExternalCommandSnapshotRoundTrips(t *testing.T) {
 	s := c.Snapshot()
 	if !domain.FromExternalCommandSnapshot(s).Snapshot().Equal(s) {
 		t.Fatalf("round trip lost state: %+v", s)
+	}
+}
+
+func TestHoldDispatchMarksTheFirstHoldAndKeepsTheStatus(t *testing.T) {
+	for name, c := range map[string]*domain.ExternalCommand{"created": newCreated(t), "retryable failure": retryable(t)} {
+		t.Run(name, func(t *testing.T) {
+			status := c.Snapshot().Status
+
+			first, rej := c.HoldDispatch(domain.HoldDispatch{At: at + 5*second})
+			tb.RequireAccepted(t, rej)
+			requireNoEvents(t, first)
+			again, rej := c.HoldDispatch(domain.HoldDispatch{At: at + 9*second})
+			tb.RequireAccepted(t, rej)
+			requireNoEvents(t, again)
+
+			if s := c.Snapshot(); s.DispatchHeldSince != at+5*second || s.Status != status || s.WaitingSince != 0 {
+				t.Fatalf("Snapshot() = %+v, want held since the first hold, status %s and no wait", s, status)
+			}
+			if got := first.Response(); got.IdempotencyKey != commandKey {
+				t.Fatalf("Response() = %+v", got)
+			}
+		})
+	}
+}
+
+func TestHoldDispatchRejectsACommandWithSomethingInFlight(t *testing.T) {
+	for name, c := range map[string]*domain.ExternalCommand{
+		"acknowledged":    waiting(t, domain.StepAwait, domain.CategoryNone),
+		"unknown outcome": waiting(t, domain.StepQuery, domain.CategoryUnknownSent),
+		"confirmed":       waiting(t, domain.StepConfirm, domain.CategoryNone),
+	} {
+		t.Run(name, func(t *testing.T) {
+			before := c.Snapshot()
+
+			acc, rej := c.HoldDispatch(domain.HoldDispatch{At: at + second})
+
+			tb.RequireRejected(t, acc, rej, domain.CodeExternalCommandNotHoldable)
+			requireCommandUnchanged(t, before, c)
+		})
+	}
+}
+
+func TestAHeldCommandStaysCancellable(t *testing.T) {
+	c := newCreated(t)
+	if _, rej := c.HoldDispatch(domain.HoldDispatch{At: at + second}); rej != nil {
+		t.Fatalf("HoldDispatch rejected: %v", rej)
+	}
+
+	_, rej := c.Cancel(domain.CancelExternalCommand{At: at + 2*second})
+
+	tb.RequireAccepted(t, rej)
+	if s := c.Snapshot(); s.Status != domain.StatusCancelled {
+		t.Fatalf("Snapshot() = %+v, want cancelled", s)
+	}
+}
+
+func TestRequestResendReleasesAHeldDispatchWithTheSameIntent(t *testing.T) {
+	c := newCreated(t)
+	if _, rej := c.HoldDispatch(domain.HoldDispatch{At: at + second}); rej != nil {
+		t.Fatalf("HoldDispatch rejected: %v", rej)
+	}
+
+	acc, rej := c.RequestResend(domain.RequestResend{At: at + 2*second})
+
+	tb.RequireAccepted(t, rej)
+	want := domain.ExternalCommandDispatchRequested{IdempotencyKey: commandKey, ConnectorKey: connectorKey, Operation: "submitEffect", At: at + 2*second}
+	if events := acc.Events(); len(events) != 1 || events[0] != want {
+		t.Fatalf("Events() = %+v, want only %+v", events, want)
+	}
+	if s := c.Snapshot(); s.DispatchHeldSince != 0 || s.Status != domain.StatusCreated || s.OutboundKey != "0a1b2c" {
+		t.Fatalf("Snapshot() = %+v, want the hold cleared and the command still created", s)
+	}
+}
+
+// A resend held by a suspension waits for the suspension, not for the
+// quiescence it already served before the hold.
+func TestRequestResendReleasesAHeldResendWithoutTheQuiescence(t *testing.T) {
+	c := retryable(t)
+	if _, rej := c.RequestResend(domain.RequestResend{At: c.Snapshot().ResendAfter}); rej != nil {
+		t.Fatalf("RequestResend rejected: %v", rej)
+	}
+	if _, rej := c.HoldDispatch(domain.HoldDispatch{At: at + 40*second}); rej != nil {
+		t.Fatalf("HoldDispatch rejected: %v", rej)
+	}
+
+	acc, rej := c.RequestResend(domain.RequestResend{At: at + 41*second})
+
+	tb.RequireAccepted(t, rej)
+	if len(acc.Events()) != 1 {
+		t.Fatalf("Events() = %+v, want the dispatch intent", acc.Events())
+	}
+	if s := c.Snapshot(); s.DispatchHeldSince != 0 || s.ResendAfter != 0 || s.Status != domain.StatusRetryableFailure {
+		t.Fatalf("Snapshot() = %+v", s)
+	}
+}
+
+func TestRequestResendRejectsACreatedCommandThatIsNotHeld(t *testing.T) {
+	c := newCreated(t)
+	before := c.Snapshot()
+
+	acc, rej := c.RequestResend(domain.RequestResend{At: at + second})
+
+	tb.RequireRejected(t, acc, rej, domain.CodeExternalCommandNotResendable)
+	requireCommandUnchanged(t, before, c)
+}
+
+func TestKeepsSeriesOpenReleasesTheSeriesOfASpentResendBudget(t *testing.T) {
+	tests := []struct {
+		status   domain.CommandStatus
+		category domain.FailureCategory
+		want     bool
+	}{
+		{domain.StatusFinalFailure, domain.CategoryResendBudgetExhausted, true},
+		{domain.StatusFinalFailure, domain.CategoryFinalValidation, true},
+		{domain.StatusCancelled, domain.CategoryNone, true},
+		{domain.StatusFinalFailure, domain.CategoryFinalBusiness, false},
+		{domain.StatusRetryableFailure, domain.CategoryNone, false},
+	}
+	for _, tc := range tests {
+		other := domain.ExternalCommandSnapshot{PayloadVersion: 1, Status: tc.status, FailureCategory: tc.category}
+		if got := other.KeepsSeriesOpen(2); got != tc.want {
+			t.Errorf("KeepsSeriesOpen() of %s/%s = %v, want %v", tc.status, tc.category, got, tc.want)
+		}
 	}
 }

@@ -108,3 +108,11 @@ func TestTheMapperRefusesAnEventWithoutContract(t *testing.T) {
 		t.Fatalf("Map(stray) = %v, want ErrUnmappedEvent", err)
 	}
 }
+
+func TestTheMapperPublishesTheSpentResendBudgetUnderItsWireValue(t *testing.T) {
+	got, err := provider.Mapper{}.Map(domain.ExternalCommandFailed{CommandHeader: header(), Category: domain.CategoryResendBudgetExhausted, At: mapped})
+
+	if err != nil || got.Message.(*eventv1.ExternalCommandFailed).GetCategory() != eventv1.FailureCategory_FAILURE_CATEGORY_RESEND_BUDGET_EXHAUSTED {
+		t.Fatalf("Map() = %v, %v; want FAILURE_CATEGORY_RESEND_BUDGET_EXHAUSTED", got.Message, err)
+	}
+}

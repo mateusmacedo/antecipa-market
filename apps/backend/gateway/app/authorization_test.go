@@ -33,6 +33,7 @@ var internalSteps = map[application.Operation]port.Permission{
 	application.ExpireAmbiguity{}:            "gateway:sweep-external-commands",
 	application.ConsumeCapabilityEnabled{}:   "gateway:consume",
 	application.ConsumeCapabilitySuspended{}: "gateway:consume",
+	application.HoldDispatch{}:               "gateway:consume",
 }
 
 func TestEveryEdgeOperationDeclaresItsPermission(t *testing.T) {

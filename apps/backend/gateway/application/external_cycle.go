@@ -1,6 +1,8 @@
 package application
 
 import (
+	"strconv"
+
 	usecase "github.com/mateusmacedo/dmpf/libs/backend/go/application"
 	port "github.com/mateusmacedo/dmpf/libs/backend/go/ports"
 
@@ -68,11 +70,20 @@ func externalEfficacy(e domain.Efficacy) port.Efficacy {
 	}
 }
 
+// invalidProfiles also refuses maxQueries at the ledger's cap: the row of an
+// attempt would saturate before the query budget ran out (decision 13).
 func invalidProfiles(operations []domain.OperationCapability) []domain.InvalidProfile {
 	var invalid []domain.InvalidProfile
 	for _, o := range operations {
 		if err := usecase.ValidateExternalProfile(declaredProfile(o)); err != nil {
 			invalid = append(invalid, domain.InvalidProfile{Operation: o.Operation, Reason: err.Error()})
+			continue
+		}
+		if o.MaxQueries >= port.MaxAttemptEntries {
+			invalid = append(invalid, domain.InvalidProfile{
+				Operation: o.Operation,
+				Reason:    "maxQueries " + strconv.Itoa(o.MaxQueries) + " reaches the ledger cap of " + strconv.Itoa(port.MaxAttemptEntries),
+			})
 		}
 	}
 	return invalid

@@ -36,7 +36,7 @@ func operation() domain.OperationCapability {
 		MaxItemsPerRequest: 10, MaxRequestsPerMinute: 60, MaxPayloadBytes: 4096, BusinessCalendar: "BR-B3", CutoffTime: "17:00",
 		ProcessingWindow: "08:00-18:00", EncumbranceCoverage: domain.CoveragePartial, PositionFreshnessSLA: 300,
 		Efficacy: domain.EfficacyByObservation, Quiescence: 30_000_000_000, AuthoritativeAbsence: true, MaxQueries: 5,
-		KeyAlphabet: "0123456789abcdef", KeyMaxLength: 32, QueryInterval: 60, AmbiguityDeadline: 3600,
+		KeyAlphabet: "0123456789abcdef", KeyMaxLength: 32, QueryInterval: 60, AmbiguityDeadline: 3600, MaxSubmissions: 3,
 	}
 }
 
@@ -60,7 +60,7 @@ func command(marker int) domain.ExternalCommandSnapshot {
 		Profile: domain.CommandProfileOf(2, operation(), true), OutboundKey: "out-" + strconv.Itoa(marker),
 		Status: domain.StatusUnknownOutcome, FailureCategory: domain.CategoryUnknownSent, CreatedAt: 1, Submissions: 2, LastSubmittedAt: 3,
 		WaitingSince: 4, AcknowledgedNotified: true, UnknownNotified: true, NextQueryAt: 5, ResendAfter: 6, ReconciliationRequired: true,
-		AmbiguityExpiredAt: 7, ConfirmedAt: 8, ExternalReferenceID: "ext-1",
+		AmbiguityExpiredAt: 7, ConfirmedAt: 8, ExternalReferenceID: "ext-1", DispatchHeldSince: 9,
 	}
 }
 

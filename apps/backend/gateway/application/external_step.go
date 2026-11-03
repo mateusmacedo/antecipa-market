@@ -111,7 +111,7 @@ func (s Service) resolve(ctx context.Context, res Resources, identity usecase.Id
 	}
 	resolution, _ := port.IdempotencyKeyFrom(ctx)
 	cycle := cycleOf(snapshot)
-	_, err = usecase.Resolve(ctx, usecase.ExternalResolution[Resources]{
+	observed, err := usecase.Resolve(ctx, usecase.ExternalResolution[Resources]{
 		UoW:    joined{res: res},
 		Ledger: ledgerOf,
 		Observation: port.Observation{
@@ -130,6 +130,14 @@ func (s Service) resolve(ctx context.Context, res Resources, identity usecase.Id
 	})
 	if err != nil {
 		return none, err
+	}
+	// WHY: a refusal, never an error, so the unit of work commits the conflict
+	// the ledger recorded and the inbox replays the same refusal (decision 13).
+	switch observed.Result {
+	case port.ObserveConflict:
+		return usecase.Rejected[domain.CommandStatusResponse](domain.RejectExternalCommandObservationConflict), nil
+	case port.ObserveSaturated:
+		return usecase.Rejected[domain.CommandStatusResponse](domain.RejectExternalCommandObservationSaturated), nil
 	}
 	after, _, err := res.ExternalCommands.Load(ctx, cmd.IdempotencyKey)
 	if err != nil {

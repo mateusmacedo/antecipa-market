@@ -100,6 +100,8 @@ func failureCategory(c domain.FailureCategory) eventv1.FailureCategory {
 		return eventv1.FailureCategory_FAILURE_CATEGORY_UNKNOWN_AMBIGUOUS
 	case domain.CategorySchemaMismatch:
 		return eventv1.FailureCategory_FAILURE_CATEGORY_SCHEMA_MISMATCH
+	case domain.CategoryResendBudgetExhausted:
+		return eventv1.FailureCategory_FAILURE_CATEGORY_RESEND_BUDGET_EXHAUSTED
 	default:
 		return eventv1.FailureCategory_FAILURE_CATEGORY_UNSPECIFIED
 	}

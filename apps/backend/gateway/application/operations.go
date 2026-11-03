@@ -78,6 +78,13 @@ type RequestResend struct {
 	IdempotencyKey domain.IdempotencyKey
 }
 
+// HoldDispatch names the message of the dispatch intent it holds: the command
+// key derives from it, so a redelivery of the same intent replays.
+type HoldDispatch struct {
+	IdempotencyKey domain.IdempotencyKey
+	MessageID      port.MessageID
+}
+
 type ExpireAmbiguity struct {
 	IdempotencyKey domain.IdempotencyKey
 }
@@ -150,6 +157,7 @@ func (RevokeQueryAuthorization) isOperation()             {}
 func (CreateExternalCommand) isOperation()                {}
 func (CancelExternalCommand) isOperation()                {}
 func (RequestResend) isOperation()                        {}
+func (HoldDispatch) isOperation()                         {}
 func (ExpireAmbiguity) isOperation()                      {}
 func (ResolveUnknownOutcome) isOperation()                {}
 func (SweepExternalCommands) isOperation()                {}

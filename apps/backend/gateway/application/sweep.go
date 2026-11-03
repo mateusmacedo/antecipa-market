@@ -54,6 +54,11 @@ func (s Service) sweep(ctx context.Context, now kernel.Instant) (SweepReport, er
 		outcome, err := s.RequestResend(sweepKey(ctx, "resend", c.Key, c.ResendAfter), RequestResend{IdempotencyKey: c.Key})
 		report.count(outcome, err, &report.ResendRequested)
 	}
+	created, err := s.commandsIn(ctx, domain.StatusCreated)
+	if err != nil {
+		return report, err
+	}
+	s.release(ctx, append(created, retryable...), &report)
 	for _, status := range []domain.CommandStatus{domain.StatusAcknowledged, domain.StatusUnknownOutcome} {
 		waiting, err := s.commandsIn(ctx, status)
 		if err != nil {
@@ -68,6 +73,32 @@ func (s Service) sweep(ctx context.Context, now kernel.Instant) (SweepReport, er
 		}
 	}
 	return report, nil
+}
+
+// release resends each dispatch a suspension held once its operation is
+// allowed again (decision 14); a connector it cannot read is retried by the
+// next sweep, never released blind.
+func (s Service) release(ctx context.Context, commands []domain.ExternalCommandSnapshot, report *SweepReport) {
+	connectors := map[domain.ConnectorKey]domain.ConnectorSnapshot{}
+	for _, c := range commands {
+		if c.DispatchHeldSince == 0 {
+			continue
+		}
+		connector, read := connectors[c.ConnectorKey]
+		if !read {
+			loaded, _, err := s.ConnectorReader.Load(ctx, c.ConnectorKey)
+			if err != nil {
+				report.Failed++
+				continue
+			}
+			connector, connectors[c.ConnectorKey] = loaded, loaded
+		}
+		if gate, _ := connector.Gate(c.Operation, c.AssetType); gate != domain.GateAllowed {
+			continue
+		}
+		outcome, err := s.RequestResend(sweepKey(ctx, "release", c.Key, c.DispatchHeldSince), RequestResend{IdempotencyKey: c.Key})
+		report.count(outcome, err, &report.ResendRequested)
+	}
 }
 
 func (s Service) commandsIn(ctx context.Context, status domain.CommandStatus) ([]domain.ExternalCommandSnapshot, error) {

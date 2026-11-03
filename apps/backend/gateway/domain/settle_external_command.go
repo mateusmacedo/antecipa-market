@@ -16,18 +16,37 @@ func (c *ExternalCommand) Cancel(CancelExternalCommand) (kernel.Accepted[Command
 }
 
 // RequestResend asks the same dispatch again: same intent and generation, so
-// the kernel derives the same outbound key (RES-42).
+// the kernel derives the same outbound key (RES-42). It also releases a
+// dispatch held by a suspension, which has no quiescence to wait for.
 func (c *ExternalCommand) RequestResend(cmd RequestResend) (kernel.Accepted[CommandResponse], *kernel.Rejection) {
 	return kernel.DecideOver(c, (*ExternalCommand).clone, func(next *ExternalCommand) (kernel.Accepted[CommandResponse], *kernel.Rejection) {
-		if next.status != StatusRetryableFailure {
-			return kernel.Refuse[CommandResponse](CodeExternalCommandNotResendable, "only a retryable failure is resent",
+		held := next.dispatchHeldSince != 0
+		if next.status != StatusRetryableFailure && (next.status != StatusCreated || !held) {
+			return kernel.Refuse[CommandResponse](CodeExternalCommandNotResendable, "only a retryable failure or a held dispatch is resent",
 				kernel.Detail{Key: "status", Value: string(next.status)})
 		}
-		if next.resendAfter == 0 || next.resendAfter > cmd.At {
+		if !held && (next.resendAfter == 0 || next.resendAfter > cmd.At) {
 			return kernel.Refuse[CommandResponse](CodeExternalCommandQuiescenceNotElapsed, "the quiescence before the resend has not elapsed")
 		}
 		next.resendAfter = 0
+		next.dispatchHeldSince = 0
 		return kernel.Accept(CommandResponse{IdempotencyKey: next.key}, next.dispatchRequested(cmd.At)), nil
+	})
+}
+
+// HoldDispatch keeps a command unsent while its operation is suspended: the
+// redelivery would run out in the quarantine long before a re-homologation.
+// The status stays, so a held command in created is still cancellable.
+func (c *ExternalCommand) HoldDispatch(cmd HoldDispatch) (kernel.Accepted[CommandResponse], *kernel.Rejection) {
+	return kernel.DecideOver(c, (*ExternalCommand).clone, func(next *ExternalCommand) (kernel.Accepted[CommandResponse], *kernel.Rejection) {
+		if next.status != StatusCreated && next.status != StatusRetryableFailure {
+			return kernel.Refuse[CommandResponse](CodeExternalCommandNotHoldable, "only a command with nothing in flight holds its dispatch",
+				kernel.Detail{Key: "status", Value: string(next.status)})
+		}
+		if next.dispatchHeldSince == 0 {
+			next.dispatchHeldSince = cmd.At
+		}
+		return kernel.Accept(CommandResponse{IdempotencyKey: next.key}), nil
 	})
 }
 

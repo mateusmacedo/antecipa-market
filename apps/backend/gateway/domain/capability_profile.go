@@ -44,6 +44,7 @@ const (
 // OperationCapability is one operation of a connector as the partner declares
 // it (04 §2.1). Quiescence is in nanoseconds; QueryInterval, AmbiguityDeadline
 // and PositionFreshnessSLA in seconds, the last zero when the source declares none.
+// MaxSubmissions counts the sends of one command, the first included.
 type OperationCapability struct {
 	Operation              string
 	Supported              bool
@@ -68,6 +69,7 @@ type OperationCapability struct {
 	KeyMaxLength           int
 	QueryInterval          int
 	AmbiguityDeadline      int
+	MaxSubmissions         int
 }
 
 func (o OperationCapability) Equal(other OperationCapability) bool {
@@ -93,7 +95,8 @@ func (o OperationCapability) Equal(other OperationCapability) bool {
 		o.KeyAlphabet == other.KeyAlphabet &&
 		o.KeyMaxLength == other.KeyMaxLength &&
 		o.QueryInterval == other.QueryInterval &&
-		o.AmbiguityDeadline == other.AmbiguityDeadline
+		o.AmbiguityDeadline == other.AmbiguityDeadline &&
+		o.MaxSubmissions == other.MaxSubmissions
 }
 
 func (o OperationCapability) clone() OperationCapability {
@@ -243,6 +246,12 @@ func refuseWriteDeclaration(o OperationCapability) *kernel.Rejection {
 		_, rejection := kernel.Refuse[ProfileResponse](CodeCapabilityProfileAmbiguityDeadlineMissing,
 			"a write operation declares an ambiguity deadline greater than zero", operation,
 			kernel.Detail{Key: "ambiguityDeadline", Value: strconv.Itoa(o.AmbiguityDeadline)})
+		return rejection
+	}
+	if o.MaxSubmissions <= 0 {
+		_, rejection := kernel.Refuse[ProfileResponse](CodeCapabilityProfileMaxSubmissionsMissing,
+			"a write operation declares a resend budget greater than zero", operation,
+			kernel.Detail{Key: "maxSubmissions", Value: strconv.Itoa(o.MaxSubmissions)})
 		return rejection
 	}
 	if o.StateQuerySupported && o.QueryInterval <= 0 {

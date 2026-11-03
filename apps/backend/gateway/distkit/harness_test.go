@@ -60,7 +60,7 @@ func enqueue(t *testing.T, pool *pgxpool.Pool, n int) {
 		ConnectorKey: "prt-distkit:production", Version: 1, EffectiveFrom: 1,
 		Operations: []domain.OperationCapability{{
 			Operation: "submitEffect", Supported: true, IdempotencySupport: domain.IdempotencyKeyHeader, Efficacy: domain.EfficacyOnSubmit,
-			MaxQueries: 3, KeyAlphabet: "0123456789abcdef", KeyMaxLength: 32, AmbiguityDeadline: 3600,
+			MaxQueries: 3, KeyAlphabet: "0123456789abcdef", KeyMaxLength: 32, AmbiguityDeadline: 3600, MaxSubmissions: 3,
 		}},
 	})))
 	for i := range n {

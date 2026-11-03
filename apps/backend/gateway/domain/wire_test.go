@@ -40,6 +40,7 @@ func TestWireValuesStayFixed(t *testing.T) {
 		{string(domain.CategoryUnknownSent), "unknown_sent"},
 		{string(domain.CategoryUnknownAmbiguous), "unknown_ambiguous"},
 		{string(domain.CategorySchemaMismatch), "schema_mismatch"},
+		{string(domain.CategoryResendBudgetExhausted), "resend_budget_exhausted"},
 		{string(domain.CausePartner), "partner"},
 		{string(domain.CauseSchemaMismatch), "schema_mismatch"},
 		{string(domain.AuthorizationGranted), "granted"},

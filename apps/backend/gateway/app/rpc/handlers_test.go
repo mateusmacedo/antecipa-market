@@ -21,7 +21,7 @@ func submitEffect() *servicev1.OperationCapability {
 		Operation: "submitEffect", Supported: true, Protocol: servicev1.Protocol_PROTOCOL_SYNC_HTTP, StateQuerySupported: true,
 		IdempotencySupport: servicev1.IdempotencySupport_IDEMPOTENCY_SUPPORT_KEY_HEADER, AssetTypes: []string{"duplicata"},
 		Efficacy: servicev1.Efficacy_EFFICACY_ON_SUBMIT, Quiescence: 30_000_000_000, MaxQueries: 3,
-		KeyAlphabet: "0123456789abcdef", KeyMaxLength: 32, QueryInterval: 60, AmbiguityDeadline: 3600,
+		KeyAlphabet: "0123456789abcdef", KeyMaxLength: 32, QueryInterval: 60, AmbiguityDeadline: 3600, MaxSubmissions: 3,
 		EncumbranceCoverage: servicev1.EncumbranceCoverage_ENCUMBRANCE_COVERAGE_UNAVAILABLE,
 	}
 }
@@ -82,19 +82,27 @@ func TestTheExternalCommandFlowsThroughTheEdge(t *testing.T) {
 	if err := h.invoke(withoutKey(t), "FindExternalCommand", &servicev1.FindExternalCommandRequest{IdempotencyKey: "idem-1"}, &found); err != nil {
 		t.Fatalf("FindExternalCommand() = %v", err)
 	}
-	if c := found.GetCommand(); c.GetProfile().GetProfileVersion() != 1 || c.GetPayloadHash() != "h1" || c.GetSeriesKey() != "prt-1:production:submitEffect:eff-1" {
+	if c := found.GetCommand(); c.GetProfile().GetProfileVersion() != 1 || c.GetPayloadHash() != "h1" || c.GetSeriesKey() != "prt-1:production:submitEffect:eff-1" ||
+		c.GetProfile().GetMaxSubmissions() != 3 || c.GetDispatchHeldSince() != 0 {
 		t.Fatalf("FindExternalCommand() = %v", c)
+	}
+	var listed servicev1.FindExternalCommandsByStatusResponse
+	if err := h.invoke(withoutKey(t), "FindExternalCommandsByStatus", &servicev1.FindExternalCommandsByStatusRequest{
+		Status: servicev1.ExternalCommandStatus_EXTERNAL_COMMAND_STATUS_CREATED, ConnectorId: "prt-1:production",
+	}, &listed); err != nil || len(listed.GetCommands()) != 1 {
+		t.Fatalf("FindExternalCommandsByStatus() = %v, %v", &listed, err)
 	}
 
 	var cancelled servicev1.CancelExternalCommandResponse
 	if err := h.invoke(withKey(t), "CancelExternalCommand", &servicev1.CancelExternalCommandRequest{IdempotencyKey: "idem-1"}, &cancelled); err != nil || cancelled.GetCancelled() == nil {
 		t.Fatalf("CancelExternalCommand() = %v, %v", &cancelled, err)
 	}
-	var listed servicev1.FindExternalCommandsByStatusResponse
-	if err := h.invoke(withoutKey(t), "FindExternalCommandsByStatus", &servicev1.FindExternalCommandsByStatusRequest{
+	var terminal servicev1.FindExternalCommandsByStatusResponse
+	err := h.invoke(withoutKey(t), "FindExternalCommandsByStatus", &servicev1.FindExternalCommandsByStatusRequest{
 		Status: servicev1.ExternalCommandStatus_EXTERNAL_COMMAND_STATUS_CANCELLED, ConnectorId: "prt-1:production",
-	}, &listed); err != nil || len(listed.GetCommands()) != 1 {
-		t.Fatalf("FindExternalCommandsByStatus() = %v, %v", &listed, err)
+	}, &terminal)
+	if status.Code(err) != codes.InvalidArgument {
+		t.Fatalf("FindExternalCommandsByStatus(cancelled) = %v, want InvalidArgument: a terminal status is invalid input", err)
 	}
 }
 
@@ -229,7 +237,8 @@ func TestTheQueriesReadTheConnectorAndItsProfile(t *testing.T) {
 	var effective servicev1.FindEffectiveCapabilityProfileResponse
 	if err := h.invoke(withoutKey(t), "FindEffectiveCapabilityProfile", &servicev1.FindEffectiveCapabilityProfileRequest{
 		ConnectorId: "prt-1:production", EffectiveAt: int64(occurred),
-	}, &effective); err != nil || effective.GetProfile().GetOperations()[0].GetEfficacy() != servicev1.Efficacy_EFFICACY_ON_SUBMIT {
+	}, &effective); err != nil || effective.GetProfile().GetOperations()[0].GetEfficacy() != servicev1.Efficacy_EFFICACY_ON_SUBMIT ||
+		effective.GetProfile().GetOperations()[0].GetMaxSubmissions() != 3 {
 		t.Fatalf("FindEffectiveCapabilityProfile() = %v, %v", &effective, err)
 	}
 	var missing servicev1.FindCapabilityProfileResponse

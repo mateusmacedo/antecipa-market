@@ -160,12 +160,13 @@ var statusesFromTheWire = map[servicev1.ExternalCommandStatus]domain.CommandStat
 }
 
 var failureCategoriesToTheWire = map[domain.FailureCategory]servicev1.FailureCategory{
-	domain.CategoryFinalValidation:    servicev1.FailureCategory_FAILURE_CATEGORY_FINAL_VALIDATION,
-	domain.CategoryFinalBusiness:      servicev1.FailureCategory_FAILURE_CATEGORY_FINAL_BUSINESS,
-	domain.CategoryFinalAuthorization: servicev1.FailureCategory_FAILURE_CATEGORY_FINAL_AUTHORIZATION,
-	domain.CategoryUnknownSent:        servicev1.FailureCategory_FAILURE_CATEGORY_UNKNOWN_SENT,
-	domain.CategoryUnknownAmbiguous:   servicev1.FailureCategory_FAILURE_CATEGORY_UNKNOWN_AMBIGUOUS,
-	domain.CategorySchemaMismatch:     servicev1.FailureCategory_FAILURE_CATEGORY_SCHEMA_MISMATCH,
+	domain.CategoryFinalValidation:       servicev1.FailureCategory_FAILURE_CATEGORY_FINAL_VALIDATION,
+	domain.CategoryFinalBusiness:         servicev1.FailureCategory_FAILURE_CATEGORY_FINAL_BUSINESS,
+	domain.CategoryFinalAuthorization:    servicev1.FailureCategory_FAILURE_CATEGORY_FINAL_AUTHORIZATION,
+	domain.CategoryUnknownSent:           servicev1.FailureCategory_FAILURE_CATEGORY_UNKNOWN_SENT,
+	domain.CategoryUnknownAmbiguous:      servicev1.FailureCategory_FAILURE_CATEGORY_UNKNOWN_AMBIGUOUS,
+	domain.CategorySchemaMismatch:        servicev1.FailureCategory_FAILURE_CATEGORY_SCHEMA_MISMATCH,
+	domain.CategoryResendBudgetExhausted: servicev1.FailureCategory_FAILURE_CATEGORY_RESEND_BUDGET_EXHAUSTED,
 }
 
 var authorizationStatusesToTheWire = map[domain.AuthorizationStatus]servicev1.AuthorizationStatus{
@@ -242,7 +243,7 @@ func operationOnTheWire(o domain.OperationCapability) *servicev1.OperationCapabi
 		EncumbranceCoverage: coveragesToTheWire[o.EncumbranceCoverage], PositionFreshnessSla: int32(o.PositionFreshnessSLA),
 		Efficacy: efficaciesToTheWire[o.Efficacy], Quiescence: o.Quiescence, AuthoritativeAbsence: o.AuthoritativeAbsence,
 		MaxQueries: int32(o.MaxQueries), KeyAlphabet: o.KeyAlphabet, KeyMaxLength: int32(o.KeyMaxLength),
-		QueryInterval: int32(o.QueryInterval), AmbiguityDeadline: int32(o.AmbiguityDeadline),
+		QueryInterval: int32(o.QueryInterval), AmbiguityDeadline: int32(o.AmbiguityDeadline), MaxSubmissions: int32(o.MaxSubmissions),
 	}
 }
 
@@ -274,12 +275,13 @@ func commandOnTheWire(s domain.ExternalCommandSnapshot) *servicev1.ExternalComma
 			IdempotencySupport: idempotencySupportToTheWire[p.IdempotencySupport], PartialResultSupported: p.PartialResultSupported,
 			Efficacy: efficaciesToTheWire[p.Efficacy], Quiescence: p.Quiescence, AuthoritativeAbsence: p.AuthoritativeAbsence,
 			MaxQueries: int32(p.MaxQueries), KeyAlphabet: p.KeyAlphabet, KeyMaxLength: int32(p.KeyMaxLength),
-			QueryInterval: int32(p.QueryInterval), AmbiguityDeadline: int32(p.AmbiguityDeadline),
+			QueryInterval: int32(p.QueryInterval), AmbiguityDeadline: int32(p.AmbiguityDeadline), MaxSubmissions: int32(p.MaxSubmissions),
 		},
 		Status: statusesToTheWire[s.Status], FailureCategory: failureCategoriesToTheWire[s.FailureCategory],
 		CreatedAt: int64(s.CreatedAt), Submissions: int32(s.Submissions), LastSubmittedAt: int64(s.LastSubmittedAt),
 		WaitingSince: int64(s.WaitingSince), NextQueryAt: int64(s.NextQueryAt), ResendAfter: int64(s.ResendAfter),
 		ReconciliationRequired: s.ReconciliationRequired, AmbiguityExpiredAt: int64(s.AmbiguityExpiredAt),
 		ConfirmedAt: int64(s.ConfirmedAt), ExternalReferenceId: string(s.ExternalReferenceID),
+		DispatchHeldSince: int64(s.DispatchHeldSince),
 	}
 }

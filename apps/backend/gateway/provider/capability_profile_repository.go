@@ -40,6 +40,7 @@ type operationState struct {
 	KeyMaxLength           int      `json:"keyMaxLength"`
 	QueryInterval          int      `json:"queryInterval"`
 	AmbiguityDeadline      int      `json:"ambiguityDeadline"`
+	MaxSubmissions         int      `json:"maxSubmissions"`
 }
 
 // profileTable guards connector_id: declaring a version takes the exclusive
@@ -132,6 +133,7 @@ func operationStates(operations []domain.OperationCapability) []operationState {
 			EncumbranceCoverage: string(o.EncumbranceCoverage), PositionFreshnessSLA: o.PositionFreshnessSLA, Efficacy: string(o.Efficacy),
 			Quiescence: o.Quiescence, AuthoritativeAbsence: o.AuthoritativeAbsence, MaxQueries: o.MaxQueries,
 			KeyAlphabet: o.KeyAlphabet, KeyMaxLength: o.KeyMaxLength, QueryInterval: o.QueryInterval, AmbiguityDeadline: o.AmbiguityDeadline,
+			MaxSubmissions: o.MaxSubmissions,
 		})
 	}
 	return out
@@ -149,7 +151,7 @@ func operationsOf(stored []operationState) []domain.OperationCapability {
 			EncumbranceCoverage: domain.EncumbranceCoverage(o.EncumbranceCoverage), PositionFreshnessSLA: o.PositionFreshnessSLA,
 			Efficacy: domain.Efficacy(o.Efficacy), Quiescence: o.Quiescence, AuthoritativeAbsence: o.AuthoritativeAbsence,
 			MaxQueries: o.MaxQueries, KeyAlphabet: o.KeyAlphabet, KeyMaxLength: o.KeyMaxLength,
-			QueryInterval: o.QueryInterval, AmbiguityDeadline: o.AmbiguityDeadline,
+			QueryInterval: o.QueryInterval, AmbiguityDeadline: o.AmbiguityDeadline, MaxSubmissions: o.MaxSubmissions,
 		})
 	}
 	return out

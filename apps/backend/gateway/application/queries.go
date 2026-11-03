@@ -49,7 +49,15 @@ func (s Service) FindExternalCommandsByBusinessKey(ctx context.Context, connecto
 	return ofConnector(found, connector), err
 }
 
+// ErrStatusNotInFlight is a terminal status asked of FindExternalCommandsByStatus:
+// the terminal sets grow without bound, so only the ones in flight are listed.
+var ErrStatusNotInFlight = errors.New("application: the status is not one a command is in flight with")
+
 func (s Service) FindExternalCommandsByStatus(ctx context.Context, status domain.CommandStatus, connector domain.ConnectorKey) ([]domain.ExternalCommandSnapshot, error) {
+	if !status.InFlight() {
+		return nil, usecase.NewFailure(usecase.Validation, false,
+			fmt.Errorf("application: %s %s: %w", OperationFindExternalCommandsByStatus, status, ErrStatusNotInFlight))
+	}
 	found, err := relation(ctx, s, OperationFindExternalCommandsByStatus, FindExternalCommandsByStatus{Status: status, ConnectorKey: connector},
 		func(ctx context.Context) ([]domain.ExternalCommandSnapshot, error) {
 			return s.CommandsByStatus.LoadByStatus(ctx, status)

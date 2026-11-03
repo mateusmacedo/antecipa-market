@@ -39,7 +39,9 @@ func permissionOf(op application.Operation) port.Permission {
 	// runs them under its execution, so they answer for its permission.
 	case application.SweepExternalCommands, application.RequestResend, application.ExpireAmbiguity:
 		return "gateway:sweep-external-commands"
-	case application.ConsumeCapabilityEnabled, application.ConsumeCapabilitySuspended:
+	// HoldDispatch has no method either: the dispatch handler runs it while it
+	// consumes the intent.
+	case application.ConsumeCapabilityEnabled, application.ConsumeCapabilitySuspended, application.HoldDispatch:
 		return "gateway:consume"
 	case application.FindConnector:
 		return "gateway:find-connector"

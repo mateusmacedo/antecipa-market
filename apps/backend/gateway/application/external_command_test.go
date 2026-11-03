@@ -2,8 +2,10 @@ package application_test
 
 import (
 	"context"
+	"errors"
 	"testing"
 
+	usecase "github.com/mateusmacedo/dmpf/libs/backend/go/application"
 	kernel "github.com/mateusmacedo/dmpf/libs/backend/go/domain"
 	"github.com/mateusmacedo/dmpf/libs/backend/go/memory"
 	port "github.com/mateusmacedo/dmpf/libs/backend/go/ports"
@@ -257,12 +259,85 @@ func TestFindExternalCommandsByBusinessKeyNarrowsToTheConnector(t *testing.T) {
 	if err != nil || len(other) != 0 {
 		t.Fatalf("another connector found %+v, %v", other, err)
 	}
-	byStatus, err := h.service.FindExternalCommandsByStatus(withExecution(t), domain.StatusCancelled, "")
-	if err != nil || len(byStatus) != 1 || byStatus[0].Key != testCommand {
+	byStatus, err := h.service.FindExternalCommandsByStatus(withExecution(t), domain.StatusCreated, "")
+	if err != nil || len(byStatus) != 1 || byStatus[0].Key != "idem-2" {
 		t.Fatalf("FindExternalCommandsByStatus() = %+v, %v", byStatus, err)
 	}
 	command, err := h.service.FindExternalCommand(withExecution(t), "idem-2")
 	if err != nil || command.PayloadVersion != 2 {
 		t.Fatalf("FindExternalCommand() = %+v, %v", command, err)
 	}
+}
+
+func TestCreateExternalCommandCopiesTheResendBudget(t *testing.T) {
+	h := ready(t)
+
+	command := h.created(t, testCommand, 1)
+
+	if command.Profile.MaxSubmissions != 3 || command.DispatchHeldSince != 0 {
+		t.Fatalf("command = %+v, want the budget of the profile copied and no hold", command)
+	}
+}
+
+func TestFindExternalCommandsByStatusRefusesATerminalStatusAsInvalidInput(t *testing.T) {
+	h := ready(t)
+	h.created(t, testCommand, 1)
+	h.force(t, testCommand, func(s *domain.ExternalCommandSnapshot) { s.Status = domain.StatusCancelled })
+
+	for _, status := range []domain.CommandStatus{domain.StatusConfirmed, domain.StatusFinalFailure, domain.StatusCancelled} {
+		found, err := h.service.FindExternalCommandsByStatus(withExecution(t), status, "")
+
+		if !errors.Is(err, application.ErrStatusNotInFlight) || usecase.CategoryOf(err) != string(usecase.Validation) || found != nil {
+			t.Fatalf("FindExternalCommandsByStatus(%s) = %+v, %v, want a Validation failure", status, found, err)
+		}
+	}
+}
+
+func TestFindExternalCommandsByStatusNarrowsToTheConnector(t *testing.T) {
+	h := ready(t)
+	h.created(t, testCommand, 1)
+
+	mine, err := h.service.FindExternalCommandsByStatus(withExecution(t), domain.StatusCreated, testConnector)
+	if err != nil || len(mine) != 1 || mine[0].Key != testCommand {
+		t.Fatalf("FindExternalCommandsByStatus(connector) = %+v, %v", mine, err)
+	}
+	other, err := h.service.FindExternalCommandsByStatus(withExecution(t), domain.StatusCreated, "prt-2:production")
+	if err != nil || len(other) != 0 {
+		t.Fatalf("another connector found %+v, %v", other, err)
+	}
+}
+
+func TestHoldDispatchHoldsTheCommandUnderTheKeyOfTheMessage(t *testing.T) {
+	h := ready(t)
+	h.created(t, testCommand, 1)
+	h.clock.advance(5 * second)
+	hold := application.HoldDispatch{IdempotencyKey: testCommand, MessageID: "m-1"}
+
+	first := must(h.service.HoldDispatch(withExecution(t), hold)).accepted(t)
+	h.clock.advance(5 * second)
+	again := must(h.service.HoldDispatch(withExecution(t), hold)).accepted(t)
+
+	if first != again || first.IdempotencyKey != testCommand {
+		t.Fatalf("hold = %+v then %+v, want the replay of the same answer", first, again)
+	}
+	if s := h.command(t, testCommand); s.DispatchHeldSince != testOccurred+5*second || s.Status != domain.StatusCreated {
+		t.Fatalf("command = %+v, want held since the first hold and still created", s)
+	}
+	if len(h.entries()) != 1 {
+		t.Fatalf("outbox = %d entries, want only the creation intent: a hold sends nothing", len(h.entries()))
+	}
+	_, err := h.service.CancelExternalCommand(withKey(t, "hold.idem-1.m-1"), application.CancelExternalCommand{IdempotencyKey: testCommand})
+	if !errors.Is(err, port.ErrIdempotencyMismatch) {
+		t.Fatalf("CancelExternalCommand() under the hold key = %v, want ErrIdempotencyMismatch: the hold took hold.<key>.<message>", err)
+	}
+}
+
+func TestHoldDispatchRefusesACommandWithSomethingInFlight(t *testing.T) {
+	h := ready(t)
+	h.created(t, testCommand, 1)
+	h.force(t, testCommand, func(s *domain.ExternalCommandSnapshot) { s.Status, s.Submissions = domain.StatusAcknowledged, 1 })
+
+	outcome, err := h.service.HoldDispatch(withExecution(t), application.HoldDispatch{IdempotencyKey: testCommand, MessageID: "m-1"})
+
+	must(outcome, err).refused(t, string(domain.CodeExternalCommandNotHoldable))
 }

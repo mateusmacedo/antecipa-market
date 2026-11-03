@@ -28,6 +28,7 @@ const (
 	OperationCreateExternalCommand                = "gateway.CreateExternalCommand"
 	OperationCancelExternalCommand                = "gateway.CancelExternalCommand"
 	OperationRequestResend                        = "gateway.RequestResend"
+	OperationHoldDispatch                         = "gateway.HoldDispatch"
 	OperationExpireAmbiguity                      = "gateway.ExpireAmbiguity"
 	OperationResolveUnknownOutcome                = "gateway.ResolveUnknownOutcome"
 	OperationSweepExternalCommands                = "gateway.SweepExternalCommands"

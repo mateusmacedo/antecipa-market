@@ -17,7 +17,7 @@ func submitEffectCapability() domain.OperationCapability {
 		BusinessCalendar: "BR-B3", CutoffTime: "17:00", ProcessingWindow: "08:00-18:00",
 		EncumbranceCoverage: domain.CoverageComplete, PositionFreshnessSLA: 300,
 		Efficacy: domain.EfficacyByObservation, Quiescence: int64(30 * second), MaxQueries: 5,
-		KeyAlphabet: "0123456789abcdef", KeyMaxLength: 64, QueryInterval: 60, AmbiguityDeadline: 3600,
+		KeyAlphabet: "0123456789abcdef", KeyMaxLength: 64, QueryInterval: 60, AmbiguityDeadline: 3600, MaxSubmissions: 3,
 	}
 }
 
@@ -49,6 +49,8 @@ func TestDeclareCapabilityProfileRejects(t *testing.T) {
 	}
 	withoutInterval := submitEffectCapability()
 	withoutInterval.QueryInterval = 0
+	withoutBudget := submitEffectCapability()
+	withoutBudget.MaxSubmissions = 0
 	tests := []struct {
 		name string
 		cmd  domain.DeclareCapabilityProfile
@@ -62,6 +64,7 @@ func TestDeclareCapabilityProfileRejects(t *testing.T) {
 		}(), domain.CodeCapabilityProfileExternalProfileInvalid},
 		{"a write operation without ambiguity deadline", declare(withDeadline(0)), domain.CodeCapabilityProfileAmbiguityDeadlineMissing},
 		{"a write operation with state query and no query interval", declare(withoutInterval), domain.CodeCapabilityProfileQueryIntervalMissing},
+		{"a write operation without max submissions", declare(withoutBudget), domain.CodeCapabilityProfileMaxSubmissionsMissing},
 	}
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
@@ -144,4 +147,14 @@ func TestCapabilityProfileSnapshotIsADeepCopy(t *testing.T) {
 	if !domain.FromCapabilityProfileSnapshot(p.Snapshot()).Snapshot().Equal(p.Snapshot()) {
 		t.Fatalf("round trip lost state")
 	}
+}
+
+func TestAReadOperationNeedsNoResendBudget(t *testing.T) {
+	read := submitEffectCapability()
+	read.Operation, read.MaxSubmissions = "queryAsset", 0
+	p := domain.NewCapabilityProfile(domain.ProfileKeyOf(connectorKey, 2))
+
+	_, rej := p.Declare(declare(read))
+
+	tb.RequireAccepted(t, rej)
 }
