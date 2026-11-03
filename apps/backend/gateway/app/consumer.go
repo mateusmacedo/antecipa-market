@@ -48,10 +48,6 @@ const (
 	consumerLocale = "en"
 )
 
-// PartnerEventTypes is the closed set this consumer takes from partner.events;
-// IntegrationProfileRegistered joins it when the Partner publishes it.
-var PartnerEventTypes = []string{capabilityEnabledEvent, capabilitySuspendedEvent}
-
 var errUnknownEnvironment = errors.New("gateway: the event names no environment this consumer knows")
 
 // Handler unpacks the two capability events. A payload that is not their
@@ -123,13 +119,21 @@ type ConsumerTelemetry struct {
 	Channel        kernelapp.Channel
 }
 
-// NewConsumer is the whole consumer: adapter, service and Postgres quarantine.
-// maxAttempts <= 0 disables the attempt limit (GAR-08 fixes that one exists).
+// NewConsumer is the whole consumer: adapter, service and Postgres quarantine,
+// accepting the capability events among telemetry.Channel.Carries, or
+// PartnerChannel's when it carries none. maxAttempts <= 0 disables the attempt
+// limit (GAR-08 fixes that one exists).
 func NewConsumer(pool *pgxpool.Pool, clock ports.Clock, ids ports.IDGenerator, wait, timeout time.Duration, maxAttempts int, boundary kernelapp.Boundary, telemetry ConsumerTelemetry) kernelapp.Consumer {
+	partner := PartnerChannel(Config{})
+	carries := telemetry.Channel.Carries
+	if len(carries) == 0 {
+		carries = channel.WireTypes(partner)
+	}
 	return kernelapp.Consumer{
 		Name:           ConsumerName,
 		MaxAttempts:    maxAttempts,
 		Handle:         Handler(NewService(pool, clock, ids, Waits{Message: wait})),
+		Accepts:        wireTypesOf(partner, capabilityEnabled, capabilitySuspended),
 		Containment:    postgres.NewQuarantine(pool, postgres.WithQuarantineLoggerProvider(telemetry.LoggerProvider)),
 		Clock:          clock,
 		Timeout:        timeout,
@@ -139,8 +143,17 @@ func NewConsumer(pool *pgxpool.Pool, clock ports.Clock, ids ports.IDGenerator, w
 		MeterProvider:  telemetry.MeterProvider,
 		LoggerProvider: telemetry.LoggerProvider,
 		System:         telemetry.System,
-		Channel:        telemetry.Channel,
+		Channel: kernelapp.Channel{
+			Address: telemetry.Channel.Address,
+			Group:   telemetry.Channel.Group,
+			Carries: carries,
+		},
 	}
+}
+
+func wireTypesOf(ch channel.Channel, events ...channel.Event) []string {
+	ch.Events = events
+	return channel.WireTypes(ch)
 }
 
 // PartnerBoundary is the one place the consumer's trust is declared: the
@@ -187,19 +200,19 @@ func runConsumer(ctx context.Context, cfg Config, rt *otelboot.Runtime) error {
 	}
 	kafkaConfig.RevokeGrace = revokeGrace
 	logger := rt.LoggerFor(reflect.TypeFor[Config]().PkgPath())
+	adapter := NewConsumer(pool, idclock.SystemClock{}, idclock.NewMessageIDs("gateway"), cfg.Wait, cfg.ConsumerTimeout, ch.Retry.MaxAttempts,
+		PartnerBoundary(cfg, kafkaConfig.ClientAuthenticated()), ConsumerTelemetry{
+			Tracer: rt.Tracer(), MeterProvider: rt.MeterProvider(), LoggerProvider: rt.LoggerProvider(),
+			System:  semconv.MessagingSystemKafka.Value.AsString(),
+			Channel: kernelapp.Channel{Address: ch.Address, Group: ch.Group, Carries: channel.WireTypes(ch)},
+		})
+	if err := adapter.Validate(); err != nil {
+		return err
+	}
 	consumer := &kafka.Consumer{
-		Config:  kafkaConfig,
-		Channel: ch,
-		Sink: Sink{
-			Consumer: NewConsumer(pool, idclock.SystemClock{}, idclock.NewMessageIDs("gateway"), cfg.Wait, cfg.ConsumerTimeout, ch.Retry.MaxAttempts,
-				PartnerBoundary(cfg, kafkaConfig.ClientAuthenticated()), ConsumerTelemetry{
-					Tracer: rt.Tracer(), MeterProvider: rt.MeterProvider(), LoggerProvider: rt.LoggerProvider(),
-					System:  semconv.MessagingSystemKafka.Value.AsString(),
-					Channel: kernelapp.Channel{Address: ch.Address, Group: ch.Group},
-				}),
-			EventTypes: PartnerEventTypes,
-			Logger:     logger,
-		},
+		Config:             kafkaConfig,
+		Channel:            ch,
+		Sink:               kernelapp.Sink{Consumer: adapter},
 		Backoff:            retry.Backoff{Base: 10 * time.Millisecond, Factor: 2, Cap: time.Second},
 		ProcessingDeadline: processingDeadline,
 		RebalanceTimeout:   rebalanceTimeout,

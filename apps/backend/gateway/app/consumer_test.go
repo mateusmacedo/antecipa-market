@@ -2,15 +2,18 @@ package app_test
 
 import (
 	"context"
+	"slices"
 	"testing"
 	"time"
 
+	"github.com/jackc/pgx/v5/pgxpool"
 	kernelapp "github.com/mateusmacedo/dmpf/libs/backend/go/app"
 	usecase "github.com/mateusmacedo/dmpf/libs/backend/go/application"
 	"github.com/mateusmacedo/dmpf/libs/backend/go/contracts/envelope"
 	"github.com/mateusmacedo/dmpf/libs/backend/go/memory"
 	"github.com/mateusmacedo/dmpf/libs/backend/go/ports"
 	"github.com/mateusmacedo/dmpf/libs/backend/go/testkit/tb/execctx"
+	"github.com/mateusmacedo/dmpf/libs/backend/go/transport/channel"
 	"go.opentelemetry.io/otel/trace/noop"
 	"google.golang.org/protobuf/proto"
 	"google.golang.org/protobuf/types/known/timestamppb"
@@ -169,17 +172,43 @@ func raw(t *testing.T, eventType string, msg proto.Message) []byte {
 	return out
 }
 
-func TestTheSinkTakesTheClosedSetAndAcknowledgesTheRest(t *testing.T) {
-	handler := &countingHandler{}
-	sink := app.Sink{
-		Consumer: kernelapp.Consumer{
-			Name: app.ConsumerName, MaxAttempts: 2, Handle: handler.handle, Containment: containment{}, Clock: memory.FixedClock{At: occurred},
-			Timeout: 10 * time.Second, Locale: "en", Tracer: noop.NewTracerProvider().Tracer(""),
-			Boundary: kernelapp.Boundary{Transport: kernelapp.TransportDevelopmentOnly, Sources: []string{"urn:dmpf:reference-partner"}},
-			Channel:  kernelapp.Channel{Address: "partner.events", Group: app.ConsumerName},
-		},
-		EventTypes: app.PartnerEventTypes,
+func partnerConsumer(t *testing.T, handler *countingHandler) kernelapp.Consumer {
+	t.Helper()
+	cfg := app.Defaults(app.RoleConsumer)
+	cfg.PartnerTopic, cfg.PartnerDLQ, cfg.Group = "partner.events", "partner.events.dlq", app.ConsumerName
+	pool, err := pgxpool.New(t.Context(), "postgres://gateway@127.0.0.1:1/gateway")
+	if err != nil {
+		t.Fatalf("pgxpool.New() = %v, want a lazy pool", err)
 	}
+	t.Cleanup(pool.Close)
+	ch := app.PartnerChannel(cfg)
+	consumer := app.NewConsumer(pool, memory.FixedClock{At: occurred}, &memory.SequenceIDs{Prefix: "m-"}, time.Second, 10*time.Second, 2,
+		kernelapp.Boundary{Transport: kernelapp.TransportDevelopmentOnly, Sources: []string{"urn:dmpf:reference-partner"}},
+		app.ConsumerTelemetry{Tracer: noop.NewTracerProvider().Tracer(""), Channel: kernelapp.Channel{Address: ch.Address, Group: ch.Group, Carries: channel.WireTypes(ch)}})
+	consumer.Containment = containment{}
+	if handler != nil {
+		consumer.Handle = handler.handle
+	}
+	return consumer
+}
+
+func TestTheConsumerAcceptsTheCapabilityEventsAmongTheElevenOfThePartnerChannel(t *testing.T) {
+	consumer := partnerConsumer(t, nil)
+
+	if want := []string{"com.company.partner.capability-enabled.v1", "com.company.partner.capability-suspended.v1"}; !slices.Equal(consumer.Accepts, want) {
+		t.Fatalf("Accepts = %v, want %v: the handler unpacks only the capability events (KFK-03c)", consumer.Accepts, want)
+	}
+	if got := len(consumer.Channel.Carries); got != 11 {
+		t.Fatalf("Carries = %v, want the eleven types the Partner publishes on partner.events (KFK-03b)", consumer.Channel.Carries)
+	}
+	if err := consumer.Validate(); err != nil {
+		t.Fatalf("Validate() = %v, want nil: the subscription stays within the channel", err)
+	}
+}
+
+func TestTheSinkHandsTheAcceptedTypesAndDiscardsTheRestOfTheChannel(t *testing.T) {
+	handler := &countingHandler{}
+	sink := kernelapp.Sink{Consumer: partnerConsumer(t, handler)}
 
 	other := &ack{}
 	if err := sink.Handle(context.Background(), raw(t, "com.company.partner.partner-registered.v1", &partnerv1.PartnerRegistered{PartnerId: "prt-1"}), 1, other); err != nil {
@@ -194,6 +223,6 @@ func TestTheSinkTakesTheClosedSetAndAcknowledgesTheRest(t *testing.T) {
 		t.Fatalf("Handle(capability-suspended) = %v", err)
 	}
 	if handler.calls != 1 || taken.acks != 1 {
-		t.Fatalf("a type of the set: handled %d, acks %d; want handed to the adapter and acknowledged after it", handler.calls, taken.acks)
+		t.Fatalf("a type of the set: handled %d, acks %d; want handed to the handler and acknowledged after it", handler.calls, taken.acks)
 	}
 }
