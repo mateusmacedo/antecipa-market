@@ -42,7 +42,9 @@ var (
 			return domain.FromQueryAuthorizationSnapshot(s).Snapshot()
 		},
 	}
-	commandsTable = memory.Table[domain.IdempotencyKey, domain.ExternalCommandSnapshot]{Name: "external_commands"}
+	commandsTable     = memory.Table[domain.IdempotencyKey, domain.ExternalCommandSnapshot]{Name: "external_commands"}
+	interactionsTable = memory.Table[domain.InteractionID, domain.ExternalInteractionSnapshot]{Name: "external_interactions"}
+	referencesTable   = memory.Table[domain.ReferenceKey, domain.ExternalReferenceSnapshot]{Name: "external_references"}
 )
 
 // identities records every id ever saved to a table, so a relation reader can
@@ -135,6 +137,28 @@ func (r commandsBy) LoadByOutboundKey(ctx context.Context, key port.OutboundKey)
 	return scan(ctx, r.ids, r.load, func(s domain.ExternalCommandSnapshot) bool { return s.OutboundKey == string(key) })
 }
 
+type interactionsBy struct {
+	ids  *identities[domain.InteractionID]
+	load func(context.Context, domain.InteractionID) (domain.ExternalInteractionSnapshot, port.Version, error)
+}
+
+func (r interactionsBy) LoadByPartnerEvent(ctx context.Context, partnerEventID string) ([]domain.ExternalInteractionSnapshot, error) {
+	return scan(ctx, r.ids, r.load, func(s domain.ExternalInteractionSnapshot) bool { return s.PartnerEventID == partnerEventID })
+}
+
+func (r interactionsBy) LoadByCommand(ctx context.Context, command domain.IdempotencyKey) ([]domain.ExternalInteractionSnapshot, error) {
+	return scan(ctx, r.ids, r.load, func(s domain.ExternalInteractionSnapshot) bool { return s.CommandID == command })
+}
+
+type referencesBy struct {
+	ids  *identities[domain.ReferenceKey]
+	load func(context.Context, domain.ReferenceKey) (domain.ExternalReferenceSnapshot, port.Version, error)
+}
+
+func (r referencesBy) LoadBySubject(ctx context.Context, subject domain.SubjectID) ([]domain.ExternalReferenceSnapshot, error) {
+	return scan(ctx, r.ids, r.load, func(s domain.ExternalReferenceSnapshot) bool { return s.SubjectID == subject })
+}
+
 // clock is settable so a test can let a quiescence or a deadline elapse.
 type clock struct {
 	mu sync.Mutex
@@ -154,12 +178,14 @@ func (c *clock) advance(by port.Instant) {
 }
 
 type harness struct {
-	fakes    *serviceskit.Fakes
-	store    *memory.Store
-	clock    *clock
-	service  application.Service
-	profiles *identities[domain.ProfileKey]
-	commands *identities[domain.IdempotencyKey]
+	fakes        *serviceskit.Fakes
+	store        *memory.Store
+	clock        *clock
+	service      application.Service
+	profiles     *identities[domain.ProfileKey]
+	commands     *identities[domain.IdempotencyKey]
+	interactions *identities[domain.InteractionID]
+	references   *identities[domain.ReferenceKey]
 }
 
 type option func(*setup)
@@ -182,6 +208,7 @@ func newHarness(t *testing.T, options ...option) *harness {
 	h := &harness{
 		fakes: fakes, store: fakes.Store, clock: &clock{at: testOccurred},
 		profiles: &identities[domain.ProfileKey]{}, commands: &identities[domain.IdempotencyKey]{},
+		interactions: &identities[domain.InteractionID]{}, references: &identities[domain.ReferenceKey]{},
 	}
 	authorizations := &identities[domain.ConsentID]{}
 
@@ -191,10 +218,16 @@ func newHarness(t *testing.T, options ...option) *harness {
 		}
 		profiles := indexed[domain.ProfileKey, domain.CapabilityProfileSnapshot]{Repository: profilesTable.Repository(tx.Memory()), ids: h.profiles}
 		return application.Resources{
-			Connectors:          connectorsTable.Repository(tx.Memory()),
-			Profiles:            profiles,
-			Authorizations:      indexed[domain.ConsentID, domain.QueryAuthorizationSnapshot]{Repository: authorizationsTable.Repository(tx.Memory()), ids: authorizations},
-			ExternalCommands:    commands,
+			Connectors:       connectorsTable.Repository(tx.Memory()),
+			Profiles:         profiles,
+			Authorizations:   indexed[domain.ConsentID, domain.QueryAuthorizationSnapshot]{Repository: authorizationsTable.Repository(tx.Memory()), ids: authorizations},
+			ExternalCommands: commands,
+			ExternalInteractions: indexed[domain.InteractionID, domain.ExternalInteractionSnapshot]{
+				Repository: interactionsTable.Repository(tx.Memory()), ids: h.interactions,
+			},
+			ExternalReferences: indexed[domain.ReferenceKey, domain.ExternalReferenceSnapshot]{
+				Repository: referencesTable.Repository(tx.Memory()), ids: h.references,
+			},
 			ProfilesByConnector: profilesByConnector{ids: h.profiles, load: profiles.Load},
 			CommandsBySeries:    commandsBy{ids: h.commands, load: commands.Load},
 			Ledger:              tx.Memory().AttemptLedger(),
@@ -204,6 +237,8 @@ func newHarness(t *testing.T, options ...option) *harness {
 		}
 	}
 	commandReader := commandsTable.Reader(h.store)
+	interactionReader := interactionsTable.Reader(h.store)
+	referenceReader := referencesTable.Reader(h.store)
 	h.service = application.Service{
 		UoW:                          serviceskit.UnitOfWork(fakes, bind),
 		ConnectorReader:              connectorsTable.Reader(h.store),
@@ -214,11 +249,17 @@ func newHarness(t *testing.T, options ...option) *harness {
 		CommandsByBusinessKey:        commandsBy{ids: h.commands, load: commandReader.Load},
 		CommandsByStatus:             commandsBy{ids: h.commands, load: commandReader.Load},
 		CommandsByOutboundKey:        commandsBy{ids: h.commands, load: commandReader.Load},
+		InteractionReader:            interactionReader,
+		InteractionsByPartnerEvent:   interactionsBy{ids: h.interactions, load: interactionReader.Load},
+		InteractionsByCommand:        interactionsBy{ids: h.interactions, load: interactionReader.Load},
+		ReferenceReader:              referenceReader,
+		ReferencesBySubject:          referencesBy{ids: h.references, load: referenceReader.Load},
 		Clock:                        h.clock,
 		IDs:                          &memory.SequenceIDs{Prefix: "m-"},
 		Authorize:                    usecase.AllowAll[application.Operation](),
 		Idempotency:                  usecase.IdempotencyPolicy{Wait: 1_000_000_000, Retention: 86_400_000_000_000, Digest: serviceskit.FoldDigest},
 		OutboundKeys:                 usecase.OutboundKeyPolicy{Digest: serviceskit.FoldDigest},
+		DerivedKeys:                  application.DerivedKeyPolicy{Digest: serviceskit.FoldDigest},
 		Consumer:                     "gateway",
 	}
 	return h

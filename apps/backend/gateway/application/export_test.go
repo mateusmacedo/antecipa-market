@@ -21,3 +21,8 @@ func (s Service) SubmissionStep(key domain.IdempotencyKey, partnerCode, partnerM
 func CycleOf(s domain.ExternalCommandSnapshot) ExternalCycle { return cycleOf(s) }
 
 func LedgerOf(res Resources) port.AttemptLedger { return ledgerOf(res) }
+
+// Key is the command key an internal step derives under the policy.
+func (p DerivedKeyPolicy) Key(step string, parts ...string) (string, error) {
+	return p.key(step, parts...)
+}

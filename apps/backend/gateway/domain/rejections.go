@@ -30,7 +30,23 @@ const (
 	CodeExternalCommandNotHoldable                 kernel.Code = "receivables-gateway/external-command/not-holdable"
 	CodeExternalCommandObservationConflict         kernel.Code = "receivables-gateway/external-command/observation-conflict"
 	CodeExternalCommandObservationSaturated        kernel.Code = "receivables-gateway/external-command/observation-saturated"
+
+	CodeExternalInteractionRawPayloadMissing     kernel.Code = "receivables-gateway/external-interaction/raw-payload-missing"
+	CodeExternalInteractionAlreadyConcluded      kernel.Code = "receivables-gateway/external-interaction/already-concluded"
+	CodeExternalInteractionMismatchDetailMissing kernel.Code = "receivables-gateway/external-interaction/mismatch-detail-missing"
+	CodeExternalInteractionNotConcluded          kernel.Code = "receivables-gateway/external-interaction/not-concluded"
+	CodeExternalInteractionJustificationMissing  kernel.Code = "receivables-gateway/external-interaction/justification-missing"
+	CodeExternalInteractionPayloadTooLarge       kernel.Code = "receivables-gateway/external-interaction/payload-too-large"
+
+	CodeExternalReferenceReferenceEmpty kernel.Code = "receivables-gateway/external-reference/reference-empty"
+	CodeExternalReferenceAlreadyLinked  kernel.Code = "receivables-gateway/external-reference/already-linked"
 )
+
+// RejectExternalInteractionPayloadTooLarge is the refusal of a raw body above
+// the maxPayloadBytes of the operation: the edge answers it before writing
+// anything to the store, so no UPR produces it.
+var RejectExternalInteractionPayloadTooLarge = kernel.Reject(CodeExternalInteractionPayloadTooLarge,
+	"the raw payload exceeds the maxPayloadBytes of the operation")
 
 // RejectCapabilityProfileAlreadyDeclared is the refusal of a version that
 // already exists: the profile key is the identity, so no UPR produces it and

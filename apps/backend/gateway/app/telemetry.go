@@ -41,6 +41,10 @@ func settings(cfg Config) []slog.Attr {
 			slog.String("kafka_gateway_dlq", cfg.GatewayDLQ),
 			slog.String("kafka_gateway_dispatch_topic", cfg.DispatchTopic),
 			slog.String("kafka_gateway_dispatch_dlq", cfg.DispatchDLQ),
+			slog.String("kafka_gateway_interactions_topic", cfg.InteractionTopic),
+			slog.String("kafka_gateway_interactions_dlq", cfg.InteractionDLQ),
+			slog.String("kafka_gateway_normalizations_topic", cfg.NormalizationTopic),
+			slog.String("kafka_gateway_normalizations_dlq", cfg.NormalizationDLQ),
 		)...)
 	case RoleConsumer:
 		return append(storage, append(kafkaSettings(cfg),

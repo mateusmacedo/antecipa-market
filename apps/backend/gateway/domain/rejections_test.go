@@ -37,6 +37,14 @@ func TestRejectionCodesKeepTheirWireValues(t *testing.T) {
 		domain.CodeExternalCommandNotHoldable:                 "receivables-gateway/external-command/not-holdable",
 		domain.CodeExternalCommandObservationConflict:         "receivables-gateway/external-command/observation-conflict",
 		domain.CodeExternalCommandObservationSaturated:        "receivables-gateway/external-command/observation-saturated",
+		domain.CodeExternalInteractionRawPayloadMissing:       "receivables-gateway/external-interaction/raw-payload-missing",
+		domain.CodeExternalInteractionAlreadyConcluded:        "receivables-gateway/external-interaction/already-concluded",
+		domain.CodeExternalInteractionMismatchDetailMissing:   "receivables-gateway/external-interaction/mismatch-detail-missing",
+		domain.CodeExternalInteractionNotConcluded:            "receivables-gateway/external-interaction/not-concluded",
+		domain.CodeExternalInteractionJustificationMissing:    "receivables-gateway/external-interaction/justification-missing",
+		domain.CodeExternalInteractionPayloadTooLarge:         "receivables-gateway/external-interaction/payload-too-large",
+		domain.CodeExternalReferenceReferenceEmpty:            "receivables-gateway/external-reference/reference-empty",
+		domain.CodeExternalReferenceAlreadyLinked:             "receivables-gateway/external-reference/already-linked",
 	}
 	for code, wire := range codes {
 		if string(code) != wire {
@@ -48,6 +56,12 @@ func TestRejectionCodesKeepTheirWireValues(t *testing.T) {
 func TestAlreadyDeclaredIsTheStaticRejectionOfTheProfileIdentity(t *testing.T) {
 	if got := domain.RejectCapabilityProfileAlreadyDeclared.Code(); got != domain.CodeCapabilityProfileAlreadyDeclared {
 		t.Fatalf("Code() = %q, want %q", got, domain.CodeCapabilityProfileAlreadyDeclared)
+	}
+}
+
+func TestPayloadTooLargeIsTheStaticRejectionOfTheEdge(t *testing.T) {
+	if got := domain.RejectExternalInteractionPayloadTooLarge.Code(); got != domain.CodeExternalInteractionPayloadTooLarge {
+		t.Fatalf("Code() = %q, want %q", got, domain.CodeExternalInteractionPayloadTooLarge)
 	}
 }
 

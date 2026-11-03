@@ -20,6 +20,11 @@ const (
 	failedType            = "com.company.gateway.external-command-failed.v1"
 	outcomeUnknownType    = "com.company.gateway.external-outcome-unknown.v1"
 	ambiguityExpiredType  = "com.company.gateway.external-command-ambiguity-expired.v1"
+	responseCapturedType  = "com.company.gateway.external-response-captured.v1"
+	interactionStoredType = "com.company.gateway.external-interaction-stored.v1"
+	schemaMismatchType    = "com.company.gateway.external-schema-mismatch-detected.v1"
+	uncorrelatedType      = "com.company.gateway.external-interaction-uncorrelated.v1"
+	reprocessedType       = "com.company.gateway.external-interaction-reprocessed.v1"
 )
 
 type Mapper struct{}
@@ -74,6 +79,47 @@ func (Mapper) Map(event kernel.DomainEvent) (postgres.Mapped, error) {
 			StateQuerySupported: e.StateQuerySupported, At: timestamp(e.At),
 		}}, nil
 	default:
+		return mapInteraction(event)
+	}
+}
+
+func mapInteraction(event kernel.DomainEvent) (postgres.Mapped, error) {
+	switch e := event.(type) {
+	case domain.ExternalResponseCaptured:
+		return postgres.Mapped{Type: responseCapturedType, Message: &eventv1.ExternalResponseCaptured{
+			InteractionId: string(e.InteractionID), CommandId: string(e.CommandID), ConnectorId: string(e.ConnectorKey), Operation: e.Operation,
+			RequestRef: e.Request.Ref, RequestVersionId: e.Request.VersionID, RequestHash: e.Request.Hash,
+			ResponseRef: e.Response.Ref, ResponseVersionId: e.Response.VersionID, ResponseHash: e.Response.Hash,
+			Step: step(e.Step), MismatchKind: mismatchKind(e.Mismatch.Kind), MismatchDetail: e.Mismatch.Detail,
+			PartnerDeclaredVersion: e.Mismatch.PartnerDeclaredVersion, At: timestamp(e.At),
+		}}, nil
+	case domain.ExternalInteractionStored:
+		return postgres.Mapped{Type: interactionStoredType, Message: &eventv1.ExternalInteractionStored{
+			InteractionId: string(e.InteractionID), ConnectorId: string(e.ConnectorKey), Operation: e.Operation,
+			Direction: direction(e.Direction), Source: interactionSource(e.Source), CommandId: string(e.CommandID),
+			NormalizationRevision: int32(e.NormalizationRevision), At: timestamp(e.At),
+		}}, nil
+	case domain.ExternalSchemaMismatchDetected:
+		return postgres.Mapped{Type: schemaMismatchType, Message: &eventv1.ExternalSchemaMismatchDetected{
+			InteractionId: string(e.InteractionID), ConnectorId: string(e.ConnectorKey), ConnectorKey: string(e.ConnectorKey),
+			PartnerId: string(e.PartnerID), Environment: environment(e.Environment), Operation: e.Operation, AssetType: e.AssetType,
+			CommandId: string(e.CommandID), MismatchKind: mismatchKind(e.Mismatch.Kind), MismatchDetail: e.Mismatch.Detail,
+			PartnerDeclaredVersion: e.Mismatch.PartnerDeclaredVersion, At: timestamp(e.At),
+		}}, nil
+	case domain.ExternalInteractionUncorrelated:
+		return postgres.Mapped{Type: uncorrelatedType, Message: &eventv1.ExternalInteractionUncorrelated{
+			InteractionId: string(e.InteractionID), ConnectorId: string(e.ConnectorKey), ConnectorKey: string(e.ConnectorKey),
+			PartnerId: string(e.PartnerID), Environment: environment(e.Environment), Operation: e.Operation,
+			PartnerEventId: e.PartnerEventID, BusinessDate: e.BusinessDate, ReceivedAt: timestamp(e.ReceivedAt), At: timestamp(e.At),
+		}}, nil
+	case domain.ExternalInteractionReprocessed:
+		return postgres.Mapped{Type: reprocessedType, Message: &eventv1.ExternalInteractionReprocessed{
+			InteractionId: string(e.InteractionID), ConnectorId: string(e.ConnectorKey), PartnerId: string(e.PartnerID), Operation: e.Operation,
+			CommandId: string(e.CommandID), PreviousRevision: int32(e.PreviousRevision), NormalizationRevision: int32(e.NormalizationRevision),
+			PreviousOutcome: interactionOutcome(e.PreviousOutcome), Outcome: interactionOutcome(e.Outcome),
+			OutcomeChanged: e.OutcomeChanged, TerminalCommandAffected: e.TerminalCommandAffected, At: timestamp(e.At),
+		}}, nil
+	default:
 		return postgres.Mapped{}, fmt.Errorf("%w: %s", postgres.ErrUnmappedEvent, event.EventName())
 	}
 }
@@ -123,6 +169,63 @@ func confirmationSource(s domain.ConfirmationSource) eventv1.ConfirmationSource 
 		return eventv1.ConfirmationSource_CONFIRMATION_SOURCE_UNSPECIFIED
 	}
 }
+
+var (
+	environmentsOnTheWire = map[domain.Environment]eventv1.Environment{
+		domain.EnvironmentDevelopment:  eventv1.Environment_ENVIRONMENT_DEVELOPMENT,
+		domain.EnvironmentIntegration:  eventv1.Environment_ENVIRONMENT_INTEGRATION,
+		domain.EnvironmentHomologation: eventv1.Environment_ENVIRONMENT_HOMOLOGATION,
+		domain.EnvironmentProduction:   eventv1.Environment_ENVIRONMENT_PRODUCTION,
+	}
+	mismatchKindsOnTheWire = map[domain.MismatchKind]eventv1.MismatchKind{
+		domain.MismatchStructure:    eventv1.MismatchKind_MISMATCH_KIND_STRUCTURE,
+		domain.MismatchMissingField: eventv1.MismatchKind_MISMATCH_KIND_MISSING_FIELD,
+		domain.MismatchType:         eventv1.MismatchKind_MISMATCH_KIND_TYPE,
+		domain.MismatchVersion:      eventv1.MismatchKind_MISMATCH_KIND_VERSION,
+	}
+	outcomesOnTheWire = map[domain.InteractionStatus]eventv1.InteractionOutcome{
+		domain.InteractionNormalized:     eventv1.InteractionOutcome_INTERACTION_OUTCOME_NORMALIZED,
+		domain.InteractionUncorrelated:   eventv1.InteractionOutcome_INTERACTION_OUTCOME_UNCORRELATED,
+		domain.InteractionSchemaMismatch: eventv1.InteractionOutcome_INTERACTION_OUTCOME_SCHEMA_MISMATCH,
+	}
+	directionsOnTheWire = map[domain.Direction]eventv1.InteractionDirection{
+		domain.DirectionOutbound: eventv1.InteractionDirection_INTERACTION_DIRECTION_OUTBOUND,
+		domain.DirectionInbound:  eventv1.InteractionDirection_INTERACTION_DIRECTION_INBOUND,
+	}
+	sourcesOnTheWire = map[domain.InteractionSource]eventv1.InteractionSource{
+		domain.InteractionSubmitResponse: eventv1.InteractionSource_INTERACTION_SOURCE_SUBMIT_RESPONSE,
+		domain.InteractionStateQuery:     eventv1.InteractionSource_INTERACTION_SOURCE_STATE_QUERY,
+		domain.InteractionCallback:       eventv1.InteractionSource_INTERACTION_SOURCE_CALLBACK,
+		domain.InteractionFile:           eventv1.InteractionSource_INTERACTION_SOURCE_FILE,
+		domain.InteractionExternalRead:   eventv1.InteractionSource_INTERACTION_SOURCE_EXTERNAL_READ,
+	}
+	stepsOnTheWire = map[domain.Step]eventv1.Step{
+		domain.StepConfirm:   eventv1.Step_STEP_CONFIRM,
+		domain.StepAwait:     eventv1.Step_STEP_AWAIT,
+		domain.StepRetry:     eventv1.Step_STEP_RETRY,
+		domain.StepFail:      eventv1.Step_STEP_FAIL,
+		domain.StepQuery:     eventv1.Step_STEP_QUERY,
+		domain.StepReconcile: eventv1.Step_STEP_RECONCILE,
+		domain.StepSuspend:   eventv1.Step_STEP_SUSPEND,
+	}
+)
+
+// A value the maps do not know travels as the zero, UNSPECIFIED, never as a guess.
+func environment(e domain.Environment) eventv1.Environment { return environmentsOnTheWire[e] }
+
+func mismatchKind(k domain.MismatchKind) eventv1.MismatchKind { return mismatchKindsOnTheWire[k] }
+
+func interactionOutcome(s domain.InteractionStatus) eventv1.InteractionOutcome {
+	return outcomesOnTheWire[s]
+}
+
+func direction(d domain.Direction) eventv1.InteractionDirection { return directionsOnTheWire[d] }
+
+func interactionSource(s domain.InteractionSource) eventv1.InteractionSource {
+	return sourcesOnTheWire[s]
+}
+
+func step(s domain.Step) eventv1.Step { return stepsOnTheWire[s] }
 
 func waitingStatus(s domain.CommandStatus) eventv1.WaitingStatus {
 	switch s {

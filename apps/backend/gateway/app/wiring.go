@@ -58,16 +58,18 @@ type Waits struct {
 func Bind(waits Waits) func(tx *postgres.Tx) application.Resources {
 	return func(tx *postgres.Tx) application.Resources {
 		return application.Resources{
-			Connectors:          provider.NewConnectorRepository(tx),
-			Profiles:            provider.NewCapabilityProfileRepository(tx),
-			Authorizations:      provider.NewQueryAuthorizationRepository(tx),
-			ExternalCommands:    provider.NewExternalCommandRepository(tx),
-			ProfilesByConnector: provider.NewCapabilityProfilesByConnectorWithin(tx),
-			CommandsBySeries:    provider.NewExternalCommandsBySeriesWithin(tx),
-			Ledger:              tx.AttemptLedger(),
-			Outbox:              tx.Outbox(provider.Mapper{}),
-			Commands:            tx.CommandInbox(application.CommandConsumer, waits.Command),
-			Inbox:               tx.Inbox(ConsumerName, waits.Message),
+			Connectors:           provider.NewConnectorRepository(tx),
+			Profiles:             provider.NewCapabilityProfileRepository(tx),
+			Authorizations:       provider.NewQueryAuthorizationRepository(tx),
+			ExternalCommands:     provider.NewExternalCommandRepository(tx),
+			ExternalInteractions: provider.NewExternalInteractionRepository(tx),
+			ExternalReferences:   provider.NewExternalReferenceRepository(tx),
+			ProfilesByConnector:  provider.NewCapabilityProfilesByConnectorWithin(tx),
+			CommandsBySeries:     provider.NewExternalCommandsBySeriesWithin(tx),
+			Ledger:               tx.AttemptLedger(),
+			Outbox:               tx.Outbox(provider.Mapper{}),
+			Commands:             tx.CommandInbox(application.CommandConsumer, waits.Command),
+			Inbox:                tx.Inbox(ConsumerName, waits.Message),
 		}
 	}
 }
@@ -77,6 +79,7 @@ func Bind(waits Waits) func(tx *postgres.Tx) application.Resources {
 func NewService(pool *pgxpool.Pool, clock ports.Clock, ids ports.IDGenerator, waits Waits) application.Service {
 	reads := postgres.NewReadPool(pool)
 	commands := provider.NewExternalCommandsReader(reads)
+	interactions := provider.NewExternalInteractionsReader(reads)
 	return application.Service{
 		UoW:                          unitOfWork(pool, Bind(waits)),
 		ConnectorReader:              provider.NewConnectorReader(reads),
@@ -87,10 +90,16 @@ func NewService(pool *pgxpool.Pool, clock ports.Clock, ids ports.IDGenerator, wa
 		CommandsByBusinessKey:        commands,
 		CommandsByStatus:             commands,
 		CommandsByOutboundKey:        commands,
+		InteractionReader:            provider.NewExternalInteractionReader(reads),
+		InteractionsByPartnerEvent:   interactions,
+		InteractionsByCommand:        interactions,
+		ReferenceReader:              provider.NewExternalReferenceReader(reads),
+		ReferencesBySubject:          provider.NewExternalReferencesReader(reads),
 		Clock:                        clock,
 		IDs:                          ids,
 		Authorize:                    Authorization(),
 		OutboundKeys:                 OutboundKeyPolicy(),
+		DerivedKeys:                  DerivedKeyPolicy(),
 		Consumer:                     ConsumerName,
 	}
 }
@@ -98,8 +107,16 @@ func NewService(pool *pgxpool.Pool, clock ports.Clock, ids ports.IDGenerator, wa
 // OutboundKeyPolicy is SHA-256 over the canonical intent (IDM-11); the
 // application block imports no crypto, so the composition root fixes it.
 func OutboundKeyPolicy() usecase.OutboundKeyPolicy {
-	return usecase.OutboundKeyPolicy{Digest: func(canonical []byte) ports.Fingerprint { return sha256.Sum256(canonical) }}
+	return usecase.OutboundKeyPolicy{Digest: digest}
 }
+
+// DerivedKeyPolicy is SHA-256 too, over the parts of a command key that an
+// internal step derives and that IDM-02 cannot hold as they are.
+func DerivedKeyPolicy() application.DerivedKeyPolicy {
+	return application.DerivedKeyPolicy{Digest: digest}
+}
+
+func digest(canonical []byte) ports.Fingerprint { return sha256.Sum256(canonical) }
 
 func NewGatewayService(pool *pgxpool.Pool, rt *otelboot.Runtime, cfg Config) (application.Service, error) {
 	policy, err := kernelapp.IdempotencyPolicy(cfg.Policies.IdempotencyWait, cfg.Policies.IdempotencyRetention)

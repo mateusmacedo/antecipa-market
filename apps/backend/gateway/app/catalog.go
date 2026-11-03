@@ -35,9 +35,29 @@ var (
 		Type:        "com.company.gateway.external-command-ambiguity-expired",
 		ContractRef: "company/gateway/event/v1/external_command_ambiguity_expired.proto#ExternalCommandAmbiguityExpired",
 	}
+	externalSchemaMismatchDetected = channel.Event{
+		Type:        "com.company.gateway.external-schema-mismatch-detected",
+		ContractRef: "company/gateway/event/v1/external_schema_mismatch_detected.proto#ExternalSchemaMismatchDetected",
+	}
+	externalInteractionUncorrelated = channel.Event{
+		Type:        "com.company.gateway.external-interaction-uncorrelated",
+		ContractRef: "company/gateway/event/v1/external_interaction_uncorrelated.proto#ExternalInteractionUncorrelated",
+	}
+	externalInteractionReprocessed = channel.Event{
+		Type:        "com.company.gateway.external-interaction-reprocessed",
+		ContractRef: "company/gateway/event/v1/external_interaction_reprocessed.proto#ExternalInteractionReprocessed",
+	}
 	externalCommandDispatchRequested = channel.Event{
 		Type:        "com.company.gateway.external-command-dispatch-requested",
 		ContractRef: "company/gateway/event/v1/external_command_dispatch_requested.proto#ExternalCommandDispatchRequested",
+	}
+	externalResponseCaptured = channel.Event{
+		Type:        "com.company.gateway.external-response-captured",
+		ContractRef: "company/gateway/event/v1/external_response_captured.proto#ExternalResponseCaptured",
+	}
+	externalInteractionStored = channel.Event{
+		Type:        "com.company.gateway.external-interaction-stored",
+		ContractRef: "company/gateway/event/v1/external_interaction_stored.proto#ExternalInteractionStored",
 	}
 )
 
@@ -64,18 +84,31 @@ func partnerEvent(name, file, message string) channel.Event {
 	}
 }
 
-// GatewayChannel is the channel of the integration events, named after the
+// GatewayChannel is the channel of the nine integration events, named after the
 // destination the use cases author, because the publisher resolves by it.
 func GatewayChannel(cfg Config) channel.Channel {
 	return channel.NewKafka(application.Destination, cfg.GatewayTopic, cfg.GatewayDLQ, cfg.Group,
 		externalCommandSubmitted, externalCommandAcknowledged, externalCommandConfirmed,
-		externalCommandFailed, externalOutcomeUnknown, externalCommandAmbiguityExpired)
+		externalCommandFailed, externalOutcomeUnknown, externalCommandAmbiguityExpired,
+		externalSchemaMismatchDetected, externalInteractionUncorrelated, externalInteractionReprocessed)
 }
 
 // DispatchChannel carries the dispatch intent alone (KFK-03), to the handler
 // of this context that sends the command to the partner.
 func DispatchChannel(cfg Config) channel.Channel {
 	return channel.NewKafka(application.DispatchDestination, cfg.DispatchTopic, cfg.DispatchDLQ, cfg.Group, externalCommandDispatchRequested)
+}
+
+// InteractionChannel carries the capture of a submission's response alone
+// (KFK-03), to the consumer of this context that records the interaction.
+func InteractionChannel(cfg Config) channel.Channel {
+	return channel.NewKafka(application.InteractionDestination, cfg.InteractionTopic, cfg.InteractionDLQ, cfg.Group, externalResponseCaptured)
+}
+
+// NormalizationChannel carries the interaction stored for normalization alone
+// (KFK-03), to the consumer of this context that concludes it (decision 18).
+func NormalizationChannel(cfg Config) channel.Channel {
+	return channel.NewKafka(application.NormalizationDestination, cfg.NormalizationTopic, cfg.NormalizationDLQ, cfg.Group, externalInteractionStored)
 }
 
 // PartnerChannel is the channel the consumer reads, with every event the

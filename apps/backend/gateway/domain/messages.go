@@ -121,6 +121,60 @@ type ResolveUnknownOutcome struct {
 	Partial             bool
 }
 
+// RecordExternalInteraction carries the references the store returned for the
+// raw payload, written before the record; DuplicateOf is set by the caller that
+// found the first reception of the same partner event.
+type RecordExternalInteraction struct {
+	ConnectorKey   ConnectorKey
+	Operation      string
+	Direction      Direction
+	Source         InteractionSource
+	ContentType    string
+	CommandID      IdempotencyKey
+	PartnerEventID string
+	BusinessDate   string
+	Request        RawPayload
+	Response       RawPayload
+	CapturedStep   Step
+	Mismatch       Mismatch
+	DuplicateOf    InteractionID
+	At             kernel.Instant
+}
+
+// ConcludeInteraction carries the reading of the revision it concludes and, as
+// facts read in the unit of work, whether the linked command is terminal and
+// what the events take from the connector and the command (92 §2).
+type ConcludeInteraction struct {
+	Revision        int
+	Outcome         InteractionStatus
+	CommandID       IdempotencyKey
+	ReadingHash     string
+	Finding         Finding
+	Mismatch        Mismatch
+	CommandTerminal bool
+	PartnerID       PartnerID
+	Environment     Environment
+	AssetType       string
+	At              kernel.Instant
+}
+
+type ReprocessInteraction struct {
+	Justification string
+	At            kernel.Instant
+}
+
+type LinkExternalReference struct {
+	ProviderID          PartnerID
+	System              ExternalSystem
+	ReferenceType       ReferenceType
+	Reference           string
+	NormalizedReference string
+	SubjectType         string
+	SubjectID           SubjectID
+	AsOf                kernel.Instant
+	ObservedVersion     string
+}
+
 type ConnectorResponse struct {
 	ConnectorKey ConnectorKey
 }
@@ -148,6 +202,20 @@ type StepApplied struct {
 
 type ResolutionAccepted struct {
 	Finding Finding
+}
+
+type InteractionResponse struct {
+	InteractionID InteractionID
+	Status        InteractionStatus
+}
+
+type ReprocessResponse struct {
+	InteractionID         InteractionID
+	NormalizationRevision int
+}
+
+type ReferenceResponse struct {
+	ReferenceKey ReferenceKey
 }
 
 // ExternalCommandDispatchRequested is the dispatch intent, internal to the
@@ -237,6 +305,91 @@ func (ExternalCommandAmbiguityExpired) EventName() string {
 	return "gateway.external-command-ambiguity-expired"
 }
 
+// ExternalResponseCaptured is the capture of the response of a submission,
+// internal to the context: the consumer records the outbound interaction from
+// it, with the step the dispatch applied.
+type ExternalResponseCaptured struct {
+	InteractionID InteractionID
+	CommandID     IdempotencyKey
+	ConnectorKey  ConnectorKey
+	Operation     string
+	Request       RawPayload
+	Response      RawPayload
+	Step          Step
+	Mismatch      Mismatch
+	At            kernel.Instant
+}
+
+func (ExternalResponseCaptured) EventName() string { return "gateway.external-response-captured" }
+
+// ExternalInteractionStored hands a revision of an interaction to the
+// normalization, internal to the context: the raw payload does not travel.
+type ExternalInteractionStored struct {
+	InteractionID         InteractionID
+	ConnectorKey          ConnectorKey
+	Operation             string
+	Direction             Direction
+	Source                InteractionSource
+	CommandID             IdempotencyKey
+	NormalizationRevision int
+	At                    kernel.Instant
+}
+
+func (ExternalInteractionStored) EventName() string { return "gateway.external-interaction-stored" }
+
+// ExternalSchemaMismatchDetected carries the partner and the environment of the
+// connector, so the Partner and the Backoffice act on it alone (92 §2).
+type ExternalSchemaMismatchDetected struct {
+	InteractionID InteractionID
+	ConnectorKey  ConnectorKey
+	PartnerID     PartnerID
+	Environment   Environment
+	Operation     string
+	AssetType     string
+	CommandID     IdempotencyKey
+	Mismatch      Mismatch
+	At            kernel.Instant
+}
+
+func (ExternalSchemaMismatchDetected) EventName() string {
+	return "gateway.external-schema-mismatch-detected"
+}
+
+type ExternalInteractionUncorrelated struct {
+	InteractionID  InteractionID
+	ConnectorKey   ConnectorKey
+	PartnerID      PartnerID
+	Environment    Environment
+	Operation      string
+	PartnerEventID string
+	BusinessDate   string
+	ReceivedAt     kernel.Instant
+	At             kernel.Instant
+}
+
+func (ExternalInteractionUncorrelated) EventName() string {
+	return "gateway.external-interaction-uncorrelated"
+}
+
+type ExternalInteractionReprocessed struct {
+	InteractionID           InteractionID
+	ConnectorKey            ConnectorKey
+	PartnerID               PartnerID
+	Operation               string
+	CommandID               IdempotencyKey
+	PreviousRevision        int
+	NormalizationRevision   int
+	PreviousOutcome         InteractionStatus
+	Outcome                 InteractionStatus
+	OutcomeChanged          bool
+	TerminalCommandAffected bool
+	At                      kernel.Instant
+}
+
+func (ExternalInteractionReprocessed) EventName() string {
+	return "gateway.external-interaction-reprocessed"
+}
+
 var (
 	_ kernel.DomainEvent = ExternalCommandDispatchRequested{}
 	_ kernel.DomainEvent = ExternalCommandSubmitted{}
@@ -245,4 +398,9 @@ var (
 	_ kernel.DomainEvent = ExternalCommandFailed{}
 	_ kernel.DomainEvent = ExternalOutcomeUnknown{}
 	_ kernel.DomainEvent = ExternalCommandAmbiguityExpired{}
+	_ kernel.DomainEvent = ExternalResponseCaptured{}
+	_ kernel.DomainEvent = ExternalInteractionStored{}
+	_ kernel.DomainEvent = ExternalSchemaMismatchDetected{}
+	_ kernel.DomainEvent = ExternalInteractionUncorrelated{}
+	_ kernel.DomainEvent = ExternalInteractionReprocessed{}
 )

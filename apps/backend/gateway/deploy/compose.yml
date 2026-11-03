@@ -1,6 +1,7 @@
 # Processos do gateway na topologia local (ADR-044): api gRPC, que aplica o
-# schema (MIGRATE=true), relay da própria outbox, com os canais gateway.events
-# e gateway.dispatch, e consumer de partner.events.
+# schema (MIGRATE=true), relay da própria outbox, com os canais gateway.events,
+# gateway.dispatch, gateway.interactions e gateway.normalizations, e consumer de
+# partner.events.
 x-image: &image
   build:
     context: ../../../..
@@ -51,6 +52,10 @@ services:
       KAFKA_GATEWAY_DLQ: ${KAFKA_GATEWAY_DLQ:-gateway.events.dlq}
       KAFKA_GATEWAY_DISPATCH_TOPIC: ${KAFKA_GATEWAY_DISPATCH_TOPIC:-gateway.dispatch}
       KAFKA_GATEWAY_DISPATCH_DLQ: ${KAFKA_GATEWAY_DISPATCH_DLQ:-gateway.dispatch.dlq}
+      KAFKA_GATEWAY_INTERACTIONS_TOPIC: ${KAFKA_GATEWAY_INTERACTIONS_TOPIC:-gateway.interactions}
+      KAFKA_GATEWAY_INTERACTIONS_DLQ: ${KAFKA_GATEWAY_INTERACTIONS_DLQ:-gateway.interactions.dlq}
+      KAFKA_GATEWAY_NORMALIZATIONS_TOPIC: ${KAFKA_GATEWAY_NORMALIZATIONS_TOPIC:-gateway.normalizations}
+      KAFKA_GATEWAY_NORMALIZATIONS_DLQ: ${KAFKA_GATEWAY_NORMALIZATIONS_DLQ:-gateway.normalizations.dlq}
     depends_on:
       redpanda-init:
         condition: service_completed_successfully

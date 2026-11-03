@@ -59,6 +59,8 @@ func TestTheRelayNamesEachMissingVariable(t *testing.T) {
 		"PG_DSN", "postgres://x", "KAFKA_BROKERS", "b:9092", "KAFKA_SASL_MECHANISM", "SCRAM-SHA-256",
 		"KAFKA_GATEWAY_TOPIC", "gateway", "KAFKA_GATEWAY_DLQ", "gateway.dlq",
 		"KAFKA_GATEWAY_DISPATCH_TOPIC", "gateway.dispatch", "KAFKA_GATEWAY_DISPATCH_DLQ", "gateway.dispatch.dlq", "KAFKA_GROUP", "g",
+		"KAFKA_GATEWAY_INTERACTIONS_TOPIC", "gateway.interactions", "KAFKA_GATEWAY_INTERACTIONS_DLQ", "gateway.interactions.dlq",
+		"KAFKA_GATEWAY_NORMALIZATIONS_TOPIC", "gateway.normalizations", "KAFKA_GATEWAY_NORMALIZATIONS_DLQ", "gateway.normalizations.dlq",
 	}
 	if _, err := app.FromEnv(app.RoleRelay, lookup(full...)); err != nil {
 		t.Fatalf("FromEnv(full) = %v, want nil", err)
@@ -167,7 +169,9 @@ func TestFromEnvHandsTheMigratingDSNToTheAPIOnly(t *testing.T) {
 
 	relay, err := app.FromEnv(app.RoleRelay, lookup("PG_DSN", "postgres://x", "MIGRATE", "true", "PG_MIGRATE_DSN", migrator,
 		"KAFKA_BROKERS", "b:9092", "KAFKA_INSECURE", "true", "KAFKA_GATEWAY_TOPIC", "t", "KAFKA_GATEWAY_DLQ", "d",
-		"KAFKA_GATEWAY_DISPATCH_TOPIC", "dt", "KAFKA_GATEWAY_DISPATCH_DLQ", "dd", "KAFKA_GROUP", "g"))
+		"KAFKA_GATEWAY_DISPATCH_TOPIC", "dt", "KAFKA_GATEWAY_DISPATCH_DLQ", "dd", "KAFKA_GROUP", "g",
+		"KAFKA_GATEWAY_INTERACTIONS_TOPIC", "it", "KAFKA_GATEWAY_INTERACTIONS_DLQ", "id",
+		"KAFKA_GATEWAY_NORMALIZATIONS_TOPIC", "nt", "KAFKA_GATEWAY_NORMALIZATIONS_DLQ", "nd"))
 	if err != nil {
 		t.Fatalf("FromEnv(relay) = %v, want nil", err)
 	}

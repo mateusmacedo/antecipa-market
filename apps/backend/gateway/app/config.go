@@ -50,9 +50,14 @@ const (
 	envGatewayDLQ    = "KAFKA_GATEWAY_DLQ"
 	envDispatchTopic = "KAFKA_GATEWAY_DISPATCH_TOPIC"
 	envDispatchDLQ   = "KAFKA_GATEWAY_DISPATCH_DLQ"
-	envPartnerTopic  = "KAFKA_PARTNER_TOPIC"
-	envPartnerDLQ    = "KAFKA_PARTNER_DLQ"
-	envPartnerSource = "PARTNER_SOURCE"
+
+	envInteractionTopic   = "KAFKA_GATEWAY_INTERACTIONS_TOPIC"
+	envInteractionDLQ     = "KAFKA_GATEWAY_INTERACTIONS_DLQ"
+	envNormalizationTopic = "KAFKA_GATEWAY_NORMALIZATIONS_TOPIC"
+	envNormalizationDLQ   = "KAFKA_GATEWAY_NORMALIZATIONS_DLQ"
+	envPartnerTopic       = "KAFKA_PARTNER_TOPIC"
+	envPartnerDLQ         = "KAFKA_PARTNER_DLQ"
+	envPartnerSource      = "PARTNER_SOURCE"
 
 	envMetricTenants = "METRIC_TENANTS"
 )
@@ -78,14 +83,19 @@ type Config struct {
 	KafkaAuth kafka.ClientAuth
 	Group     string
 
-	// GatewayTopic and DispatchTopic address the two channels the relay
-	// publishes to; PartnerTopic the one the consumer reads.
-	GatewayTopic  string
-	GatewayDLQ    string
-	DispatchTopic string
-	DispatchDLQ   string
-	PartnerTopic  string
-	PartnerDLQ    string
+	// GatewayTopic, DispatchTopic, InteractionTopic and NormalizationTopic
+	// address the four channels the relay publishes to; PartnerTopic the one
+	// the consumer reads.
+	GatewayTopic       string
+	GatewayDLQ         string
+	DispatchTopic      string
+	DispatchDLQ        string
+	InteractionTopic   string
+	InteractionDLQ     string
+	NormalizationTopic string
+	NormalizationDLQ   string
+	PartnerTopic       string
+	PartnerDLQ         string
 
 	// PartnerSource is the producer the consumer admits on partner.events, by
 	// the envelope's source attribute (CTX-27, IDN-04).
@@ -155,6 +165,10 @@ func FromEnv(role Role, lookup func(string) string) (Config, error) {
 	cfg.GatewayDLQ = lookup(envGatewayDLQ)
 	cfg.DispatchTopic = lookup(envDispatchTopic)
 	cfg.DispatchDLQ = lookup(envDispatchDLQ)
+	cfg.InteractionTopic = lookup(envInteractionTopic)
+	cfg.InteractionDLQ = lookup(envInteractionDLQ)
+	cfg.NormalizationTopic = lookup(envNormalizationTopic)
+	cfg.NormalizationDLQ = lookup(envNormalizationDLQ)
 	cfg.PartnerTopic = lookup(envPartnerTopic)
 	cfg.PartnerDLQ = lookup(envPartnerDLQ)
 	cfg.PartnerSource = envconfig.OrDefault(lookup(envPartnerSource), cfg.PartnerSource)
@@ -232,6 +246,10 @@ func (c Config) requirements() ([]string, error) {
 		require(envGatewayDLQ, c.GatewayDLQ == "")
 		require(envDispatchTopic, c.DispatchTopic == "")
 		require(envDispatchDLQ, c.DispatchDLQ == "")
+		require(envInteractionTopic, c.InteractionTopic == "")
+		require(envInteractionDLQ, c.InteractionDLQ == "")
+		require(envNormalizationTopic, c.NormalizationTopic == "")
+		require(envNormalizationDLQ, c.NormalizationDLQ == "")
 		require(envGroup, c.Group == "")
 		return append(missing, c.KafkaAuth.Missing(c.KafkaInsecure)...), nil
 	case RoleConsumer:

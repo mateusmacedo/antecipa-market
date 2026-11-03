@@ -98,3 +98,60 @@ func relation[S any](ctx context.Context, s Service, operation string, input Ope
 	}
 	return found, nil
 }
+
+func (s Service) FindExternalInteraction(ctx context.Context, id domain.InteractionID) (domain.ExternalInteractionSnapshot, error) {
+	return usecase.Query[Operation](ctx, s.instrumentation(), s.Authorize, OperationFindExternalInteraction, FindExternalInteraction{InteractionID: id},
+		func(ctx context.Context) (domain.ExternalInteractionSnapshot, error) {
+			interaction, _, err := s.InteractionReader.Load(ctx, id)
+			if err != nil {
+				return domain.ExternalInteractionSnapshot{}, fmt.Errorf("application: find external interaction %s: %w", id, err)
+			}
+			return interaction, nil
+		})
+}
+
+// FindExternalInteractionByPartnerEvent answers the first reception of the
+// event: a repeated reception names it in DuplicateOf, so it is the one the
+// deduplication compares against.
+func (s Service) FindExternalInteractionByPartnerEvent(ctx context.Context, connector domain.ConnectorKey, partnerEventID string) (domain.ExternalInteractionSnapshot, error) {
+	input := FindExternalInteractionByPartnerEvent{ConnectorKey: connector, PartnerEventID: partnerEventID}
+	return usecase.Query[Operation](ctx, s.instrumentation(), s.Authorize, OperationFindExternalInteractionByPartnerEvent, input,
+		func(ctx context.Context) (domain.ExternalInteractionSnapshot, error) {
+			found, err := s.InteractionsByPartnerEvent.LoadByPartnerEvent(ctx, partnerEventID)
+			if err != nil {
+				return domain.ExternalInteractionSnapshot{}, fmt.Errorf("application: find external interaction by partner event %s: %w", partnerEventID, err)
+			}
+			for _, interaction := range found {
+				if interaction.ConnectorKey == connector && interaction.Status != domain.InteractionDuplicate {
+					return interaction, nil
+				}
+			}
+			return domain.ExternalInteractionSnapshot{}, fmt.Errorf("application: find external interaction by partner event %s: %w", partnerEventID, port.ErrNotFound)
+		})
+}
+
+func (s Service) FindExternalInteractionsByCommand(ctx context.Context, command domain.IdempotencyKey) ([]domain.ExternalInteractionSnapshot, error) {
+	return relation(ctx, s, OperationFindExternalInteractionsByCommand, FindExternalInteractionsByCommand{CommandID: command},
+		func(ctx context.Context) ([]domain.ExternalInteractionSnapshot, error) {
+			return s.InteractionsByCommand.LoadByCommand(ctx, command)
+		})
+}
+
+func (s Service) FindExternalReference(ctx context.Context, key domain.ReferenceKey) (domain.ExternalReferenceSnapshot, error) {
+	return usecase.Query[Operation](ctx, s.instrumentation(), s.Authorize, OperationFindExternalReference, FindExternalReference{ReferenceKey: key},
+		func(ctx context.Context) (domain.ExternalReferenceSnapshot, error) {
+			reference, _, err := s.ReferenceReader.Load(ctx, key)
+			if err != nil {
+				return domain.ExternalReferenceSnapshot{}, fmt.Errorf("application: find external reference %s: %w", key, err)
+			}
+			return reference, nil
+		})
+}
+
+func (s Service) FindExternalReferencesBySubject(ctx context.Context, subjectType string, subject domain.SubjectID) ([]domain.ExternalReferenceSnapshot, error) {
+	found, err := relation(ctx, s, OperationFindExternalReferencesBySubject, FindExternalReferencesBySubject{SubjectType: subjectType, SubjectID: subject},
+		func(ctx context.Context) ([]domain.ExternalReferenceSnapshot, error) {
+			return s.ReferencesBySubject.LoadBySubject(ctx, subject)
+		})
+	return slices.DeleteFunc(found, func(r domain.ExternalReferenceSnapshot) bool { return r.SubjectType != subjectType }), err
+}

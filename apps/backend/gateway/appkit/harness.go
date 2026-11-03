@@ -14,7 +14,9 @@ import (
 
 // Tables of this context, which the kit cannot know: it resets the kernel
 // tables and the ones named here.
-var Tables = []string{"connectors", "capability_profiles", "query_authorizations", "external_commands"}
+var Tables = []string{
+	"connectors", "capability_profiles", "query_authorizations", "external_commands", "external_interactions", "external_references",
+}
 
 // PoolOptions is the database this context's suites run in.
 var PoolOptions = pg.Options{

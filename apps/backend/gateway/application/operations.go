@@ -102,6 +102,61 @@ type ResolveUnknownOutcome struct {
 
 type SweepExternalCommands struct{}
 
+// RecordExternalInteraction is recorded after its raw payload is in the
+// store, under the id its recorder minted, which also derives its command key.
+type RecordExternalInteraction struct {
+	InteractionID  domain.InteractionID
+	ConnectorKey   domain.ConnectorKey
+	Operation      string
+	Direction      domain.Direction
+	Source         domain.InteractionSource
+	ContentType    string
+	CommandID      domain.IdempotencyKey
+	PartnerEventID string
+	BusinessDate   string
+	Request        domain.RawPayload
+	Response       domain.RawPayload
+	CapturedStep   domain.Step
+	Mismatch       domain.Mismatch
+	DuplicateOf    domain.InteractionID
+}
+
+// ConcludeInteraction names the revision it concludes, which derives its
+// command key: a reprocessing is concluded under a key of its own.
+type ConcludeInteraction struct {
+	InteractionID domain.InteractionID
+	Revision      int
+	Outcome       domain.InteractionStatus
+	CommandID     domain.IdempotencyKey
+	ReadingHash   string
+	Finding       domain.Finding
+	Mismatch      domain.Mismatch
+}
+
+type ReprocessInteraction struct {
+	InteractionID domain.InteractionID
+	Justification string
+}
+
+type LinkExternalReference struct {
+	ProviderID          domain.PartnerID
+	System              domain.ExternalSystem
+	ReferenceType       domain.ReferenceType
+	Reference           string
+	NormalizedReference string
+	SubjectType         string
+	SubjectID           domain.SubjectID
+	AsOf                kernel.Instant
+	ObservedVersion     string
+}
+
+// LinkInteractionReference is a link the normalization found in the
+// interaction it names; the interaction derives the command key.
+type LinkInteractionReference struct {
+	Link          LinkExternalReference
+	InteractionID domain.InteractionID
+}
+
 // ConsumeCapabilityEnabled and ConsumeCapabilitySuspended are one delivery of
 // partner.events, with the receipt the message inbox registers.
 type ConsumeCapabilityEnabled struct {
@@ -147,6 +202,39 @@ type FindExternalCommandsByStatus struct {
 	Status       domain.CommandStatus
 	ConnectorKey domain.ConnectorKey
 }
+
+type FindExternalInteraction struct {
+	InteractionID domain.InteractionID
+}
+
+type FindExternalInteractionByPartnerEvent struct {
+	ConnectorKey   domain.ConnectorKey
+	PartnerEventID string
+}
+
+type FindExternalInteractionsByCommand struct {
+	CommandID domain.IdempotencyKey
+}
+
+type FindExternalReference struct {
+	ReferenceKey domain.ReferenceKey
+}
+
+type FindExternalReferencesBySubject struct {
+	SubjectType string
+	SubjectID   domain.SubjectID
+}
+
+func (RecordExternalInteraction) isOperation()             {}
+func (ConcludeInteraction) isOperation()                   {}
+func (ReprocessInteraction) isOperation()                  {}
+func (LinkExternalReference) isOperation()                 {}
+func (LinkInteractionReference) isOperation()              {}
+func (FindExternalInteraction) isOperation()               {}
+func (FindExternalInteractionByPartnerEvent) isOperation() {}
+func (FindExternalInteractionsByCommand) isOperation()     {}
+func (FindExternalReference) isOperation()                 {}
+func (FindExternalReferencesBySubject) isOperation()       {}
 
 func (RegisterConnector) isOperation()                    {}
 func (SuspendOperation) isOperation()                     {}

@@ -34,6 +34,22 @@
       {
         "name": "gateway.dispatch.dlq",
         "env": "KAFKA_GATEWAY_DISPATCH_DLQ"
+      },
+      {
+        "name": "gateway.interactions",
+        "env": "KAFKA_GATEWAY_INTERACTIONS_TOPIC"
+      },
+      {
+        "name": "gateway.interactions.dlq",
+        "env": "KAFKA_GATEWAY_INTERACTIONS_DLQ"
+      },
+      {
+        "name": "gateway.normalizations",
+        "env": "KAFKA_GATEWAY_NORMALIZATIONS_TOPIC"
+      },
+      {
+        "name": "gateway.normalizations.dlq",
+        "env": "KAFKA_GATEWAY_NORMALIZATIONS_DLQ"
       }
     ],
     "acls": [
@@ -44,6 +60,10 @@
           "gateway.events.dlq",
           "gateway.dispatch",
           "gateway.dispatch.dlq",
+          "gateway.interactions",
+          "gateway.interactions.dlq",
+          "gateway.normalizations",
+          "gateway.normalizations.dlq",
           "partner.events.dlq"
         ]
       },

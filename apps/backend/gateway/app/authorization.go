@@ -40,9 +40,16 @@ func permissionOf(op application.Operation) port.Permission {
 	case application.SweepExternalCommands, application.RequestResend, application.ExpireAmbiguity:
 		return "gateway:sweep-external-commands"
 	// HoldDispatch has no method either: the dispatch handler runs it while it
-	// consumes the intent.
-	case application.ConsumeCapabilityEnabled, application.ConsumeCapabilitySuspended, application.HoldDispatch:
+	// consumes the intent. The record, the conclusion and the link a
+	// normalization finds are steps of the interaction cycle, run by its
+	// consumers, the sweep and the edge of a partner interaction.
+	case application.ConsumeCapabilityEnabled, application.ConsumeCapabilitySuspended, application.HoldDispatch,
+		application.RecordExternalInteraction, application.ConcludeInteraction, application.LinkInteractionReference:
 		return "gateway:consume"
+	case application.ReprocessInteraction:
+		return "gateway:reprocess-interaction"
+	case application.LinkExternalReference:
+		return "gateway:link-external-reference"
 	case application.FindConnector:
 		return "gateway:find-connector"
 	case application.FindEffectiveCapabilityProfile:
@@ -57,6 +64,16 @@ func permissionOf(op application.Operation) port.Permission {
 		return "gateway:find-external-commands-by-business-key"
 	case application.FindExternalCommandsByStatus:
 		return "gateway:find-external-commands-by-status"
+	case application.FindExternalInteraction:
+		return "gateway:find-external-interaction"
+	case application.FindExternalInteractionByPartnerEvent:
+		return "gateway:find-external-interaction-by-partner-event"
+	case application.FindExternalInteractionsByCommand:
+		return "gateway:find-external-interactions-by-command"
+	case application.FindExternalReference:
+		return "gateway:find-external-reference"
+	case application.FindExternalReferencesBySubject:
+		return "gateway:find-external-references-by-subject"
 	default:
 		return ""
 	}

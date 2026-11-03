@@ -14,7 +14,7 @@ import (
 
 // Spec runs the relay of this context from its own configuration. The harness
 // creates one topic and collects from it, so it carries the dispatch intents
-// the vector enqueues; gateway.events goes to the topic the test creates.
+// the vector enqueues; the other channels go to the topics the test creates.
 var Spec = dist.Spec{
 	Name: "gateway",
 	Pool: appkit.PoolOptions,
@@ -27,11 +27,16 @@ var Spec = dist.Spec{
 	})},
 }
 
-// EnvEventsTopic and EnvEventsDLQ name the topic of gateway.events: the
+// EnvEventsTopic and EnvEventsDLQ name the topic of gateway.events, and the
+// other two pairs those of gateway.interactions and gateway.normalizations: the
 // catalogue refuses two channels on one address (KFK-01c).
 const (
-	EnvEventsTopic = "DISTKIT_GATEWAY_EVENTS_TOPIC"
-	EnvEventsDLQ   = "DISTKIT_GATEWAY_EVENTS_DLQ"
+	EnvEventsTopic         = "DISTKIT_GATEWAY_EVENTS_TOPIC"
+	EnvEventsDLQ           = "DISTKIT_GATEWAY_EVENTS_DLQ"
+	EnvInteractionsTopic   = "DISTKIT_GATEWAY_INTERACTIONS_TOPIC"
+	EnvInteractionsDLQ     = "DISTKIT_GATEWAY_INTERACTIONS_DLQ"
+	EnvNormalizationsTopic = "DISTKIT_GATEWAY_NORMALIZATIONS_TOPIC"
+	EnvNormalizationsDLQ   = "DISTKIT_GATEWAY_NORMALIZATIONS_DLQ"
 )
 
 func oneTopic(getenv func(string) string) func(string) string {
@@ -45,6 +50,14 @@ func oneTopic(getenv func(string) string) func(string) string {
 			return getenv(EnvEventsTopic)
 		case "KAFKA_GATEWAY_DLQ":
 			return getenv(EnvEventsDLQ)
+		case "KAFKA_GATEWAY_INTERACTIONS_TOPIC":
+			return getenv(EnvInteractionsTopic)
+		case "KAFKA_GATEWAY_INTERACTIONS_DLQ":
+			return getenv(EnvInteractionsDLQ)
+		case "KAFKA_GATEWAY_NORMALIZATIONS_TOPIC":
+			return getenv(EnvNormalizationsTopic)
+		case "KAFKA_GATEWAY_NORMALIZATIONS_DLQ":
+			return getenv(EnvNormalizationsDLQ)
 		default:
 			return getenv(name)
 		}

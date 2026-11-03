@@ -16,20 +16,24 @@ func channelConfig() Config {
 	cfg := Defaults(RoleRelay)
 	cfg.GatewayTopic, cfg.GatewayDLQ = "gateway.events", "gateway.events.dlq"
 	cfg.DispatchTopic, cfg.DispatchDLQ = "gateway.dispatch", "gateway.dispatch.dlq"
+	cfg.InteractionTopic, cfg.InteractionDLQ = "gateway.interactions", "gateway.interactions.dlq"
+	cfg.NormalizationTopic, cfg.NormalizationDLQ = "gateway.normalizations", "gateway.normalizations.dlq"
 	cfg.PartnerTopic, cfg.PartnerDLQ, cfg.Group = "partner.events", "partner.events.dlq", "gateway"
 	return cfg
 }
 
 func TestTheRelayAddressesEachChannelByItsPhysicalTopic(t *testing.T) {
 	cfg := channelConfig()
-	catalog, err := channel.NewCatalog(GatewayChannel(cfg), DispatchChannel(cfg))
+	catalog, err := RelayCatalog(cfg)
 	if err != nil {
-		t.Fatalf("NewCatalog() = %v, want nil", err)
+		t.Fatalf("RelayCatalog() = %v, want nil", err)
 	}
 
 	for destination, topic := range map[string]string{
-		application.Destination:         cfg.GatewayTopic,
-		application.DispatchDestination: cfg.DispatchTopic,
+		application.Destination:              cfg.GatewayTopic,
+		application.DispatchDestination:      cfg.DispatchTopic,
+		application.InteractionDestination:   cfg.InteractionTopic,
+		application.NormalizationDestination: cfg.NormalizationTopic,
 	} {
 		if got := catalog.AddressOf(destination); got != topic {
 			t.Errorf("AddressOf(%q) = %q, want the physical topic %q", destination, got, topic)
@@ -54,6 +58,10 @@ func TestEachChannelCarriesTheTypesItsWriterOrReaderUses(t *testing.T) {
 			"company/gateway/event/v1/external_command_submitted.proto#ExternalCommandSubmitted", cfg.GatewayDLQ},
 		"gateway.dispatch": {DispatchChannel(cfg), "com.company.gateway.external-command-dispatch-requested.v1",
 			"company/gateway/event/v1/external_command_dispatch_requested.proto#ExternalCommandDispatchRequested", cfg.DispatchDLQ},
+		"gateway.interactions": {InteractionChannel(cfg), "com.company.gateway.external-response-captured.v1",
+			"company/gateway/event/v1/external_response_captured.proto#ExternalResponseCaptured", cfg.InteractionDLQ},
+		"gateway.normalizations": {NormalizationChannel(cfg), "com.company.gateway.external-interaction-stored.v1",
+			"company/gateway/event/v1/external_interaction_stored.proto#ExternalInteractionStored", cfg.NormalizationDLQ},
 		"partner.events": {PartnerChannel(cfg), capabilityEnabledEvent,
 			"company/partner/event/v1/capability_enabled.proto#CapabilityEnabled", cfg.PartnerDLQ},
 	}
@@ -80,6 +88,8 @@ func TestEveryTypeTheMapperPublishesIsOnItsChannel(t *testing.T) {
 		"submitted": domain.ExternalCommandSubmitted{}, "acknowledged": domain.ExternalCommandAcknowledged{},
 		"confirmed": domain.ExternalCommandConfirmed{}, "failed": domain.ExternalCommandFailed{},
 		"outcome unknown": domain.ExternalOutcomeUnknown{}, "ambiguity expired": domain.ExternalCommandAmbiguityExpired{},
+		"schema mismatch": domain.ExternalSchemaMismatchDetected{}, "uncorrelated": domain.ExternalInteractionUncorrelated{},
+		"reprocessed": domain.ExternalInteractionReprocessed{},
 	}
 	for name, event := range events {
 		mapped, err := provider.Mapper{}.Map(event)
@@ -93,8 +103,18 @@ func TestEveryTypeTheMapperPublishesIsOnItsChannel(t *testing.T) {
 	if len(integration) != len(events) {
 		t.Errorf("gateway.events carries %v, want exactly the %d types the mapper publishes", integration, len(events))
 	}
-	mapped, err := provider.Mapper{}.Map(domain.ExternalCommandDispatchRequested{})
-	if err != nil || !slices.Equal(dispatch, []string{mapped.Type}) {
-		t.Fatalf("gateway.dispatch carries %v, want the dispatch intent %q alone (KFK-03), err %v", dispatch, mapped.Type, err)
+	internal := map[string]struct {
+		carries []string
+		event   kernel.DomainEvent
+	}{
+		"gateway.dispatch":       {dispatch, domain.ExternalCommandDispatchRequested{}},
+		"gateway.interactions":   {channel.WireTypes(InteractionChannel(cfg)), domain.ExternalResponseCaptured{}},
+		"gateway.normalizations": {channel.WireTypes(NormalizationChannel(cfg)), domain.ExternalInteractionStored{}},
+	}
+	for name, c := range internal {
+		mapped, err := provider.Mapper{}.Map(c.event)
+		if err != nil || !slices.Equal(c.carries, []string{mapped.Type}) {
+			t.Errorf("%s carries %v, want %q alone (KFK-03), err %v", name, c.carries, mapped.Type, err)
+		}
 	}
 }
