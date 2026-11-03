@@ -44,7 +44,8 @@ func permissionOf(op application.Operation) port.Permission {
 	// normalization finds are steps of the interaction cycle, run by its
 	// consumers, the sweep and the edge of a partner interaction.
 	case application.ConsumeCapabilityEnabled, application.ConsumeCapabilitySuspended, application.HoldDispatch,
-		application.RecordExternalInteraction, application.ConcludeInteraction, application.LinkInteractionReference:
+		application.RecordExternalInteraction, application.ConcludeInteraction, application.LinkInteractionReference,
+		application.DispatchExternalCommand, application.ConsumeResponseCaptured, application.ConsumeInteractionStored:
 		return "gateway:consume"
 	case application.ReprocessInteraction:
 		return "gateway:reprocess-interaction"

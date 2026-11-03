@@ -315,6 +315,7 @@ type ExternalResponseCaptured struct {
 	Operation     string
 	Request       RawPayload
 	Response      RawPayload
+	ContentType   string
 	Step          Step
 	Mismatch      Mismatch
 	At            kernel.Instant

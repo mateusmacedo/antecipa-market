@@ -21,11 +21,15 @@ var ErrOutcomeNotConcluded = errors.New("application: the outcome is not one a n
 // payload to the store records it under a key derived from the interaction id,
 // so a redelivery or a repeated sweep replays instead of recording twice.
 func (s Service) RecordExternalInteraction(ctx context.Context, cmd RecordExternalInteraction) (usecase.Outcome[domain.InteractionResponse], error) {
+	return s.record(ctx, s.executor(), cmd)
+}
+
+func (s Service) record(ctx context.Context, x executor, cmd RecordExternalInteraction) (usecase.Outcome[domain.InteractionResponse], error) {
 	key, err := s.DerivedKeys.key("record", string(cmd.InteractionID))
 	if err != nil {
 		return usecase.Outcome[domain.InteractionResponse]{}, fmt.Errorf("application: record external interaction %s: %w", cmd.InteractionID, err)
 	}
-	return usecase.Execute(port.WithIdempotencyKey(ctx, key), s.executor(), command[domain.InteractionResponse]{
+	return usecase.Execute(port.WithIdempotencyKey(ctx, key), x, command[domain.InteractionResponse]{
 		Operation:   OperationRecordExternalInteraction,
 		Object:      string(cmd.InteractionID),
 		Input:       cmd,
@@ -67,6 +71,10 @@ func recordFingerprint(cmd RecordExternalInteraction) *usecase.Fingerprint {
 // the connector are read in the unit of work: whether the command is terminal
 // decides what a reprocessing announces, and the events are self-contained.
 func (s Service) ConcludeInteraction(ctx context.Context, cmd ConcludeInteraction) (usecase.Outcome[domain.InteractionResponse], error) {
+	return s.conclude(ctx, s.executor(), cmd)
+}
+
+func (s Service) conclude(ctx context.Context, x executor, cmd ConcludeInteraction) (usecase.Outcome[domain.InteractionResponse], error) {
 	if !cmd.Outcome.Concluded() {
 		return usecase.Outcome[domain.InteractionResponse]{}, usecase.NewFailure(usecase.Validation, false,
 			fmt.Errorf("application: %s %s %s: %w", OperationConcludeInteraction, cmd.InteractionID, cmd.Outcome, ErrOutcomeNotConcluded))
@@ -75,7 +83,7 @@ func (s Service) ConcludeInteraction(ctx context.Context, cmd ConcludeInteractio
 	if err != nil {
 		return usecase.Outcome[domain.InteractionResponse]{}, fmt.Errorf("application: conclude interaction %s: %w", cmd.InteractionID, err)
 	}
-	return usecase.Execute(port.WithIdempotencyKey(ctx, key), s.executor(), command[domain.InteractionResponse]{
+	return usecase.Execute(port.WithIdempotencyKey(ctx, key), x, command[domain.InteractionResponse]{
 		Operation: OperationConcludeInteraction,
 		Object:    string(cmd.InteractionID),
 		Input:     cmd,

@@ -234,6 +234,9 @@ func newHarness(t *testing.T, options ...option) *harness {
 			Outbox:              serviceskit.FaultyOutbox(tx.Outbox(), cfg.faults),
 			Commands:            tx.CommandInbox(application.CommandConsumer),
 			Inbox:               tx.Inbox("gateway"),
+			DispatchInbox:       tx.Inbox(application.DispatchConsumer),
+			InteractionInbox:    tx.Inbox(application.InteractionConsumer),
+			NormalizationInbox:  tx.Inbox(application.NormalizationConsumer),
 		}
 	}
 	commandReader := commandsTable.Reader(h.store)

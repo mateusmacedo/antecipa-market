@@ -89,7 +89,7 @@ func mapInteraction(event kernel.DomainEvent) (postgres.Mapped, error) {
 		return postgres.Mapped{Type: responseCapturedType, Message: &eventv1.ExternalResponseCaptured{
 			InteractionId: string(e.InteractionID), CommandId: string(e.CommandID), ConnectorId: string(e.ConnectorKey), Operation: e.Operation,
 			RequestRef: e.Request.Ref, RequestVersionId: e.Request.VersionID, RequestHash: e.Request.Hash,
-			ResponseRef: e.Response.Ref, ResponseVersionId: e.Response.VersionID, ResponseHash: e.Response.Hash,
+			ResponseRef: e.Response.Ref, ResponseVersionId: e.Response.VersionID, ResponseHash: e.Response.Hash, ContentType: e.ContentType,
 			Step: step(e.Step), MismatchKind: mismatchKind(e.Mismatch.Kind), MismatchDetail: e.Mismatch.Detail,
 			PartnerDeclaredVersion: e.Mismatch.PartnerDeclaredVersion, At: timestamp(e.At),
 		}}, nil

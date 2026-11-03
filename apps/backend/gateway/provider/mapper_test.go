@@ -107,12 +107,12 @@ func TestTheMapperPublishesEachInteractionMessageUnderItsContract(t *testing.T) 
 		{
 			domain.ExternalResponseCaptured{
 				InteractionID: "int-1", CommandID: "idem-1", ConnectorKey: "prt-1:production", Operation: "submitEffect",
-				Request: request, Response: response, Step: domain.StepSuspend, Mismatch: broken, At: mapped,
+				Request: request, Response: response, ContentType: "application/json", Step: domain.StepSuspend, Mismatch: broken, At: mapped,
 			},
 			&eventv1.ExternalResponseCaptured{
 				InteractionId: "int-1", CommandId: "idem-1", ConnectorId: "prt-1:production", Operation: "submitEffect",
 				RequestRef: request.Ref, RequestVersionId: "vq", RequestHash: "hq", ResponseRef: response.Ref, ResponseVersionId: "vs", ResponseHash: "hs",
-				Step: eventv1.Step_STEP_SUSPEND, MismatchKind: eventv1.MismatchKind_MISMATCH_KIND_VERSION, MismatchDetail: "schema 3",
+				ContentType: "application/json", Step: eventv1.Step_STEP_SUSPEND, MismatchKind: eventv1.MismatchKind_MISMATCH_KIND_VERSION, MismatchDetail: "schema 3",
 				PartnerDeclaredVersion: "3.0", At: stamp,
 			},
 			"com.company.gateway.external-response-captured.v1",

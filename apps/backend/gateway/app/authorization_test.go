@@ -41,6 +41,9 @@ var internalSteps = map[application.Operation]port.Permission{
 	application.RecordExternalInteraction{}:  "gateway:consume",
 	application.ConcludeInteraction{}:        "gateway:consume",
 	application.LinkInteractionReference{}:   "gateway:consume",
+	application.DispatchExternalCommand{}:    "gateway:consume",
+	application.ConsumeResponseCaptured{}:    "gateway:consume",
+	application.ConsumeInteractionStored{}:   "gateway:consume",
 }
 
 func TestEveryEdgeOperationDeclaresItsPermission(t *testing.T) {

@@ -159,8 +159,13 @@ func (s Service) RequestResend(ctx context.Context, cmd RequestResend) (usecase.
 // is suspended at the send: nothing goes out, and the sweep resends once the
 // suspension lifts (decision 14).
 func (s Service) HoldDispatch(ctx context.Context, cmd HoldDispatch) (usecase.Outcome[domain.CommandResponse], error) {
-	ctx = port.WithIdempotencyKey(ctx, "hold."+string(cmd.IdempotencyKey)+"."+string(cmd.MessageID))
-	return usecase.Execute(ctx, s.executor(), command[domain.CommandResponse]{
+	// WHY: the command key and the message id together may exceed the 128
+	// characters of IDM-02, so the policy shortens them like any derived key.
+	key, err := s.DerivedKeys.key("hold", string(cmd.IdempotencyKey), string(cmd.MessageID))
+	if err != nil {
+		return usecase.Outcome[domain.CommandResponse]{}, fmt.Errorf("application: hold dispatch %s: %w", cmd.IdempotencyKey, err)
+	}
+	return usecase.Execute(port.WithIdempotencyKey(ctx, key), s.executor(), command[domain.CommandResponse]{
 		Operation:   OperationHoldDispatch,
 		Object:      string(cmd.IdempotencyKey),
 		Input:       cmd,

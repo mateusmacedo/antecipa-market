@@ -10,6 +10,7 @@ import (
 	port "github.com/mateusmacedo/dmpf/libs/backend/go/ports"
 
 	"github.com/mateusmacedo/antecipa-market/apps/backend/gateway/domain"
+	"github.com/mateusmacedo/antecipa-market/apps/backend/gateway/ports"
 )
 
 const (
@@ -39,6 +40,15 @@ type stepDetail struct {
 	partnerCode         string
 	partnerMessage      string
 	partial             bool
+	capture             *submissionCapture
+}
+
+// submissionCapture is the collector of the message being dispatched and the
+// command it belongs to, which the capture names.
+type submissionCapture struct {
+	collector *ports.CaptureCollector
+	connector domain.ConnectorKey
+	operation string
 }
 
 // applier is the Apply of application.ExternalDispatch, ExternalAbandon and
@@ -54,12 +64,17 @@ func (s Service) applier(identity usecase.Identity, d stepDetail) func(context.C
 		if reference == "" {
 			reference = domain.ExternalReferenceID(step.Observation.ExternalRef)
 		}
+		capture, captured := d.captured()
+		interaction := d.interactionID
+		if captured {
+			interaction = capture.InteractionID
+		}
 		outcome, err := usecase.Decide(ctx, res.ExternalCommands, res.Outbox, origin(AggregateTypeExternalCommand, string(d.key)), d.key, identity,
 			loadExistingCommand,
 			func(c *domain.ExternalCommand) (kernel.Accepted[domain.StepApplied], *kernel.Rejection) {
 				return c.ApplyExternalStep(domain.ApplyExternalStep{
 					Step: next, Origin: d.origin, ClassCategory: categoryOf(step.Class), Finding: findingOf(step.Observation.Finding),
-					Source: d.source, InteractionID: d.interactionID, ExternalReferenceID: reference,
+					Source: d.source, InteractionID: interaction, ExternalReferenceID: reference,
 					PartnerCode: d.partnerCode, PartnerMessage: d.partnerMessage, Partial: d.partial, At: identity.OccurredAt,
 				})
 			})
@@ -70,8 +85,39 @@ func (s Service) applier(identity usecase.Identity, d stepDetail) func(context.C
 			return fmt.Errorf("application: apply external step %s: %w",
 				d.key, usecase.NewFailure(usecase.DomainRejection, false, fmt.Errorf("%w: %s", ErrStepRefused, rejection.Code())))
 		}
+		if !captured {
+			return nil
+		}
+		if err := usecase.Enqueue(ctx, res.Outbox, captureIdentity(identity), captureOrigin(capture.InteractionID), 0,
+			[]kernel.DomainEvent{d.capture.message(d.key, capture, next, identity.OccurredAt)}); err != nil {
+			return fmt.Errorf("application: apply external step %s: enqueue capture: %w", d.key, err)
+		}
 		return nil
 	}
+}
+
+func (d stepDetail) captured() (ports.Capture, bool) {
+	if d.capture == nil {
+		return ports.Capture{}, false
+	}
+	return d.capture.collector.Captured()
+}
+
+// message is the capture of decision 17, with the step the dispatch applied;
+// the break of the contract travels only with the suspension it caused.
+func (c submissionCapture) message(key domain.IdempotencyKey, capture ports.Capture, step domain.Step, at kernel.Instant) domain.ExternalResponseCaptured {
+	captured := domain.ExternalResponseCaptured{
+		InteractionID: capture.InteractionID, CommandID: key, ConnectorKey: c.connector, Operation: c.operation,
+		Request: capture.Request, Response: capture.Response, ContentType: capture.ContentType, Step: step, At: at,
+	}
+	if step == domain.StepSuspend {
+		captured.Mismatch = capture.Mismatch
+	}
+	return captured
+}
+
+func captureIdentity(identity usecase.Identity) usecase.Identity {
+	return usecase.Identity{OccurredAt: identity.OccurredAt, MessageIDs: identity.MessageIDs[captureSlot:]}
 }
 
 // ResolveUnknownOutcome is the human reconciliation of RES-43: the decision

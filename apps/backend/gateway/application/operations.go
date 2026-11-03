@@ -157,6 +157,28 @@ type LinkInteractionReference struct {
 	InteractionID domain.InteractionID
 }
 
+// DispatchExternalCommand is one delivery of the dispatch intent: the payload
+// does not travel, so the handler reads the command by its key.
+type DispatchExternalCommand struct {
+	Receipt        port.Receipt
+	IdempotencyKey domain.IdempotencyKey
+}
+
+// ConsumeResponseCaptured is one delivery of the capture of a submission's
+// response, recorded as the outbound interaction.
+type ConsumeResponseCaptured struct {
+	Receipt port.Receipt
+	Capture domain.ExternalResponseCaptured
+}
+
+// ConsumeInteractionStored is one delivery of a revision of an interaction
+// handed to the normalization.
+type ConsumeInteractionStored struct {
+	Receipt       port.Receipt
+	InteractionID domain.InteractionID
+	Revision      int
+}
+
 // ConsumeCapabilityEnabled and ConsumeCapabilitySuspended are one delivery of
 // partner.events, with the receipt the message inbox registers.
 type ConsumeCapabilityEnabled struct {
@@ -251,6 +273,9 @@ func (ResolveUnknownOutcome) isOperation()                {}
 func (SweepExternalCommands) isOperation()                {}
 func (ConsumeCapabilityEnabled) isOperation()             {}
 func (ConsumeCapabilitySuspended) isOperation()           {}
+func (DispatchExternalCommand) isOperation()              {}
+func (ConsumeResponseCaptured) isOperation()              {}
+func (ConsumeInteractionStored) isOperation()             {}
 func (FindConnector) isOperation()                        {}
 func (FindEffectiveCapabilityProfile) isOperation()       {}
 func (FindCapabilityProfile) isOperation()                {}
