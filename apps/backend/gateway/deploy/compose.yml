@@ -3,8 +3,8 @@
 # gateway.dispatch, gateway.interactions e gateway.normalizations, e consumer de
 # partner.events e desses quatro canais, cada um com o seu grupo, além da
 # varredura de tentativas do kernel. O api e o consumer guardam o bruto das interações no S3 do
-# floci; o bucket (versionado, com Object Lock e sem retenção padrão) é
-# provisionado fora do contexto, e sem ele os dois papéis recusam a partida.
+# floci, num bucket versionado, com Object Lock e sem retenção padrão, que nesta
+# topologia o gateway-s3-init cria; sem ele os dois papéis recusam a partida.
 x-image: &image
   build:
     context: ../../../..
@@ -30,6 +30,37 @@ x-kafka: &kafka
   KAFKA_GROUP: gateway
 
 services:
+  # Object Lock só se concede na criação, e liga o versionamento. Bucket que já
+  # existe fica como está: o Ready do api e do consumer recusa o que não for
+  # versionado e travado. O endereçamento é por caminho, como o S3_PATH_STYLE,
+  # porque o bucket não resolve como subdomínio de floci. O profile floci serve
+  # aos processos que rodam no host.
+  gateway-s3-init:
+    image: amazon/aws-cli:2.38.1@sha256:733d5be1015825e4038c6016f3fa9954868ddee1f611b73be795a9cc2e706bfd
+    profiles: [dmpf, floci]
+    restart: 'no'
+    depends_on:
+      floci:
+        condition: service_healthy
+    environment:
+      <<: *s3
+    entrypoint: ['/bin/sh', '-c']
+    command:
+      - |
+        set -eu
+        aws configure set default.s3.addressing_style path
+        s3api() { aws --endpoint-url "$$S3_ENDPOINT" s3api "$$@"; }
+        if s3api head-bucket --bucket "$$S3_BUCKET" >/dev/null 2>&1; then
+          echo "gateway-s3-init: o bucket $$S3_BUCKET já existe"
+          exit 0
+        fi
+        s3api create-bucket --bucket "$$S3_BUCKET" --object-lock-enabled-for-bucket >/dev/null
+        echo "gateway-s3-init: bucket $$S3_BUCKET criado com Object Lock"
+    deploy:
+      resources:
+        limits: { cpus: '0.25', memory: 128M }
+        reservations: { cpus: '0.01', memory: 32M }
+
   dmpf-gateway-api:
     <<: *image
     extends:
@@ -47,8 +78,8 @@ services:
         condition: service_completed_successfully
       postgres-init:
         condition: service_completed_successfully
-      floci:
-        condition: service_healthy
+      gateway-s3-init:
+        condition: service_completed_successfully
       otel-collector:
         condition: service_started
 
@@ -103,7 +134,7 @@ services:
     depends_on:
       redpanda-init:
         condition: service_completed_successfully
-      floci:
-        condition: service_healthy
+      gateway-s3-init:
+        condition: service_completed_successfully
       dmpf-gateway-api:
         condition: service_started
