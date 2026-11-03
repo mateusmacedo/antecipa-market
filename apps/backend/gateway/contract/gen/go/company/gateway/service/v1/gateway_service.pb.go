@@ -3201,8 +3201,11 @@ type SweepExternalCommandsResponse struct {
 	AmbiguityExpired int32                  `protobuf:"varint,2,opt,name=ambiguity_expired,json=ambiguityExpired,proto3" json:"ambiguity_expired,omitempty"`
 	Skipped          int32                  `protobuf:"varint,3,opt,name=skipped,proto3" json:"skipped,omitempty"`
 	Failed           int32                  `protobuf:"varint,4,opt,name=failed,proto3" json:"failed,omitempty"`
-	unknownFields    protoimpl.UnknownFields
-	sizeCache        protoimpl.SizeCache
+	// State queries made and recorded; the finding reaches the command through
+	// the normalization.
+	StateQueried  int32 `protobuf:"varint,5,opt,name=state_queried,json=stateQueried,proto3" json:"state_queried,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
 }
 
 func (x *SweepExternalCommandsResponse) Reset() {
@@ -3259,6 +3262,13 @@ func (x *SweepExternalCommandsResponse) GetSkipped() int32 {
 func (x *SweepExternalCommandsResponse) GetFailed() int32 {
 	if x != nil {
 		return x.Failed
+	}
+	return 0
+}
+
+func (x *SweepExternalCommandsResponse) GetStateQueried() int32 {
+	if x != nil {
+		return x.StateQueried
 	}
 	return 0
 }
@@ -5864,6 +5874,493 @@ func (x *ExternalInteraction) GetReceivedAt() int64 {
 	return 0
 }
 
+type ReceivePartnerInteractionRequest struct {
+	state        protoimpl.MessageState `protogen:"open.v1"`
+	ConnectorKey string                 `protobuf:"bytes,1,opt,name=connector_key,json=connectorKey,proto3" json:"connector_key,omitempty"`
+	// The operation of the ports the interaction belongs to.
+	Operation string `protobuf:"bytes,2,opt,name=operation,proto3" json:"operation,omitempty"`
+	// INTERACTION_SOURCE_CALLBACK or INTERACTION_SOURCE_FILE.
+	Source InteractionSource `protobuf:"varint,3,opt,name=source,proto3,enum=company.gateway.service.v1.InteractionSource" json:"source,omitempty"`
+	// The partner's id of the event, the key of the deduplication; empty
+	// records the interaction without one.
+	PartnerEventId string `protobuf:"bytes,4,opt,name=partner_event_id,json=partnerEventId,proto3" json:"partner_event_id,omitempty"`
+	// The ISO 8601 business date the partner informs, empty when none.
+	BusinessDate string `protobuf:"bytes,5,opt,name=business_date,json=businessDate,proto3" json:"business_date,omitempty"`
+	ContentType  string `protobuf:"bytes,6,opt,name=content_type,json=contentType,proto3" json:"content_type,omitempty"`
+	// The raw body, up to the max_payload_bytes the profile in force declares
+	// for the operation.
+	Body          []byte `protobuf:"bytes,7,opt,name=body,proto3" json:"body,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ReceivePartnerInteractionRequest) Reset() {
+	*x = ReceivePartnerInteractionRequest{}
+	mi := &file_company_gateway_service_v1_gateway_service_proto_msgTypes[69]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ReceivePartnerInteractionRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ReceivePartnerInteractionRequest) ProtoMessage() {}
+
+func (x *ReceivePartnerInteractionRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_company_gateway_service_v1_gateway_service_proto_msgTypes[69]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ReceivePartnerInteractionRequest.ProtoReflect.Descriptor instead.
+func (*ReceivePartnerInteractionRequest) Descriptor() ([]byte, []int) {
+	return file_company_gateway_service_v1_gateway_service_proto_rawDescGZIP(), []int{69}
+}
+
+func (x *ReceivePartnerInteractionRequest) GetConnectorKey() string {
+	if x != nil {
+		return x.ConnectorKey
+	}
+	return ""
+}
+
+func (x *ReceivePartnerInteractionRequest) GetOperation() string {
+	if x != nil {
+		return x.Operation
+	}
+	return ""
+}
+
+func (x *ReceivePartnerInteractionRequest) GetSource() InteractionSource {
+	if x != nil {
+		return x.Source
+	}
+	return InteractionSource_INTERACTION_SOURCE_UNSPECIFIED
+}
+
+func (x *ReceivePartnerInteractionRequest) GetPartnerEventId() string {
+	if x != nil {
+		return x.PartnerEventId
+	}
+	return ""
+}
+
+func (x *ReceivePartnerInteractionRequest) GetBusinessDate() string {
+	if x != nil {
+		return x.BusinessDate
+	}
+	return ""
+}
+
+func (x *ReceivePartnerInteractionRequest) GetContentType() string {
+	if x != nil {
+		return x.ContentType
+	}
+	return ""
+}
+
+func (x *ReceivePartnerInteractionRequest) GetBody() []byte {
+	if x != nil {
+		return x.Body
+	}
+	return nil
+}
+
+type ReceivePartnerInteractionResponse struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// Types that are valid to be assigned to Result:
+	//
+	//	*ReceivePartnerInteractionResponse_Received
+	//	*ReceivePartnerInteractionResponse_Rejection
+	Result        isReceivePartnerInteractionResponse_Result `protobuf_oneof:"result"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ReceivePartnerInteractionResponse) Reset() {
+	*x = ReceivePartnerInteractionResponse{}
+	mi := &file_company_gateway_service_v1_gateway_service_proto_msgTypes[70]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ReceivePartnerInteractionResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ReceivePartnerInteractionResponse) ProtoMessage() {}
+
+func (x *ReceivePartnerInteractionResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_company_gateway_service_v1_gateway_service_proto_msgTypes[70]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ReceivePartnerInteractionResponse.ProtoReflect.Descriptor instead.
+func (*ReceivePartnerInteractionResponse) Descriptor() ([]byte, []int) {
+	return file_company_gateway_service_v1_gateway_service_proto_rawDescGZIP(), []int{70}
+}
+
+func (x *ReceivePartnerInteractionResponse) GetResult() isReceivePartnerInteractionResponse_Result {
+	if x != nil {
+		return x.Result
+	}
+	return nil
+}
+
+func (x *ReceivePartnerInteractionResponse) GetReceived() *ReceivedPartnerInteraction {
+	if x != nil {
+		if x, ok := x.Result.(*ReceivePartnerInteractionResponse_Received); ok {
+			return x.Received
+		}
+	}
+	return nil
+}
+
+func (x *ReceivePartnerInteractionResponse) GetRejection() *Rejection {
+	if x != nil {
+		if x, ok := x.Result.(*ReceivePartnerInteractionResponse_Rejection); ok {
+			return x.Rejection
+		}
+	}
+	return nil
+}
+
+type isReceivePartnerInteractionResponse_Result interface {
+	isReceivePartnerInteractionResponse_Result()
+}
+
+type ReceivePartnerInteractionResponse_Received struct {
+	Received *ReceivedPartnerInteraction `protobuf:"bytes,1,opt,name=received,proto3,oneof"`
+}
+
+type ReceivePartnerInteractionResponse_Rejection struct {
+	Rejection *Rejection `protobuf:"bytes,2,opt,name=rejection,proto3,oneof"`
+}
+
+func (*ReceivePartnerInteractionResponse_Received) isReceivePartnerInteractionResponse_Result() {}
+
+func (*ReceivePartnerInteractionResponse_Rejection) isReceivePartnerInteractionResponse_Result() {}
+
+type ReceivedPartnerInteraction struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	InteractionId string                 `protobuf:"bytes,1,opt,name=interaction_id,json=interactionId,proto3" json:"interaction_id,omitempty"`
+	// INTERACTION_STATUS_STORED, or INTERACTION_STATUS_DUPLICATE for a partner
+	// event already received.
+	Status        InteractionStatus `protobuf:"varint,2,opt,name=status,proto3,enum=company.gateway.service.v1.InteractionStatus" json:"status,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ReceivedPartnerInteraction) Reset() {
+	*x = ReceivedPartnerInteraction{}
+	mi := &file_company_gateway_service_v1_gateway_service_proto_msgTypes[71]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ReceivedPartnerInteraction) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ReceivedPartnerInteraction) ProtoMessage() {}
+
+func (x *ReceivedPartnerInteraction) ProtoReflect() protoreflect.Message {
+	mi := &file_company_gateway_service_v1_gateway_service_proto_msgTypes[71]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ReceivedPartnerInteraction.ProtoReflect.Descriptor instead.
+func (*ReceivedPartnerInteraction) Descriptor() ([]byte, []int) {
+	return file_company_gateway_service_v1_gateway_service_proto_rawDescGZIP(), []int{71}
+}
+
+func (x *ReceivedPartnerInteraction) GetInteractionId() string {
+	if x != nil {
+		return x.InteractionId
+	}
+	return ""
+}
+
+func (x *ReceivedPartnerInteraction) GetStatus() InteractionStatus {
+	if x != nil {
+		return x.Status
+	}
+	return InteractionStatus_INTERACTION_STATUS_UNSPECIFIED
+}
+
+type ReadExternalRequest struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// A read of the vocabulary of the ports, as the Partner names it.
+	Operation    string `protobuf:"bytes,1,opt,name=operation,proto3" json:"operation,omitempty"`
+	ConnectorKey string `protobuf:"bytes,2,opt,name=connector_key,json=connectorKey,proto3" json:"connector_key,omitempty"`
+	// Required by the reads of ReceivablesQueryPort, which an authorization of
+	// query of the organization guards.
+	OrganizationId string `protobuf:"bytes,3,opt,name=organization_id,json=organizationId,proto3" json:"organization_id,omitempty"`
+	// Required by the reads of ReceivablesQueryPort; elsewhere, the asset type
+	// the read is about, when there is one.
+	AssetType string `protobuf:"bytes,4,opt,name=asset_type,json=assetType,proto3" json:"asset_type,omitempty"`
+	// The parameters of the read as canonical JSON.
+	Parameters    string `protobuf:"bytes,5,opt,name=parameters,proto3" json:"parameters,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ReadExternalRequest) Reset() {
+	*x = ReadExternalRequest{}
+	mi := &file_company_gateway_service_v1_gateway_service_proto_msgTypes[72]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ReadExternalRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ReadExternalRequest) ProtoMessage() {}
+
+func (x *ReadExternalRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_company_gateway_service_v1_gateway_service_proto_msgTypes[72]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ReadExternalRequest.ProtoReflect.Descriptor instead.
+func (*ReadExternalRequest) Descriptor() ([]byte, []int) {
+	return file_company_gateway_service_v1_gateway_service_proto_rawDescGZIP(), []int{72}
+}
+
+func (x *ReadExternalRequest) GetOperation() string {
+	if x != nil {
+		return x.Operation
+	}
+	return ""
+}
+
+func (x *ReadExternalRequest) GetConnectorKey() string {
+	if x != nil {
+		return x.ConnectorKey
+	}
+	return ""
+}
+
+func (x *ReadExternalRequest) GetOrganizationId() string {
+	if x != nil {
+		return x.OrganizationId
+	}
+	return ""
+}
+
+func (x *ReadExternalRequest) GetAssetType() string {
+	if x != nil {
+		return x.AssetType
+	}
+	return ""
+}
+
+func (x *ReadExternalRequest) GetParameters() string {
+	if x != nil {
+		return x.Parameters
+	}
+	return ""
+}
+
+type ReadExternalResponse struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// Types that are valid to be assigned to Result:
+	//
+	//	*ReadExternalResponse_Reading
+	//	*ReadExternalResponse_Rejection
+	Result        isReadExternalResponse_Result `protobuf_oneof:"result"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ReadExternalResponse) Reset() {
+	*x = ReadExternalResponse{}
+	mi := &file_company_gateway_service_v1_gateway_service_proto_msgTypes[73]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ReadExternalResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ReadExternalResponse) ProtoMessage() {}
+
+func (x *ReadExternalResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_company_gateway_service_v1_gateway_service_proto_msgTypes[73]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ReadExternalResponse.ProtoReflect.Descriptor instead.
+func (*ReadExternalResponse) Descriptor() ([]byte, []int) {
+	return file_company_gateway_service_v1_gateway_service_proto_rawDescGZIP(), []int{73}
+}
+
+func (x *ReadExternalResponse) GetResult() isReadExternalResponse_Result {
+	if x != nil {
+		return x.Result
+	}
+	return nil
+}
+
+func (x *ReadExternalResponse) GetReading() *ExternalReading {
+	if x != nil {
+		if x, ok := x.Result.(*ReadExternalResponse_Reading); ok {
+			return x.Reading
+		}
+	}
+	return nil
+}
+
+func (x *ReadExternalResponse) GetRejection() *Rejection {
+	if x != nil {
+		if x, ok := x.Result.(*ReadExternalResponse_Rejection); ok {
+			return x.Rejection
+		}
+	}
+	return nil
+}
+
+type isReadExternalResponse_Result interface {
+	isReadExternalResponse_Result()
+}
+
+type ReadExternalResponse_Reading struct {
+	Reading *ExternalReading `protobuf:"bytes,1,opt,name=reading,proto3,oneof"`
+}
+
+type ReadExternalResponse_Rejection struct {
+	Rejection *Rejection `protobuf:"bytes,2,opt,name=rejection,proto3,oneof"`
+}
+
+func (*ReadExternalResponse_Reading) isReadExternalResponse_Result() {}
+
+func (*ReadExternalResponse_Rejection) isReadExternalResponse_Result() {}
+
+// A reading of a partner with its provenance.
+type ExternalReading struct {
+	state             protoimpl.MessageState `protogen:"open.v1"`
+	InteractionId     string                 `protobuf:"bytes,1,opt,name=interaction_id,json=interactionId,proto3" json:"interaction_id,omitempty"`
+	AsOf              int64                  `protobuf:"varint,2,opt,name=as_of,json=asOf,proto3" json:"as_of,omitempty"`
+	ProviderId        string                 `protobuf:"bytes,3,opt,name=provider_id,json=providerId,proto3" json:"provider_id,omitempty"`
+	ExternalReference string                 `protobuf:"bytes,4,opt,name=external_reference,json=externalReference,proto3" json:"external_reference,omitempty"`
+	// The normalized reading as canonical JSON, up to the max_payload_bytes of
+	// the operation.
+	Reading string `protobuf:"bytes,5,opt,name=reading,proto3" json:"reading,omitempty"`
+	// SHA-256 of reading, in hexadecimal.
+	ReadingHash   string `protobuf:"bytes,6,opt,name=reading_hash,json=readingHash,proto3" json:"reading_hash,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ExternalReading) Reset() {
+	*x = ExternalReading{}
+	mi := &file_company_gateway_service_v1_gateway_service_proto_msgTypes[74]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ExternalReading) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ExternalReading) ProtoMessage() {}
+
+func (x *ExternalReading) ProtoReflect() protoreflect.Message {
+	mi := &file_company_gateway_service_v1_gateway_service_proto_msgTypes[74]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ExternalReading.ProtoReflect.Descriptor instead.
+func (*ExternalReading) Descriptor() ([]byte, []int) {
+	return file_company_gateway_service_v1_gateway_service_proto_rawDescGZIP(), []int{74}
+}
+
+func (x *ExternalReading) GetInteractionId() string {
+	if x != nil {
+		return x.InteractionId
+	}
+	return ""
+}
+
+func (x *ExternalReading) GetAsOf() int64 {
+	if x != nil {
+		return x.AsOf
+	}
+	return 0
+}
+
+func (x *ExternalReading) GetProviderId() string {
+	if x != nil {
+		return x.ProviderId
+	}
+	return ""
+}
+
+func (x *ExternalReading) GetExternalReference() string {
+	if x != nil {
+		return x.ExternalReference
+	}
+	return ""
+}
+
+func (x *ExternalReading) GetReading() string {
+	if x != nil {
+		return x.Reading
+	}
+	return ""
+}
+
+func (x *ExternalReading) GetReadingHash() string {
+	if x != nil {
+		return x.ReadingHash
+	}
+	return ""
+}
+
 type ExternalReference struct {
 	state               protoimpl.MessageState `protogen:"open.v1"`
 	ReferenceKey        string                 `protobuf:"bytes,1,opt,name=reference_key,json=referenceKey,proto3" json:"reference_key,omitempty"`
@@ -5882,7 +6379,7 @@ type ExternalReference struct {
 
 func (x *ExternalReference) Reset() {
 	*x = ExternalReference{}
-	mi := &file_company_gateway_service_v1_gateway_service_proto_msgTypes[69]
+	mi := &file_company_gateway_service_v1_gateway_service_proto_msgTypes[75]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -5894,7 +6391,7 @@ func (x *ExternalReference) String() string {
 func (*ExternalReference) ProtoMessage() {}
 
 func (x *ExternalReference) ProtoReflect() protoreflect.Message {
-	mi := &file_company_gateway_service_v1_gateway_service_proto_msgTypes[69]
+	mi := &file_company_gateway_service_v1_gateway_service_proto_msgTypes[75]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -5907,7 +6404,7 @@ func (x *ExternalReference) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ExternalReference.ProtoReflect.Descriptor instead.
 func (*ExternalReference) Descriptor() ([]byte, []int) {
-	return file_company_gateway_service_v1_gateway_service_proto_rawDescGZIP(), []int{69}
+	return file_company_gateway_service_v1_gateway_service_proto_rawDescGZIP(), []int{75}
 }
 
 func (x *ExternalReference) GetReferenceKey() string {
@@ -6146,12 +6643,13 @@ const file_company_gateway_service_v1_gateway_service_proto_rawDesc = "" +
 	"\x16ResolvedUnknownOutcome\x12'\n" +
 	"\x0fidempotency_key\x18\x01 \x01(\tR\x0eidempotencyKey\x12I\n" +
 	"\x06status\x18\x02 \x01(\x0e21.company.gateway.service.v1.ExternalCommandStatusR\x06status\"\x1e\n" +
-	"\x1cSweepExternalCommandsRequest\"\xa9\x01\n" +
+	"\x1cSweepExternalCommandsRequest\"\xce\x01\n" +
 	"\x1dSweepExternalCommandsResponse\x12)\n" +
 	"\x10resend_requested\x18\x01 \x01(\x05R\x0fresendRequested\x12+\n" +
 	"\x11ambiguity_expired\x18\x02 \x01(\x05R\x10ambiguityExpired\x12\x18\n" +
 	"\askipped\x18\x03 \x01(\x05R\askipped\x12\x16\n" +
-	"\x06failed\x18\x04 \x01(\x05R\x06failed\";\n" +
+	"\x06failed\x18\x04 \x01(\x05R\x06failed\x12#\n" +
+	"\rstate_queried\x18\x05 \x01(\x05R\fstateQueried\";\n" +
 	"\x14FindConnectorRequest\x12#\n" +
 	"\rconnector_key\x18\x01 \x01(\tR\fconnectorKey\"\\\n" +
 	"\x15FindConnectorResponse\x12C\n" +
@@ -6365,7 +6863,43 @@ const file_company_gateway_service_v1_gateway_service_proto_rawDesc = "" +
 	"\x0fmismatch_detail\x18\x19 \x01(\tR\x0emismatchDetail\x128\n" +
 	"\x18partner_declared_version\x18\x1a \x01(\tR\x16partnerDeclaredVersion\x12\x1f\n" +
 	"\vreceived_at\x18\x1b \x01(\x03R\n" +
-	"receivedAt\"\xc2\x03\n" +
+	"receivedAt\"\xb2\x02\n" +
+	" ReceivePartnerInteractionRequest\x12#\n" +
+	"\rconnector_key\x18\x01 \x01(\tR\fconnectorKey\x12\x1c\n" +
+	"\toperation\x18\x02 \x01(\tR\toperation\x12E\n" +
+	"\x06source\x18\x03 \x01(\x0e2-.company.gateway.service.v1.InteractionSourceR\x06source\x12(\n" +
+	"\x10partner_event_id\x18\x04 \x01(\tR\x0epartnerEventId\x12#\n" +
+	"\rbusiness_date\x18\x05 \x01(\tR\fbusinessDate\x12!\n" +
+	"\fcontent_type\x18\x06 \x01(\tR\vcontentType\x12\x12\n" +
+	"\x04body\x18\a \x01(\fR\x04body\"\xca\x01\n" +
+	"!ReceivePartnerInteractionResponse\x12T\n" +
+	"\breceived\x18\x01 \x01(\v26.company.gateway.service.v1.ReceivedPartnerInteractionH\x00R\breceived\x12E\n" +
+	"\trejection\x18\x02 \x01(\v2%.company.gateway.service.v1.RejectionH\x00R\trejectionB\b\n" +
+	"\x06result\"\x8a\x01\n" +
+	"\x1aReceivedPartnerInteraction\x12%\n" +
+	"\x0einteraction_id\x18\x01 \x01(\tR\rinteractionId\x12E\n" +
+	"\x06status\x18\x02 \x01(\x0e2-.company.gateway.service.v1.InteractionStatusR\x06status\"\xc0\x01\n" +
+	"\x13ReadExternalRequest\x12\x1c\n" +
+	"\toperation\x18\x01 \x01(\tR\toperation\x12#\n" +
+	"\rconnector_key\x18\x02 \x01(\tR\fconnectorKey\x12'\n" +
+	"\x0forganization_id\x18\x03 \x01(\tR\x0eorganizationId\x12\x1d\n" +
+	"\n" +
+	"asset_type\x18\x04 \x01(\tR\tassetType\x12\x1e\n" +
+	"\n" +
+	"parameters\x18\x05 \x01(\tR\n" +
+	"parameters\"\xb0\x01\n" +
+	"\x14ReadExternalResponse\x12G\n" +
+	"\areading\x18\x01 \x01(\v2+.company.gateway.service.v1.ExternalReadingH\x00R\areading\x12E\n" +
+	"\trejection\x18\x02 \x01(\v2%.company.gateway.service.v1.RejectionH\x00R\trejectionB\b\n" +
+	"\x06result\"\xda\x01\n" +
+	"\x0fExternalReading\x12%\n" +
+	"\x0einteraction_id\x18\x01 \x01(\tR\rinteractionId\x12\x13\n" +
+	"\x05as_of\x18\x02 \x01(\x03R\x04asOf\x12\x1f\n" +
+	"\vprovider_id\x18\x03 \x01(\tR\n" +
+	"providerId\x12-\n" +
+	"\x12external_reference\x18\x04 \x01(\tR\x11externalReference\x12\x18\n" +
+	"\areading\x18\x05 \x01(\tR\areading\x12!\n" +
+	"\freading_hash\x18\x06 \x01(\tR\vreadingHash\"\xc2\x03\n" +
 	"\x11ExternalReference\x12#\n" +
 	"\rreference_key\x18\x01 \x01(\tR\freferenceKey\x12\x1f\n" +
 	"\vprovider_id\x18\x02 \x01(\tR\n" +
@@ -6494,7 +7028,7 @@ const file_company_gateway_service_v1_gateway_service_proto_rawDesc = "" +
 	"\x15REFERENCE_TYPE_EFFECT\x10\x02\x12 \n" +
 	"\x1cREFERENCE_TYPE_AUTHORIZATION\x10\x03\x12\x1a\n" +
 	"\x16REFERENCE_TYPE_COMMAND\x10\x04\x12\x1d\n" +
-	"\x19REFERENCE_TYPE_SETTLEMENT\x10\x052\xb8\x1c\n" +
+	"\x19REFERENCE_TYPE_SETTLEMENT\x10\x052\xc6\x1e\n" +
 	"\x0eGatewayService\x12\x80\x01\n" +
 	"\x11RegisterConnector\x124.company.gateway.service.v1.RegisterConnectorRequest\x1a5.company.gateway.service.v1.RegisterConnectorResponse\x12}\n" +
 	"\x10SuspendOperation\x123.company.gateway.service.v1.SuspendOperationRequest\x1a4.company.gateway.service.v1.SuspendOperationResponse\x12z\n" +
@@ -6519,7 +7053,9 @@ const file_company_gateway_service_v1_gateway_service_proto_rawDesc = "" +
 	"%FindExternalInteractionByPartnerEvent\x12H.company.gateway.service.v1.FindExternalInteractionByPartnerEventRequest\x1aI.company.gateway.service.v1.FindExternalInteractionByPartnerEventResponse\x12\xb0\x01\n" +
 	"!FindExternalInteractionsByCommand\x12D.company.gateway.service.v1.FindExternalInteractionsByCommandRequest\x1aE.company.gateway.service.v1.FindExternalInteractionsByCommandResponse\x12\x8c\x01\n" +
 	"\x15FindExternalReference\x128.company.gateway.service.v1.FindExternalReferenceRequest\x1a9.company.gateway.service.v1.FindExternalReferenceResponse\x12\xaa\x01\n" +
-	"\x1fFindExternalReferencesBySubject\x12B.company.gateway.service.v1.FindExternalReferencesBySubjectRequest\x1aC.company.gateway.service.v1.FindExternalReferencesBySubjectResponseB\xb3\x02\n" +
+	"\x1fFindExternalReferencesBySubject\x12B.company.gateway.service.v1.FindExternalReferencesBySubjectRequest\x1aC.company.gateway.service.v1.FindExternalReferencesBySubjectResponse\x12\x98\x01\n" +
+	"\x19ReceivePartnerInteraction\x12<.company.gateway.service.v1.ReceivePartnerInteractionRequest\x1a=.company.gateway.service.v1.ReceivePartnerInteractionResponse\x12q\n" +
+	"\fReadExternal\x12/.company.gateway.service.v1.ReadExternalRequest\x1a0.company.gateway.service.v1.ReadExternalResponseB\xb3\x02\n" +
 	"\x1ecom.company.gateway.service.v1B\x13GatewayServiceProtoP\x01Zqgithub.com/mateusmacedo/antecipa-market/apps/backend/gateway/contract/gen/go/company/gateway/service/v1;servicev1\xa2\x02\x03CGS\xaa\x02\x1aCompany.Gateway.Service.V1\xca\x02\x1aCompany\\Gateway\\Service\\V1\xe2\x02&Company\\Gateway\\Service\\V1\\GPBMetadata\xea\x02\x1dCompany::Gateway::Service::V1b\x06proto3"
 
 var (
@@ -6535,7 +7071,7 @@ func file_company_gateway_service_v1_gateway_service_proto_rawDescGZIP() []byte 
 }
 
 var file_company_gateway_service_v1_gateway_service_proto_enumTypes = make([]protoimpl.EnumInfo, 18)
-var file_company_gateway_service_v1_gateway_service_proto_msgTypes = make([]protoimpl.MessageInfo, 70)
+var file_company_gateway_service_v1_gateway_service_proto_msgTypes = make([]protoimpl.MessageInfo, 76)
 var file_company_gateway_service_v1_gateway_service_proto_goTypes = []any{
 	(Environment)(0),                                      // 0: company.gateway.service.v1.Environment
 	(SuspensionCause)(0),                                  // 1: company.gateway.service.v1.SuspensionCause
@@ -6624,7 +7160,13 @@ var file_company_gateway_service_v1_gateway_service_proto_goTypes = []any{
 	(*FindExternalReferencesBySubjectRequest)(nil),        // 84: company.gateway.service.v1.FindExternalReferencesBySubjectRequest
 	(*FindExternalReferencesBySubjectResponse)(nil),       // 85: company.gateway.service.v1.FindExternalReferencesBySubjectResponse
 	(*ExternalInteraction)(nil),                           // 86: company.gateway.service.v1.ExternalInteraction
-	(*ExternalReference)(nil),                             // 87: company.gateway.service.v1.ExternalReference
+	(*ReceivePartnerInteractionRequest)(nil),              // 87: company.gateway.service.v1.ReceivePartnerInteractionRequest
+	(*ReceivePartnerInteractionResponse)(nil),             // 88: company.gateway.service.v1.ReceivePartnerInteractionResponse
+	(*ReceivedPartnerInteraction)(nil),                    // 89: company.gateway.service.v1.ReceivedPartnerInteraction
+	(*ReadExternalRequest)(nil),                           // 90: company.gateway.service.v1.ReadExternalRequest
+	(*ReadExternalResponse)(nil),                          // 91: company.gateway.service.v1.ReadExternalResponse
+	(*ExternalReading)(nil),                               // 92: company.gateway.service.v1.ExternalReading
+	(*ExternalReference)(nil),                             // 93: company.gateway.service.v1.ExternalReference
 }
 var file_company_gateway_service_v1_gateway_service_proto_depIdxs = []int32{
 	0,  // 0: company.gateway.service.v1.RegisterConnectorRequest.environment:type_name -> company.gateway.service.v1.Environment
@@ -6683,8 +7225,8 @@ var file_company_gateway_service_v1_gateway_service_proto_depIdxs = []int32{
 	86, // 53: company.gateway.service.v1.FindExternalInteractionResponse.interaction:type_name -> company.gateway.service.v1.ExternalInteraction
 	86, // 54: company.gateway.service.v1.FindExternalInteractionByPartnerEventResponse.interaction:type_name -> company.gateway.service.v1.ExternalInteraction
 	86, // 55: company.gateway.service.v1.FindExternalInteractionsByCommandResponse.interactions:type_name -> company.gateway.service.v1.ExternalInteraction
-	87, // 56: company.gateway.service.v1.FindExternalReferenceResponse.reference:type_name -> company.gateway.service.v1.ExternalReference
-	87, // 57: company.gateway.service.v1.FindExternalReferencesBySubjectResponse.references:type_name -> company.gateway.service.v1.ExternalReference
+	93, // 56: company.gateway.service.v1.FindExternalReferenceResponse.reference:type_name -> company.gateway.service.v1.ExternalReference
+	93, // 57: company.gateway.service.v1.FindExternalReferencesBySubjectResponse.references:type_name -> company.gateway.service.v1.ExternalReference
 	10, // 58: company.gateway.service.v1.ExternalInteraction.direction:type_name -> company.gateway.service.v1.InteractionDirection
 	11, // 59: company.gateway.service.v1.ExternalInteraction.source:type_name -> company.gateway.service.v1.InteractionSource
 	15, // 60: company.gateway.service.v1.ExternalInteraction.captured_step:type_name -> company.gateway.service.v1.Step
@@ -6692,61 +7234,71 @@ var file_company_gateway_service_v1_gateway_service_proto_depIdxs = []int32{
 	13, // 62: company.gateway.service.v1.ExternalInteraction.finding:type_name -> company.gateway.service.v1.Finding
 	12, // 63: company.gateway.service.v1.ExternalInteraction.previous_outcome:type_name -> company.gateway.service.v1.InteractionStatus
 	14, // 64: company.gateway.service.v1.ExternalInteraction.mismatch_kind:type_name -> company.gateway.service.v1.MismatchKind
-	16, // 65: company.gateway.service.v1.ExternalReference.system:type_name -> company.gateway.service.v1.ExternalSystem
-	17, // 66: company.gateway.service.v1.ExternalReference.reference_type:type_name -> company.gateway.service.v1.ReferenceType
-	19, // 67: company.gateway.service.v1.GatewayService.RegisterConnector:input_type -> company.gateway.service.v1.RegisterConnectorRequest
-	22, // 68: company.gateway.service.v1.GatewayService.SuspendOperation:input_type -> company.gateway.service.v1.SuspendOperationRequest
-	25, // 69: company.gateway.service.v1.GatewayService.EnableOperation:input_type -> company.gateway.service.v1.EnableOperationRequest
-	28, // 70: company.gateway.service.v1.GatewayService.DeclareCapabilityProfile:input_type -> company.gateway.service.v1.DeclareCapabilityProfileRequest
-	32, // 71: company.gateway.service.v1.GatewayService.GrantQueryAuthorization:input_type -> company.gateway.service.v1.GrantQueryAuthorizationRequest
-	35, // 72: company.gateway.service.v1.GatewayService.RevokeQueryAuthorization:input_type -> company.gateway.service.v1.RevokeQueryAuthorizationRequest
-	38, // 73: company.gateway.service.v1.GatewayService.CreateExternalCommand:input_type -> company.gateway.service.v1.CreateExternalCommandRequest
-	41, // 74: company.gateway.service.v1.GatewayService.CancelExternalCommand:input_type -> company.gateway.service.v1.CancelExternalCommandRequest
-	44, // 75: company.gateway.service.v1.GatewayService.ResolveUnknownOutcome:input_type -> company.gateway.service.v1.ResolveUnknownOutcomeRequest
-	47, // 76: company.gateway.service.v1.GatewayService.SweepExternalCommands:input_type -> company.gateway.service.v1.SweepExternalCommandsRequest
-	49, // 77: company.gateway.service.v1.GatewayService.FindConnector:input_type -> company.gateway.service.v1.FindConnectorRequest
-	54, // 78: company.gateway.service.v1.GatewayService.FindEffectiveCapabilityProfile:input_type -> company.gateway.service.v1.FindEffectiveCapabilityProfileRequest
-	56, // 79: company.gateway.service.v1.GatewayService.FindCapabilityProfile:input_type -> company.gateway.service.v1.FindCapabilityProfileRequest
-	59, // 80: company.gateway.service.v1.GatewayService.FindQueryAuthorizationByOrganization:input_type -> company.gateway.service.v1.FindQueryAuthorizationByOrganizationRequest
-	62, // 81: company.gateway.service.v1.GatewayService.FindExternalCommand:input_type -> company.gateway.service.v1.FindExternalCommandRequest
-	64, // 82: company.gateway.service.v1.GatewayService.FindExternalCommandsByBusinessKey:input_type -> company.gateway.service.v1.FindExternalCommandsByBusinessKeyRequest
-	66, // 83: company.gateway.service.v1.GatewayService.FindExternalCommandsByStatus:input_type -> company.gateway.service.v1.FindExternalCommandsByStatusRequest
-	70, // 84: company.gateway.service.v1.GatewayService.ReprocessInteraction:input_type -> company.gateway.service.v1.ReprocessInteractionRequest
-	73, // 85: company.gateway.service.v1.GatewayService.LinkExternalReference:input_type -> company.gateway.service.v1.LinkExternalReferenceRequest
-	76, // 86: company.gateway.service.v1.GatewayService.FindExternalInteraction:input_type -> company.gateway.service.v1.FindExternalInteractionRequest
-	78, // 87: company.gateway.service.v1.GatewayService.FindExternalInteractionByPartnerEvent:input_type -> company.gateway.service.v1.FindExternalInteractionByPartnerEventRequest
-	80, // 88: company.gateway.service.v1.GatewayService.FindExternalInteractionsByCommand:input_type -> company.gateway.service.v1.FindExternalInteractionsByCommandRequest
-	82, // 89: company.gateway.service.v1.GatewayService.FindExternalReference:input_type -> company.gateway.service.v1.FindExternalReferenceRequest
-	84, // 90: company.gateway.service.v1.GatewayService.FindExternalReferencesBySubject:input_type -> company.gateway.service.v1.FindExternalReferencesBySubjectRequest
-	20, // 91: company.gateway.service.v1.GatewayService.RegisterConnector:output_type -> company.gateway.service.v1.RegisterConnectorResponse
-	23, // 92: company.gateway.service.v1.GatewayService.SuspendOperation:output_type -> company.gateway.service.v1.SuspendOperationResponse
-	26, // 93: company.gateway.service.v1.GatewayService.EnableOperation:output_type -> company.gateway.service.v1.EnableOperationResponse
-	29, // 94: company.gateway.service.v1.GatewayService.DeclareCapabilityProfile:output_type -> company.gateway.service.v1.DeclareCapabilityProfileResponse
-	33, // 95: company.gateway.service.v1.GatewayService.GrantQueryAuthorization:output_type -> company.gateway.service.v1.GrantQueryAuthorizationResponse
-	36, // 96: company.gateway.service.v1.GatewayService.RevokeQueryAuthorization:output_type -> company.gateway.service.v1.RevokeQueryAuthorizationResponse
-	39, // 97: company.gateway.service.v1.GatewayService.CreateExternalCommand:output_type -> company.gateway.service.v1.CreateExternalCommandResponse
-	42, // 98: company.gateway.service.v1.GatewayService.CancelExternalCommand:output_type -> company.gateway.service.v1.CancelExternalCommandResponse
-	45, // 99: company.gateway.service.v1.GatewayService.ResolveUnknownOutcome:output_type -> company.gateway.service.v1.ResolveUnknownOutcomeResponse
-	48, // 100: company.gateway.service.v1.GatewayService.SweepExternalCommands:output_type -> company.gateway.service.v1.SweepExternalCommandsResponse
-	50, // 101: company.gateway.service.v1.GatewayService.FindConnector:output_type -> company.gateway.service.v1.FindConnectorResponse
-	55, // 102: company.gateway.service.v1.GatewayService.FindEffectiveCapabilityProfile:output_type -> company.gateway.service.v1.FindEffectiveCapabilityProfileResponse
-	57, // 103: company.gateway.service.v1.GatewayService.FindCapabilityProfile:output_type -> company.gateway.service.v1.FindCapabilityProfileResponse
-	60, // 104: company.gateway.service.v1.GatewayService.FindQueryAuthorizationByOrganization:output_type -> company.gateway.service.v1.FindQueryAuthorizationByOrganizationResponse
-	63, // 105: company.gateway.service.v1.GatewayService.FindExternalCommand:output_type -> company.gateway.service.v1.FindExternalCommandResponse
-	65, // 106: company.gateway.service.v1.GatewayService.FindExternalCommandsByBusinessKey:output_type -> company.gateway.service.v1.FindExternalCommandsByBusinessKeyResponse
-	67, // 107: company.gateway.service.v1.GatewayService.FindExternalCommandsByStatus:output_type -> company.gateway.service.v1.FindExternalCommandsByStatusResponse
-	71, // 108: company.gateway.service.v1.GatewayService.ReprocessInteraction:output_type -> company.gateway.service.v1.ReprocessInteractionResponse
-	74, // 109: company.gateway.service.v1.GatewayService.LinkExternalReference:output_type -> company.gateway.service.v1.LinkExternalReferenceResponse
-	77, // 110: company.gateway.service.v1.GatewayService.FindExternalInteraction:output_type -> company.gateway.service.v1.FindExternalInteractionResponse
-	79, // 111: company.gateway.service.v1.GatewayService.FindExternalInteractionByPartnerEvent:output_type -> company.gateway.service.v1.FindExternalInteractionByPartnerEventResponse
-	81, // 112: company.gateway.service.v1.GatewayService.FindExternalInteractionsByCommand:output_type -> company.gateway.service.v1.FindExternalInteractionsByCommandResponse
-	83, // 113: company.gateway.service.v1.GatewayService.FindExternalReference:output_type -> company.gateway.service.v1.FindExternalReferenceResponse
-	85, // 114: company.gateway.service.v1.GatewayService.FindExternalReferencesBySubject:output_type -> company.gateway.service.v1.FindExternalReferencesBySubjectResponse
-	91, // [91:115] is the sub-list for method output_type
-	67, // [67:91] is the sub-list for method input_type
-	67, // [67:67] is the sub-list for extension type_name
-	67, // [67:67] is the sub-list for extension extendee
-	0,  // [0:67] is the sub-list for field type_name
+	11, // 65: company.gateway.service.v1.ReceivePartnerInteractionRequest.source:type_name -> company.gateway.service.v1.InteractionSource
+	89, // 66: company.gateway.service.v1.ReceivePartnerInteractionResponse.received:type_name -> company.gateway.service.v1.ReceivedPartnerInteraction
+	18, // 67: company.gateway.service.v1.ReceivePartnerInteractionResponse.rejection:type_name -> company.gateway.service.v1.Rejection
+	12, // 68: company.gateway.service.v1.ReceivedPartnerInteraction.status:type_name -> company.gateway.service.v1.InteractionStatus
+	92, // 69: company.gateway.service.v1.ReadExternalResponse.reading:type_name -> company.gateway.service.v1.ExternalReading
+	18, // 70: company.gateway.service.v1.ReadExternalResponse.rejection:type_name -> company.gateway.service.v1.Rejection
+	16, // 71: company.gateway.service.v1.ExternalReference.system:type_name -> company.gateway.service.v1.ExternalSystem
+	17, // 72: company.gateway.service.v1.ExternalReference.reference_type:type_name -> company.gateway.service.v1.ReferenceType
+	19, // 73: company.gateway.service.v1.GatewayService.RegisterConnector:input_type -> company.gateway.service.v1.RegisterConnectorRequest
+	22, // 74: company.gateway.service.v1.GatewayService.SuspendOperation:input_type -> company.gateway.service.v1.SuspendOperationRequest
+	25, // 75: company.gateway.service.v1.GatewayService.EnableOperation:input_type -> company.gateway.service.v1.EnableOperationRequest
+	28, // 76: company.gateway.service.v1.GatewayService.DeclareCapabilityProfile:input_type -> company.gateway.service.v1.DeclareCapabilityProfileRequest
+	32, // 77: company.gateway.service.v1.GatewayService.GrantQueryAuthorization:input_type -> company.gateway.service.v1.GrantQueryAuthorizationRequest
+	35, // 78: company.gateway.service.v1.GatewayService.RevokeQueryAuthorization:input_type -> company.gateway.service.v1.RevokeQueryAuthorizationRequest
+	38, // 79: company.gateway.service.v1.GatewayService.CreateExternalCommand:input_type -> company.gateway.service.v1.CreateExternalCommandRequest
+	41, // 80: company.gateway.service.v1.GatewayService.CancelExternalCommand:input_type -> company.gateway.service.v1.CancelExternalCommandRequest
+	44, // 81: company.gateway.service.v1.GatewayService.ResolveUnknownOutcome:input_type -> company.gateway.service.v1.ResolveUnknownOutcomeRequest
+	47, // 82: company.gateway.service.v1.GatewayService.SweepExternalCommands:input_type -> company.gateway.service.v1.SweepExternalCommandsRequest
+	49, // 83: company.gateway.service.v1.GatewayService.FindConnector:input_type -> company.gateway.service.v1.FindConnectorRequest
+	54, // 84: company.gateway.service.v1.GatewayService.FindEffectiveCapabilityProfile:input_type -> company.gateway.service.v1.FindEffectiveCapabilityProfileRequest
+	56, // 85: company.gateway.service.v1.GatewayService.FindCapabilityProfile:input_type -> company.gateway.service.v1.FindCapabilityProfileRequest
+	59, // 86: company.gateway.service.v1.GatewayService.FindQueryAuthorizationByOrganization:input_type -> company.gateway.service.v1.FindQueryAuthorizationByOrganizationRequest
+	62, // 87: company.gateway.service.v1.GatewayService.FindExternalCommand:input_type -> company.gateway.service.v1.FindExternalCommandRequest
+	64, // 88: company.gateway.service.v1.GatewayService.FindExternalCommandsByBusinessKey:input_type -> company.gateway.service.v1.FindExternalCommandsByBusinessKeyRequest
+	66, // 89: company.gateway.service.v1.GatewayService.FindExternalCommandsByStatus:input_type -> company.gateway.service.v1.FindExternalCommandsByStatusRequest
+	70, // 90: company.gateway.service.v1.GatewayService.ReprocessInteraction:input_type -> company.gateway.service.v1.ReprocessInteractionRequest
+	73, // 91: company.gateway.service.v1.GatewayService.LinkExternalReference:input_type -> company.gateway.service.v1.LinkExternalReferenceRequest
+	76, // 92: company.gateway.service.v1.GatewayService.FindExternalInteraction:input_type -> company.gateway.service.v1.FindExternalInteractionRequest
+	78, // 93: company.gateway.service.v1.GatewayService.FindExternalInteractionByPartnerEvent:input_type -> company.gateway.service.v1.FindExternalInteractionByPartnerEventRequest
+	80, // 94: company.gateway.service.v1.GatewayService.FindExternalInteractionsByCommand:input_type -> company.gateway.service.v1.FindExternalInteractionsByCommandRequest
+	82, // 95: company.gateway.service.v1.GatewayService.FindExternalReference:input_type -> company.gateway.service.v1.FindExternalReferenceRequest
+	84, // 96: company.gateway.service.v1.GatewayService.FindExternalReferencesBySubject:input_type -> company.gateway.service.v1.FindExternalReferencesBySubjectRequest
+	87, // 97: company.gateway.service.v1.GatewayService.ReceivePartnerInteraction:input_type -> company.gateway.service.v1.ReceivePartnerInteractionRequest
+	90, // 98: company.gateway.service.v1.GatewayService.ReadExternal:input_type -> company.gateway.service.v1.ReadExternalRequest
+	20, // 99: company.gateway.service.v1.GatewayService.RegisterConnector:output_type -> company.gateway.service.v1.RegisterConnectorResponse
+	23, // 100: company.gateway.service.v1.GatewayService.SuspendOperation:output_type -> company.gateway.service.v1.SuspendOperationResponse
+	26, // 101: company.gateway.service.v1.GatewayService.EnableOperation:output_type -> company.gateway.service.v1.EnableOperationResponse
+	29, // 102: company.gateway.service.v1.GatewayService.DeclareCapabilityProfile:output_type -> company.gateway.service.v1.DeclareCapabilityProfileResponse
+	33, // 103: company.gateway.service.v1.GatewayService.GrantQueryAuthorization:output_type -> company.gateway.service.v1.GrantQueryAuthorizationResponse
+	36, // 104: company.gateway.service.v1.GatewayService.RevokeQueryAuthorization:output_type -> company.gateway.service.v1.RevokeQueryAuthorizationResponse
+	39, // 105: company.gateway.service.v1.GatewayService.CreateExternalCommand:output_type -> company.gateway.service.v1.CreateExternalCommandResponse
+	42, // 106: company.gateway.service.v1.GatewayService.CancelExternalCommand:output_type -> company.gateway.service.v1.CancelExternalCommandResponse
+	45, // 107: company.gateway.service.v1.GatewayService.ResolveUnknownOutcome:output_type -> company.gateway.service.v1.ResolveUnknownOutcomeResponse
+	48, // 108: company.gateway.service.v1.GatewayService.SweepExternalCommands:output_type -> company.gateway.service.v1.SweepExternalCommandsResponse
+	50, // 109: company.gateway.service.v1.GatewayService.FindConnector:output_type -> company.gateway.service.v1.FindConnectorResponse
+	55, // 110: company.gateway.service.v1.GatewayService.FindEffectiveCapabilityProfile:output_type -> company.gateway.service.v1.FindEffectiveCapabilityProfileResponse
+	57, // 111: company.gateway.service.v1.GatewayService.FindCapabilityProfile:output_type -> company.gateway.service.v1.FindCapabilityProfileResponse
+	60, // 112: company.gateway.service.v1.GatewayService.FindQueryAuthorizationByOrganization:output_type -> company.gateway.service.v1.FindQueryAuthorizationByOrganizationResponse
+	63, // 113: company.gateway.service.v1.GatewayService.FindExternalCommand:output_type -> company.gateway.service.v1.FindExternalCommandResponse
+	65, // 114: company.gateway.service.v1.GatewayService.FindExternalCommandsByBusinessKey:output_type -> company.gateway.service.v1.FindExternalCommandsByBusinessKeyResponse
+	67, // 115: company.gateway.service.v1.GatewayService.FindExternalCommandsByStatus:output_type -> company.gateway.service.v1.FindExternalCommandsByStatusResponse
+	71, // 116: company.gateway.service.v1.GatewayService.ReprocessInteraction:output_type -> company.gateway.service.v1.ReprocessInteractionResponse
+	74, // 117: company.gateway.service.v1.GatewayService.LinkExternalReference:output_type -> company.gateway.service.v1.LinkExternalReferenceResponse
+	77, // 118: company.gateway.service.v1.GatewayService.FindExternalInteraction:output_type -> company.gateway.service.v1.FindExternalInteractionResponse
+	79, // 119: company.gateway.service.v1.GatewayService.FindExternalInteractionByPartnerEvent:output_type -> company.gateway.service.v1.FindExternalInteractionByPartnerEventResponse
+	81, // 120: company.gateway.service.v1.GatewayService.FindExternalInteractionsByCommand:output_type -> company.gateway.service.v1.FindExternalInteractionsByCommandResponse
+	83, // 121: company.gateway.service.v1.GatewayService.FindExternalReference:output_type -> company.gateway.service.v1.FindExternalReferenceResponse
+	85, // 122: company.gateway.service.v1.GatewayService.FindExternalReferencesBySubject:output_type -> company.gateway.service.v1.FindExternalReferencesBySubjectResponse
+	88, // 123: company.gateway.service.v1.GatewayService.ReceivePartnerInteraction:output_type -> company.gateway.service.v1.ReceivePartnerInteractionResponse
+	91, // 124: company.gateway.service.v1.GatewayService.ReadExternal:output_type -> company.gateway.service.v1.ReadExternalResponse
+	99, // [99:125] is the sub-list for method output_type
+	73, // [73:99] is the sub-list for method input_type
+	73, // [73:73] is the sub-list for extension type_name
+	73, // [73:73] is the sub-list for extension extendee
+	0,  // [0:73] is the sub-list for field type_name
 }
 
 func init() { file_company_gateway_service_v1_gateway_service_proto_init() }
@@ -6798,13 +7350,21 @@ func file_company_gateway_service_v1_gateway_service_proto_init() {
 		(*LinkExternalReferenceResponse_Linked)(nil),
 		(*LinkExternalReferenceResponse_Rejection)(nil),
 	}
+	file_company_gateway_service_v1_gateway_service_proto_msgTypes[70].OneofWrappers = []any{
+		(*ReceivePartnerInteractionResponse_Received)(nil),
+		(*ReceivePartnerInteractionResponse_Rejection)(nil),
+	}
+	file_company_gateway_service_v1_gateway_service_proto_msgTypes[73].OneofWrappers = []any{
+		(*ReadExternalResponse_Reading)(nil),
+		(*ReadExternalResponse_Rejection)(nil),
+	}
 	type x struct{}
 	out := protoimpl.TypeBuilder{
 		File: protoimpl.DescBuilder{
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_company_gateway_service_v1_gateway_service_proto_rawDesc), len(file_company_gateway_service_v1_gateway_service_proto_rawDesc)),
 			NumEnums:      18,
-			NumMessages:   70,
+			NumMessages:   76,
 			NumExtensions: 0,
 			NumServices:   1,
 		},
