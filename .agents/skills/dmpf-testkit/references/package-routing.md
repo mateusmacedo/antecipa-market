@@ -14,8 +14,8 @@ assinaturas no código atual antes de implementar.
 | Ledger de tentativas ou tabela de adaptador `ExternalCommand` | `providerkit` (`AttemptLedger`, `ExternalCommand`) | serialização na chave, retenção, teto e classe declarada |
 | Contrato Protobuf/CloudEvents e bytes canônicos | `golden` | duas direções e três oráculos |
 | Tempo, IDs e ordenação determinísticos | `clock`, `ids`, `stable` | seam controlável e comparação estável |
-| Consumer adapter até Postgres e gesto do broker | `appkit` (`https://github.com/mateusmacedo/dmpf/blob/ddd3d0c4202879f168c7f6bfafaefadd94a3a621/apps/backend/reservations`) | efeitos persistidos e Ack após commit |
-| Redelivery com broker e isolamento real | `distkit` (`https://github.com/mateusmacedo/dmpf/blob/ddd3d0c4202879f168c7f6bfafaefadd94a3a621/apps/backend/reservations`) sobre `tb/dist` | processos OS e `DMPF-R004` |
+| Consumer adapter até Postgres e gesto do broker | `appkit` (`https://github.com/mateusmacedo/dmpf/blob/25f0fda1e3ecab29582e1c85cb4df4e35478e154/apps/backend/reservations`) | efeitos persistidos e Ack após commit |
+| Redelivery com broker e isolamento real | `distkit` (`https://github.com/mateusmacedo/dmpf/blob/25f0fda1e3ecab29582e1c85cb4df4e35478e154/apps/backend/reservations`) sobre `tb/dist` | processos OS e `DMPF-R004` |
 | Supervisão de processos, harness por papel e vetor do relay | `tb/dist` | `DMPF-P001` a `DMPF-P003` |
 | Processo morto entre `Begin` e `Finish` de um comando externo | `tb/dist` | `DMPF-A001` a `DMPF-A003` |
 | Contexto de execução de teste | `tb/execctx` | subject, tenant, chave e deadline sem fixture local |
@@ -75,12 +75,12 @@ primeiro nomeia o agregado, e o segundo nomearia `application`, que o
 `serviceskit`, bloco `provider`, não importa (`DMPF-D001`). Injete falha de
 carga, `Save` e `Enqueue` por `Faults`, e de registro por `FailRegister`. Os
 moldes são o `doubles_test.go` de `apps/backend/{orders,bookings}/application` e o
-`sync_doubles_test.go` de `https://github.com/mateusmacedo/dmpf/blob/ddd3d0c4202879f168c7f6bfafaefadd94a3a621/apps/backend/reservations/application`.
+`sync_doubles_test.go` de `https://github.com/mateusmacedo/dmpf/blob/25f0fda1e3ecab29582e1c85cb4df4e35478e154/apps/backend/reservations/application`.
 
 Para um comando externo, roteirize o `Partner` por chave e por tentativa e
 prove o reenvio pela lista `Submitted`: a mesma `OutboundKey` em toda tentativa.
 Roteiro esgotado devolve `ErrScriptExhausted` e entra em `Exhausted`; confira
-que ela fica vazia. O molde é `https://github.com/mateusmacedo/dmpf/blob/ddd3d0c4202879f168c7f6bfafaefadd94a3a621/libs/backend/go/testkit/tb/reference/external_partner_cycle_test.go`.
+que ela fica vazia. O molde é `https://github.com/mateusmacedo/dmpf/blob/25f0fda1e3ecab29582e1c85cb4df4e35478e154/libs/backend/go/testkit/tb/reference/external_partner_cycle_test.go`.
 
 ## `providerkit`
 
@@ -147,13 +147,13 @@ Confirme `clock/clock.go`, `ids/ids.go` e `stable/stable.go`. Na API atual:
 - `stable.SortStrings`, `stable.SortBy` e `stable.Sequence[T]` removem ordem
   incidental das comparações.
 
-## `appkit` (em `https://github.com/mateusmacedo/dmpf/blob/ddd3d0c4202879f168c7f6bfafaefadd94a3a621/apps/backend/reservations/appkit`)
+## `appkit` (em `https://github.com/mateusmacedo/dmpf/blob/25f0fda1e3ecab29582e1c85cb4df4e35478e154/apps/backend/reservations/appkit`)
 
 Autoridade de API:
 
-- `https://github.com/mateusmacedo/dmpf/blob/ddd3d0c4202879f168c7f6bfafaefadd94a3a621/apps/backend/reservations/appkit/harness.go`: `Harness`, `NewReservations`,
+- `https://github.com/mateusmacedo/dmpf/blob/25f0fda1e3ecab29582e1c85cb4df4e35478e154/apps/backend/reservations/appkit/harness.go`: `Harness`, `NewReservations`,
   `RawOrderPlaced`, `Ack` e `Effects`;
-- `https://github.com/mateusmacedo/dmpf/blob/ddd3d0c4202879f168c7f6bfafaefadd94a3a621/apps/backend/reservations/appkit/harness_test.go`: disposições, contenção,
+- `https://github.com/mateusmacedo/dmpf/blob/25f0fda1e3ecab29582e1c85cb4df4e35478e154/apps/backend/reservations/appkit/harness_test.go`: disposições, contenção,
   reentrega e Ack após commit.
 
 O harness é uma composition root concreta do contexto `reservations` — unidade
@@ -162,19 +162,19 @@ bounded context; por isso vive com o contexto e não no `testkit` (ADR-046).
 Um contexto novo que precise do mesmo tipo de prova escreve o próprio harness
 no molde deste, sobre `tb`, `tb/pg`, `clock` e `ids` do kit.
 
-## `distkit` (em `https://github.com/mateusmacedo/dmpf/blob/ddd3d0c4202879f168c7f6bfafaefadd94a3a621/apps/backend/reservations/distkit`)
+## `distkit` (em `https://github.com/mateusmacedo/dmpf/blob/25f0fda1e3ecab29582e1c85cb4df4e35478e154/apps/backend/reservations/distkit`)
 
 Autoridade de API:
 
-- `https://github.com/mateusmacedo/dmpf/blob/ddd3d0c4202879f168c7f6bfafaefadd94a3a621/libs/backend/go/testkit/tb/dist`: `Supervise` e `Process`, `Spec`, `RunRole`,
+- `https://github.com/mateusmacedo/dmpf/blob/25f0fda1e3ecab29582e1c85cb4df4e35478e154/libs/backend/go/testkit/tb/dist`: `Supervise` e `Process`, `Spec`, `RunRole`,
   `Harness`, `CreateTopics`, `WaitFor`, o vetor do relay (`RelayVector`,
   `DecideRelay`) e o da tentativa externa interrompida (`Process.Kill`,
   `NewPostgres`, `CrashBetweenBeginAndFinishVector`, `DecideCrash`,
   `DMPF-A001` a `DMPF-A003`), rodado por `testkit:test-distributed`;
-- `https://github.com/mateusmacedo/dmpf/blob/ddd3d0c4202879f168c7f6bfafaefadd94a3a621/apps/backend/reservations/distkit/harness.go`: `New`, o `Spec` e o `RelaySpec` do contexto;
-- `https://github.com/mateusmacedo/dmpf/blob/ddd3d0c4202879f168c7f6bfafaefadd94a3a621/apps/backend/reservations/distkit/roles.go`: papéis filhos;
-- `https://github.com/mateusmacedo/dmpf/blob/ddd3d0c4202879f168c7f6bfafaefadd94a3a621/apps/backend/reservations/distkit/verdict.go`: plano, efeitos e `DMPF-R004`;
-- `https://github.com/mateusmacedo/dmpf/blob/ddd3d0c4202879f168c7f6bfafaefadd94a3a621/apps/backend/reservations/distkit/harness_test.go`: positivo e consumer
+- `https://github.com/mateusmacedo/dmpf/blob/25f0fda1e3ecab29582e1c85cb4df4e35478e154/apps/backend/reservations/distkit/harness.go`: `New`, o `Spec` e o `RelaySpec` do contexto;
+- `https://github.com/mateusmacedo/dmpf/blob/25f0fda1e3ecab29582e1c85cb4df4e35478e154/apps/backend/reservations/distkit/roles.go`: papéis filhos;
+- `https://github.com/mateusmacedo/dmpf/blob/25f0fda1e3ecab29582e1c85cb4df4e35478e154/apps/backend/reservations/distkit/verdict.go`: plano, efeitos e `DMPF-R004`;
+- `https://github.com/mateusmacedo/dmpf/blob/25f0fda1e3ecab29582e1c85cb4df4e35478e154/apps/backend/reservations/distkit/harness_test.go`: positivo e consumer
   ingênuo.
 
 Preserve `//go:build integration && distributed`. O processo pai inicia os

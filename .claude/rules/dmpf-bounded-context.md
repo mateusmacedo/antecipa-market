@@ -6,7 +6,7 @@ paths:
 # Bounded context sobre o kernel DMPF
 
 Normas que quem escreve um bounded context — pessoa ou agente — obedece. Cada
-regra é curta e aponta a fonte; a norma mora em `https://github.com/mateusmacedo/dmpf/blob/ddd3d0c4202879f168c7f6bfafaefadd94a3a621/docs/dmpf/` e nos ADRs, e
+regra é curta e aponta a fonte; a norma mora em `https://github.com/mateusmacedo/dmpf/blob/25f0fda1e3ecab29582e1c85cb4df4e35478e154/docs/dmpf/` e nos ADRs, e
 quando este texto divergir dela, a fonte vence. Complementa as demais rules de
 `.claude/rules/`, não as repete. O passo a passo com os arquivos-molde está na
 skill `.agents/skills/dmpf-bounded-context/`.
@@ -35,7 +35,7 @@ skill `.agents/skills/dmpf-bounded-context/`.
   do generator `bounded-context`; à mão só o `include` de packages novos, por
   merge, com `exceptions` e `public_integration_surface` preservados.
 - Regravar o baseline (`--write-baseline`) é passo executado por pessoa
-  (`DMPF-T001`; `https://github.com/mateusmacedo/dmpf/blob/ddd3d0c4202879f168c7f6bfafaefadd94a3a621/docs/guides/dmpf-manifesto.md`).
+  (`DMPF-T001`; `https://github.com/mateusmacedo/dmpf/blob/25f0fda1e3ecab29582e1c85cb4df4e35478e154/docs/guides/dmpf-manifesto.md`).
 
 ## Domínio (ADR-032; FND-04)
 
@@ -91,6 +91,13 @@ skill `.agents/skills/dmpf-bounded-context/`.
   e `ErrMalformed` do envelope viram `Failure(Validation)` **sem** abrir UoW.
 - O efeito de broker (`Ack`, `Release`, contenção) vem sempre depois do
   retorno da transação (`INB-08`).
+- O canal declara o conjunto fechado de eventos que carrega
+  (`channel.NewKafka(..., channel.Event{Type, ContractRef}...)`), e o consumidor
+  declara em `Accepts` os tipos de fio que o `Handler` trata, contidos em
+  `Channel.Carries` (`channel.WireTypes`). O transporte recebe `kernelapp.Sink`:
+  o kernel descarta o tipo alheio (`Ack`, contado em `dmpf.consumer.discarded`)
+  e contém o tipo não declarado como `undeclared-type` (`KFK-03c`, ADR-072). O
+  bloco `app` nunca filtra tipo.
 
 ## Contrato (ADR-033, ADR-054; PTB-01, REP-01)
 
@@ -103,7 +110,7 @@ skill `.agents/skills/dmpf-bounded-context/`.
   nunca à mão.
 - Contrato publicado é imutável: `.proto` existente não é regravado; evolução
   é rito próprio. Cada contexto tem o seu `contract/buf.yaml`, e o kernel tem
-  o dele em `https://github.com/mateusmacedo/dmpf/blob/ddd3d0c4202879f168c7f6bfafaefadd94a3a621/libs/backend/go/contracts`.
+  o dele em `https://github.com/mateusmacedo/dmpf/blob/25f0fda1e3ecab29582e1c85cb4df4e35478e154/libs/backend/go/contracts`.
 - A unidade `<ctx>/contract` fica no `dmpf-units.json` do módulo `contract/`
   e entra **antes** do `generate`; sem ela o gerado cai em `DMPF-U001`. O
   generator já a declara.
