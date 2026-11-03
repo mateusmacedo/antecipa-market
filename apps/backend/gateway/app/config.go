@@ -16,6 +16,8 @@ import (
 	"github.com/mateusmacedo/dmpf/libs/backend/go/observability/envconfig"
 	"github.com/mateusmacedo/dmpf/libs/backend/go/transport/admission"
 	semconv "go.opentelemetry.io/otel/semconv/v1.43.0"
+
+	gatewayports "github.com/mateusmacedo/antecipa-market/apps/backend/gateway/ports"
 )
 
 // Role selects which of the three processes the binary becomes (BLK-02: the
@@ -131,6 +133,10 @@ type Config struct {
 	// RawStore is the bucket the api and the consumer keep the raw payloads in;
 	// the relay never opens it.
 	RawStore RawStoreEnv
+
+	// partners stays nil outside the suites: the runtime has no partner
+	// adapter until the providers are mapped (decision 21).
+	partners gatewayports.PartnerAdapters
 }
 
 // Defaults are the values a role runs with when the environment says nothing.

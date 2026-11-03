@@ -129,6 +129,16 @@ func DerivedKeyPolicy() application.DerivedKeyPolicy {
 
 func digest(canonical []byte) ports.Fingerprint { return sha256.Sum256(canonical) }
 
+// partnerAdapters is NoPartnerAdapters for every Config the environment
+// builds; only a suite of this package sets partners, so the simulator never
+// links into the binary.
+func (c Config) partnerAdapters() gatewayports.PartnerAdapters {
+	if c.partners == nil {
+		return gatewayports.NoPartnerAdapters{}
+	}
+	return c.partners
+}
+
 // NewGatewayService is the service of the runtime: no partner adapter is
 // configured until the providers are mapped, so every way to a partner fails
 // closed as an unavailable dependency (decision 21).
@@ -139,7 +149,7 @@ func NewGatewayService(pool *pgxpool.Pool, rt *otelboot.Runtime, cfg Config, raw
 	}
 	service := NewService(pool, idclock.SystemClock{}, idclock.NewMessageIDs("gateway"), Waits{Message: cfg.Wait, Command: cfg.Policies.IdempotencyWait})
 	service.Idempotency = policy
-	service.Raw, service.Partners = raw, gatewayports.NoPartnerAdapters{}
+	service.Raw, service.Partners = raw, cfg.partnerAdapters()
 	service.Instrumentation = obsusecase.New(rt, audit.NewLogSink(rt.LoggerProvider()), ports.SubjectOf, usecase.CategoryOf)
 	return service, nil
 }
