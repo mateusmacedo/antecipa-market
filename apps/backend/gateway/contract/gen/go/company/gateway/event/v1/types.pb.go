@@ -32,6 +32,9 @@ const (
 	FailureCategory_FAILURE_CATEGORY_UNKNOWN_SENT        FailureCategory = 4
 	FailureCategory_FAILURE_CATEGORY_UNKNOWN_AMBIGUOUS   FailureCategory = 5
 	FailureCategory_FAILURE_CATEGORY_SCHEMA_MISMATCH     FailureCategory = 6
+	// The partner confirmed it never received the command and the resend
+	// budget of the operation was spent: a new command is the only way on.
+	FailureCategory_FAILURE_CATEGORY_RESEND_BUDGET_EXHAUSTED FailureCategory = 7
 )
 
 // Enum value maps for FailureCategory.
@@ -44,15 +47,17 @@ var (
 		4: "FAILURE_CATEGORY_UNKNOWN_SENT",
 		5: "FAILURE_CATEGORY_UNKNOWN_AMBIGUOUS",
 		6: "FAILURE_CATEGORY_SCHEMA_MISMATCH",
+		7: "FAILURE_CATEGORY_RESEND_BUDGET_EXHAUSTED",
 	}
 	FailureCategory_value = map[string]int32{
-		"FAILURE_CATEGORY_UNSPECIFIED":         0,
-		"FAILURE_CATEGORY_FINAL_VALIDATION":    1,
-		"FAILURE_CATEGORY_FINAL_BUSINESS":      2,
-		"FAILURE_CATEGORY_FINAL_AUTHORIZATION": 3,
-		"FAILURE_CATEGORY_UNKNOWN_SENT":        4,
-		"FAILURE_CATEGORY_UNKNOWN_AMBIGUOUS":   5,
-		"FAILURE_CATEGORY_SCHEMA_MISMATCH":     6,
+		"FAILURE_CATEGORY_UNSPECIFIED":             0,
+		"FAILURE_CATEGORY_FINAL_VALIDATION":        1,
+		"FAILURE_CATEGORY_FINAL_BUSINESS":          2,
+		"FAILURE_CATEGORY_FINAL_AUTHORIZATION":     3,
+		"FAILURE_CATEGORY_UNKNOWN_SENT":            4,
+		"FAILURE_CATEGORY_UNKNOWN_AMBIGUOUS":       5,
+		"FAILURE_CATEGORY_SCHEMA_MISMATCH":         6,
+		"FAILURE_CATEGORY_RESEND_BUDGET_EXHAUSTED": 7,
 	}
 )
 
@@ -194,7 +199,7 @@ var File_company_gateway_event_v1_types_proto protoreflect.FileDescriptor
 
 const file_company_gateway_event_v1_types_proto_rawDesc = "" +
 	"\n" +
-	"$company/gateway/event/v1/types.proto\x12\x18company.gateway.event.v1*\x9a\x02\n" +
+	"$company/gateway/event/v1/types.proto\x12\x18company.gateway.event.v1*\xc8\x02\n" +
 	"\x0fFailureCategory\x12 \n" +
 	"\x1cFAILURE_CATEGORY_UNSPECIFIED\x10\x00\x12%\n" +
 	"!FAILURE_CATEGORY_FINAL_VALIDATION\x10\x01\x12#\n" +
@@ -202,7 +207,8 @@ const file_company_gateway_event_v1_types_proto_rawDesc = "" +
 	"$FAILURE_CATEGORY_FINAL_AUTHORIZATION\x10\x03\x12!\n" +
 	"\x1dFAILURE_CATEGORY_UNKNOWN_SENT\x10\x04\x12&\n" +
 	"\"FAILURE_CATEGORY_UNKNOWN_AMBIGUOUS\x10\x05\x12$\n" +
-	" FAILURE_CATEGORY_SCHEMA_MISMATCH\x10\x06*\xe6\x01\n" +
+	" FAILURE_CATEGORY_SCHEMA_MISMATCH\x10\x06\x12,\n" +
+	"(FAILURE_CATEGORY_RESEND_BUDGET_EXHAUSTED\x10\a*\xe6\x01\n" +
 	"\x12ConfirmationSource\x12#\n" +
 	"\x1fCONFIRMATION_SOURCE_UNSPECIFIED\x10\x00\x12'\n" +
 	"#CONFIRMATION_SOURCE_SUBMIT_RESPONSE\x10\x01\x12#\n" +

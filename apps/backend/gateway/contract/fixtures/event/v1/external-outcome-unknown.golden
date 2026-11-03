@@ -181,6 +181,39 @@
       },
       "payload_bytes_hex": "0a237072742d333a70726f64756374696f6e3a7375626d69744566666563743a6566662d371208746e742d333030311a107072742d333a70726f64756374696f6e220c7375626d69744566666563742a056566662d3730033801420608849fe0d40648015a0608c69fe0d406",
       "payload_hash": "b965e305f050b5d61ce20701d380d0c6a3ca9fea05cbe82c4fdb7497a0084398"
+    },
+    {
+      "name": "enum-coverage-4",
+      "doc": "Caso empacotado que cobre o valor FAILURE_CATEGORY_RESEND_BUDGET_EXHAUSTED do campo failure_category, que os quatro casos da fixture enxuta não alcançam.",
+      "envelope": {
+        "causationid": "evt-0001",
+        "correlationid": "corr-0001",
+        "datacontenttype": "application/protobuf",
+        "dataschema": "type.googleapis.com/company.gateway.event.v1.ExternalOutcomeUnknown",
+        "id": "evt-0006",
+        "partitionkey": "c-42",
+        "source": "urn:dmpf:reference-gateway",
+        "specversion": "1.0",
+        "subject": "prt-1:production:submitEffect:eff-1",
+        "time": "2026-09-02T12:00:00Z",
+        "traceparent": "00-0af7651916cd43dd8448eb211c80319c-b7ad6b7169203331-01",
+        "type": "com.company.gateway.external-outcome-unknown.v1"
+      },
+      "payload": {
+        "business_key": "eff-8",
+        "connector_id": "prt-3:production",
+        "failure_category": "FAILURE_CATEGORY_RESEND_BUDGET_EXHAUSTED",
+        "idempotency_key": "prt-3:production:submitEffect:eff-8",
+        "last_submitted_at": "2026-09-02T11:59:00Z",
+        "operation": "submitEffect",
+        "requires_human_resolution": "false",
+        "state_query_supported": "true",
+        "submissions": "2",
+        "tenant_id": "tnt-3001",
+        "unknown_since": "2026-09-02T12:00:07Z"
+      },
+      "payload_bytes_hex": "0a237072742d333a70726f64756374696f6e3a7375626d69744566666563743a6566662d381208746e742d333030311a107072742d333a70726f64756374696f6e220c7375626d69744566666563742a056566662d3830073802420608849fe0d40648015a0608c79fe0d406",
+      "payload_hash": "a9835297f954bf6fb11689b003eb30ba9f95334fb745e4433dd1c76cada1f1b1"
     }
   ],
   "discriminators": [

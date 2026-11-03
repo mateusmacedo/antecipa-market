@@ -11,6 +11,9 @@ enum FailureCategory {
   FAILURE_CATEGORY_UNKNOWN_SENT = 4;
   FAILURE_CATEGORY_UNKNOWN_AMBIGUOUS = 5;
   FAILURE_CATEGORY_SCHEMA_MISMATCH = 6;
+  // The partner confirmed it never received the command and the resend
+  // budget of the operation was spent: a new command is the only way on.
+  FAILURE_CATEGORY_RESEND_BUDGET_EXHAUSTED = 7;
 }
 
 enum ConfirmationSource {

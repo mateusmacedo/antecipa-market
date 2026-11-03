@@ -144,6 +144,8 @@ message OperationCapability {
   int32 query_interval = 22;
   // Seconds a wait lasts before it escalates to an operational case.
   int32 ambiguity_deadline = 23;
+  // Sends per command, the first included: the resend budget of a write.
+  int32 max_submissions = 24;
 }
 
 message GrantQueryAuthorizationRequest {
@@ -359,6 +361,8 @@ message FindExternalCommandsByBusinessKeyResponse {
 }
 
 message FindExternalCommandsByStatusRequest {
+  // A status still in flight; a terminal one is invalid input, because the
+  // terminal sets grow without bound.
   ExternalCommandStatus status = 1;
   // Optional; empty lists the status across connectors.
   string connector_id = 2;
@@ -391,6 +395,8 @@ message ExternalCommand {
   int64 ambiguity_expired_at = 20;
   int64 confirmed_at = 21;
   string external_reference_id = 22;
+  // Set while the dispatch waits for the suspension of the operation to lift.
+  int64 dispatch_held_since = 23;
 }
 
 // The declaration of the operation copied when the command was created.
@@ -407,6 +413,7 @@ message CommandProfile {
   int32 key_max_length = 10;
   int32 query_interval = 11;
   int32 ambiguity_deadline = 12;
+  int32 max_submissions = 13;
 }
 
 enum Environment {
@@ -477,6 +484,7 @@ enum FailureCategory {
   FAILURE_CATEGORY_UNKNOWN_SENT = 4;
   FAILURE_CATEGORY_UNKNOWN_AMBIGUOUS = 5;
   FAILURE_CATEGORY_SCHEMA_MISMATCH = 6;
+  FAILURE_CATEGORY_RESEND_BUDGET_EXHAUSTED = 7;
 }
 
 enum Resolution {

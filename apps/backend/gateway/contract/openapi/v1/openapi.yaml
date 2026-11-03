@@ -661,8 +661,10 @@ components:
       name: status
       in: query
       required: true
+      description: A status still in flight; a terminal one is a bad request
       schema:
-        $ref: '#/components/schemas/CommandStatus'
+        type: string
+        enum: [created, acknowledged, retryable_failure, unknown_outcome]
     ConnectorIDQuery:
       name: connectorId
       in: query
@@ -790,7 +792,7 @@ components:
       enum: [created, acknowledged, confirmed, retryable_failure, final_failure, unknown_outcome, cancelled]
     FailureCategory:
       type: string
-      enum: [final_validation, final_business, final_authorization, unknown_sent, unknown_ambiguous, schema_mismatch]
+      enum: [final_validation, final_business, final_authorization, unknown_sent, unknown_ambiguous, schema_mismatch, resend_budget_exhausted]
       description: Absent when the last outcome was not a failure
     Resolution:
       type: string
@@ -946,6 +948,11 @@ components:
           format: int32
           minimum: 0
           description: Seconds a wait lasts before it escalates
+        maxSubmissions:
+          type: integer
+          format: int32
+          minimum: 0
+          description: Sends per command, the first included; a write declares it greater than zero
     DeclareCapabilityProfileRequest:
       type: object
       additionalProperties: false
@@ -1200,6 +1207,9 @@ components:
         ambiguityDeadline:
           type: integer
           format: int32
+        maxSubmissions:
+          type: integer
+          format: int32
     ExternalCommand:
       type: object
       description: The command without its payload, which is CONFIDENTIAL
@@ -1250,6 +1260,8 @@ components:
           $ref: '#/components/schemas/Instant'
         externalReferenceId:
           type: string
+        dispatchHeldSince:
+          $ref: '#/components/schemas/Instant'
     SweepReport:
       type: object
       required: [resendRequested, ambiguityExpired, skipped, failed]

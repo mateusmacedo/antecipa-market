@@ -450,13 +450,14 @@ func (ExternalCommandStatus) EnumDescriptor() ([]byte, []int) {
 type FailureCategory int32
 
 const (
-	FailureCategory_FAILURE_CATEGORY_UNSPECIFIED         FailureCategory = 0
-	FailureCategory_FAILURE_CATEGORY_FINAL_VALIDATION    FailureCategory = 1
-	FailureCategory_FAILURE_CATEGORY_FINAL_BUSINESS      FailureCategory = 2
-	FailureCategory_FAILURE_CATEGORY_FINAL_AUTHORIZATION FailureCategory = 3
-	FailureCategory_FAILURE_CATEGORY_UNKNOWN_SENT        FailureCategory = 4
-	FailureCategory_FAILURE_CATEGORY_UNKNOWN_AMBIGUOUS   FailureCategory = 5
-	FailureCategory_FAILURE_CATEGORY_SCHEMA_MISMATCH     FailureCategory = 6
+	FailureCategory_FAILURE_CATEGORY_UNSPECIFIED             FailureCategory = 0
+	FailureCategory_FAILURE_CATEGORY_FINAL_VALIDATION        FailureCategory = 1
+	FailureCategory_FAILURE_CATEGORY_FINAL_BUSINESS          FailureCategory = 2
+	FailureCategory_FAILURE_CATEGORY_FINAL_AUTHORIZATION     FailureCategory = 3
+	FailureCategory_FAILURE_CATEGORY_UNKNOWN_SENT            FailureCategory = 4
+	FailureCategory_FAILURE_CATEGORY_UNKNOWN_AMBIGUOUS       FailureCategory = 5
+	FailureCategory_FAILURE_CATEGORY_SCHEMA_MISMATCH         FailureCategory = 6
+	FailureCategory_FAILURE_CATEGORY_RESEND_BUDGET_EXHAUSTED FailureCategory = 7
 )
 
 // Enum value maps for FailureCategory.
@@ -469,15 +470,17 @@ var (
 		4: "FAILURE_CATEGORY_UNKNOWN_SENT",
 		5: "FAILURE_CATEGORY_UNKNOWN_AMBIGUOUS",
 		6: "FAILURE_CATEGORY_SCHEMA_MISMATCH",
+		7: "FAILURE_CATEGORY_RESEND_BUDGET_EXHAUSTED",
 	}
 	FailureCategory_value = map[string]int32{
-		"FAILURE_CATEGORY_UNSPECIFIED":         0,
-		"FAILURE_CATEGORY_FINAL_VALIDATION":    1,
-		"FAILURE_CATEGORY_FINAL_BUSINESS":      2,
-		"FAILURE_CATEGORY_FINAL_AUTHORIZATION": 3,
-		"FAILURE_CATEGORY_UNKNOWN_SENT":        4,
-		"FAILURE_CATEGORY_UNKNOWN_AMBIGUOUS":   5,
-		"FAILURE_CATEGORY_SCHEMA_MISMATCH":     6,
+		"FAILURE_CATEGORY_UNSPECIFIED":             0,
+		"FAILURE_CATEGORY_FINAL_VALIDATION":        1,
+		"FAILURE_CATEGORY_FINAL_BUSINESS":          2,
+		"FAILURE_CATEGORY_FINAL_AUTHORIZATION":     3,
+		"FAILURE_CATEGORY_UNKNOWN_SENT":            4,
+		"FAILURE_CATEGORY_UNKNOWN_AMBIGUOUS":       5,
+		"FAILURE_CATEGORY_SCHEMA_MISMATCH":         6,
+		"FAILURE_CATEGORY_RESEND_BUDGET_EXHAUSTED": 7,
 	}
 )
 
@@ -1454,8 +1457,10 @@ type OperationCapability struct {
 	QueryInterval int32 `protobuf:"varint,22,opt,name=query_interval,json=queryInterval,proto3" json:"query_interval,omitempty"`
 	// Seconds a wait lasts before it escalates to an operational case.
 	AmbiguityDeadline int32 `protobuf:"varint,23,opt,name=ambiguity_deadline,json=ambiguityDeadline,proto3" json:"ambiguity_deadline,omitempty"`
-	unknownFields     protoimpl.UnknownFields
-	sizeCache         protoimpl.SizeCache
+	// Sends per command, the first included: the resend budget of a write.
+	MaxSubmissions int32 `protobuf:"varint,24,opt,name=max_submissions,json=maxSubmissions,proto3" json:"max_submissions,omitempty"`
+	unknownFields  protoimpl.UnknownFields
+	sizeCache      protoimpl.SizeCache
 }
 
 func (x *OperationCapability) Reset() {
@@ -1645,6 +1650,13 @@ func (x *OperationCapability) GetQueryInterval() int32 {
 func (x *OperationCapability) GetAmbiguityDeadline() int32 {
 	if x != nil {
 		return x.AmbiguityDeadline
+	}
+	return 0
+}
+
+func (x *OperationCapability) GetMaxSubmissions() int32 {
+	if x != nil {
+		return x.MaxSubmissions
 	}
 	return 0
 }
@@ -3797,8 +3809,10 @@ func (x *FindExternalCommandsByBusinessKeyResponse) GetCommands() []*ExternalCom
 }
 
 type FindExternalCommandsByStatusRequest struct {
-	state  protoimpl.MessageState `protogen:"open.v1"`
-	Status ExternalCommandStatus  `protobuf:"varint,1,opt,name=status,proto3,enum=company.gateway.service.v1.ExternalCommandStatus" json:"status,omitempty"`
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// A status still in flight; a terminal one is invalid input, because the
+	// terminal sets grow without bound.
+	Status ExternalCommandStatus `protobuf:"varint,1,opt,name=status,proto3,enum=company.gateway.service.v1.ExternalCommandStatus" json:"status,omitempty"`
 	// Optional; empty lists the status across connectors.
 	ConnectorId   string `protobuf:"bytes,2,opt,name=connector_id,json=connectorId,proto3" json:"connector_id,omitempty"`
 	unknownFields protoimpl.UnknownFields
@@ -3917,8 +3931,10 @@ type ExternalCommand struct {
 	AmbiguityExpiredAt     int64                  `protobuf:"varint,20,opt,name=ambiguity_expired_at,json=ambiguityExpiredAt,proto3" json:"ambiguity_expired_at,omitempty"`
 	ConfirmedAt            int64                  `protobuf:"varint,21,opt,name=confirmed_at,json=confirmedAt,proto3" json:"confirmed_at,omitempty"`
 	ExternalReferenceId    string                 `protobuf:"bytes,22,opt,name=external_reference_id,json=externalReferenceId,proto3" json:"external_reference_id,omitempty"`
-	unknownFields          protoimpl.UnknownFields
-	sizeCache              protoimpl.SizeCache
+	// Set while the dispatch waits for the suspension of the operation to lift.
+	DispatchHeldSince int64 `protobuf:"varint,23,opt,name=dispatch_held_since,json=dispatchHeldSince,proto3" json:"dispatch_held_since,omitempty"`
+	unknownFields     protoimpl.UnknownFields
+	sizeCache         protoimpl.SizeCache
 }
 
 func (x *ExternalCommand) Reset() {
@@ -4105,6 +4121,13 @@ func (x *ExternalCommand) GetExternalReferenceId() string {
 	return ""
 }
 
+func (x *ExternalCommand) GetDispatchHeldSince() int64 {
+	if x != nil {
+		return x.DispatchHeldSince
+	}
+	return 0
+}
+
 // The declaration of the operation copied when the command was created.
 type CommandProfile struct {
 	state                  protoimpl.MessageState `protogen:"open.v1"`
@@ -4120,6 +4143,7 @@ type CommandProfile struct {
 	KeyMaxLength           int32                  `protobuf:"varint,10,opt,name=key_max_length,json=keyMaxLength,proto3" json:"key_max_length,omitempty"`
 	QueryInterval          int32                  `protobuf:"varint,11,opt,name=query_interval,json=queryInterval,proto3" json:"query_interval,omitempty"`
 	AmbiguityDeadline      int32                  `protobuf:"varint,12,opt,name=ambiguity_deadline,json=ambiguityDeadline,proto3" json:"ambiguity_deadline,omitempty"`
+	MaxSubmissions         int32                  `protobuf:"varint,13,opt,name=max_submissions,json=maxSubmissions,proto3" json:"max_submissions,omitempty"`
 	unknownFields          protoimpl.UnknownFields
 	sizeCache              protoimpl.SizeCache
 }
@@ -4238,6 +4262,13 @@ func (x *CommandProfile) GetAmbiguityDeadline() int32 {
 	return 0
 }
 
+func (x *CommandProfile) GetMaxSubmissions() int32 {
+	if x != nil {
+		return x.MaxSubmissions
+	}
+	return 0
+}
+
 var File_company_gateway_service_v1_gateway_service_proto protoreflect.FileDescriptor
 
 const file_company_gateway_service_v1_gateway_service_proto_rawDesc = "" +
@@ -4301,7 +4332,7 @@ const file_company_gateway_service_v1_gateway_service_proto_rawDesc = "" +
 	"\x06result\"<\n" +
 	"\x19DeclaredCapabilityProfile\x12\x1f\n" +
 	"\vprofile_key\x18\x01 \x01(\tR\n" +
-	"profileKey\"\x85\t\n" +
+	"profileKey\"\xae\t\n" +
 	"\x13OperationCapability\x12\x1c\n" +
 	"\toperation\x18\x01 \x01(\tR\toperation\x12\x1c\n" +
 	"\tsupported\x18\x02 \x01(\bR\tsupported\x12@\n" +
@@ -4331,7 +4362,8 @@ const file_company_gateway_service_v1_gateway_service_proto_rawDesc = "" +
 	"\fkey_alphabet\x18\x14 \x01(\tR\vkeyAlphabet\x12$\n" +
 	"\x0ekey_max_length\x18\x15 \x01(\x05R\fkeyMaxLength\x12%\n" +
 	"\x0equery_interval\x18\x16 \x01(\x05R\rqueryInterval\x12-\n" +
-	"\x12ambiguity_deadline\x18\x17 \x01(\x05R\x11ambiguityDeadline\"\x88\x02\n" +
+	"\x12ambiguity_deadline\x18\x17 \x01(\x05R\x11ambiguityDeadline\x12'\n" +
+	"\x0fmax_submissions\x18\x18 \x01(\x05R\x0emaxSubmissions\"\x88\x02\n" +
 	"\x1eGrantQueryAuthorizationRequest\x12\x1d\n" +
 	"\n" +
 	"consent_id\x18\x01 \x01(\tR\tconsentId\x12'\n" +
@@ -4489,7 +4521,7 @@ const file_company_gateway_service_v1_gateway_service_proto_rawDesc = "" +
 	"\x06status\x18\x01 \x01(\x0e21.company.gateway.service.v1.ExternalCommandStatusR\x06status\x12!\n" +
 	"\fconnector_id\x18\x02 \x01(\tR\vconnectorId\"o\n" +
 	"$FindExternalCommandsByStatusResponse\x12G\n" +
-	"\bcommands\x18\x01 \x03(\v2+.company.gateway.service.v1.ExternalCommandR\bcommands\"\xc9\a\n" +
+	"\bcommands\x18\x01 \x03(\v2+.company.gateway.service.v1.ExternalCommandR\bcommands\"\xf9\a\n" +
 	"\x0fExternalCommand\x12'\n" +
 	"\x0fidempotency_key\x18\x01 \x01(\tR\x0eidempotencyKey\x12\x1b\n" +
 	"\ttenant_id\x18\x02 \x01(\tR\btenantId\x12!\n" +
@@ -4516,7 +4548,8 @@ const file_company_gateway_service_v1_gateway_service_proto_rawDesc = "" +
 	"\x17reconciliation_required\x18\x13 \x01(\bR\x16reconciliationRequired\x120\n" +
 	"\x14ambiguity_expired_at\x18\x14 \x01(\x03R\x12ambiguityExpiredAt\x12!\n" +
 	"\fconfirmed_at\x18\x15 \x01(\x03R\vconfirmedAt\x122\n" +
-	"\x15external_reference_id\x18\x16 \x01(\tR\x13externalReferenceId\"\xdf\x04\n" +
+	"\x15external_reference_id\x18\x16 \x01(\tR\x13externalReferenceId\x12.\n" +
+	"\x13dispatch_held_since\x18\x17 \x01(\x03R\x11dispatchHeldSince\"\x88\x05\n" +
 	"\x0eCommandProfile\x12'\n" +
 	"\x0fprofile_version\x18\x01 \x01(\x05R\x0eprofileVersion\x122\n" +
 	"\x15state_query_supported\x18\x02 \x01(\bR\x13stateQuerySupported\x12_\n" +
@@ -4533,7 +4566,8 @@ const file_company_gateway_service_v1_gateway_service_proto_rawDesc = "" +
 	"\x0ekey_max_length\x18\n" +
 	" \x01(\x05R\fkeyMaxLength\x12%\n" +
 	"\x0equery_interval\x18\v \x01(\x05R\rqueryInterval\x12-\n" +
-	"\x12ambiguity_deadline\x18\f \x01(\x05R\x11ambiguityDeadline*\x9e\x01\n" +
+	"\x12ambiguity_deadline\x18\f \x01(\x05R\x11ambiguityDeadline\x12'\n" +
+	"\x0fmax_submissions\x18\r \x01(\x05R\x0emaxSubmissions*\x9e\x01\n" +
 	"\vEnvironment\x12\x1b\n" +
 	"\x17ENVIRONMENT_UNSPECIFIED\x10\x00\x12\x1b\n" +
 	"\x17ENVIRONMENT_DEVELOPMENT\x10\x01\x12\x1b\n" +
@@ -4576,7 +4610,7 @@ const file_company_gateway_service_v1_gateway_service_proto_rawDesc = "" +
 	")EXTERNAL_COMMAND_STATUS_RETRYABLE_FAILURE\x10\x04\x12)\n" +
 	"%EXTERNAL_COMMAND_STATUS_FINAL_FAILURE\x10\x05\x12+\n" +
 	"'EXTERNAL_COMMAND_STATUS_UNKNOWN_OUTCOME\x10\x06\x12%\n" +
-	"!EXTERNAL_COMMAND_STATUS_CANCELLED\x10\a*\x9a\x02\n" +
+	"!EXTERNAL_COMMAND_STATUS_CANCELLED\x10\a*\xc8\x02\n" +
 	"\x0fFailureCategory\x12 \n" +
 	"\x1cFAILURE_CATEGORY_UNSPECIFIED\x10\x00\x12%\n" +
 	"!FAILURE_CATEGORY_FINAL_VALIDATION\x10\x01\x12#\n" +
@@ -4584,7 +4618,8 @@ const file_company_gateway_service_v1_gateway_service_proto_rawDesc = "" +
 	"$FAILURE_CATEGORY_FINAL_AUTHORIZATION\x10\x03\x12!\n" +
 	"\x1dFAILURE_CATEGORY_UNKNOWN_SENT\x10\x04\x12&\n" +
 	"\"FAILURE_CATEGORY_UNKNOWN_AMBIGUOUS\x10\x05\x12$\n" +
-	" FAILURE_CATEGORY_SCHEMA_MISMATCH\x10\x06*}\n" +
+	" FAILURE_CATEGORY_SCHEMA_MISMATCH\x10\x06\x12,\n" +
+	"(FAILURE_CATEGORY_RESEND_BUDGET_EXHAUSTED\x10\a*}\n" +
 	"\n" +
 	"Resolution\x12\x1a\n" +
 	"\x16RESOLUTION_UNSPECIFIED\x10\x00\x12\x18\n" +
