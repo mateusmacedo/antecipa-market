@@ -27,4 +27,6 @@ message ExternalResponseCaptured {
   string mismatch_detail = 13;
   string partner_declared_version = 14;
   google.protobuf.Timestamp at = 15;
+  // The content type of the response, which the record of the interaction keeps.
+  string content_type = 16;
 }

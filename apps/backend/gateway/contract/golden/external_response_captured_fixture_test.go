@@ -66,6 +66,7 @@ func externalResponseCapturedFields(interactionID, commandID, connectorID, opera
 		"mismatch_detail":          detail,
 		"partner_declared_version": declaredVersion,
 		"at":                       at,
+		"content_type":             "application/json",
 	}
 }
 
@@ -98,5 +99,6 @@ func externalResponseCaptured(fields map[string]string) (*eventv1.ExternalRespon
 		MismatchDetail:         fields["mismatch_detail"],
 		PartnerDeclaredVersion: fields["partner_declared_version"],
 		At:                     at,
+		ContentType:            fields["content_type"],
 	}, nil
 }

@@ -45,8 +45,10 @@ type ExternalResponseCaptured struct {
 	MismatchDetail         string                 `protobuf:"bytes,13,opt,name=mismatch_detail,json=mismatchDetail,proto3" json:"mismatch_detail,omitempty"`
 	PartnerDeclaredVersion string                 `protobuf:"bytes,14,opt,name=partner_declared_version,json=partnerDeclaredVersion,proto3" json:"partner_declared_version,omitempty"`
 	At                     *timestamppb.Timestamp `protobuf:"bytes,15,opt,name=at,proto3" json:"at,omitempty"`
-	unknownFields          protoimpl.UnknownFields
-	sizeCache              protoimpl.SizeCache
+	// The content type of the response, which the record of the interaction keeps.
+	ContentType   string `protobuf:"bytes,16,opt,name=content_type,json=contentType,proto3" json:"content_type,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
 }
 
 func (x *ExternalResponseCaptured) Reset() {
@@ -184,11 +186,18 @@ func (x *ExternalResponseCaptured) GetAt() *timestamppb.Timestamp {
 	return nil
 }
 
+func (x *ExternalResponseCaptured) GetContentType() string {
+	if x != nil {
+		return x.ContentType
+	}
+	return ""
+}
+
 var File_company_gateway_event_v1_external_response_captured_proto protoreflect.FileDescriptor
 
 const file_company_gateway_event_v1_external_response_captured_proto_rawDesc = "" +
 	"\n" +
-	"9company/gateway/event/v1/external_response_captured.proto\x12\x18company.gateway.event.v1\x1a$company/gateway/event/v1/types.proto\x1a\x1fgoogle/protobuf/timestamp.proto\"\x9b\x05\n" +
+	"9company/gateway/event/v1/external_response_captured.proto\x12\x18company.gateway.event.v1\x1a$company/gateway/event/v1/types.proto\x1a\x1fgoogle/protobuf/timestamp.proto\"\xbe\x05\n" +
 	"\x18ExternalResponseCaptured\x12%\n" +
 	"\x0einteraction_id\x18\x01 \x01(\tR\rinteractionId\x12\x1d\n" +
 	"\n" +
@@ -207,7 +216,8 @@ const file_company_gateway_event_v1_external_response_captured_proto_rawDesc = "
 	"\rmismatch_kind\x18\f \x01(\x0e2&.company.gateway.event.v1.MismatchKindR\fmismatchKind\x12'\n" +
 	"\x0fmismatch_detail\x18\r \x01(\tR\x0emismatchDetail\x128\n" +
 	"\x18partner_declared_version\x18\x0e \x01(\tR\x16partnerDeclaredVersion\x12*\n" +
-	"\x02at\x18\x0f \x01(\v2\x1a.google.protobuf.TimestampR\x02atB\xaf\x02\n" +
+	"\x02at\x18\x0f \x01(\v2\x1a.google.protobuf.TimestampR\x02at\x12!\n" +
+	"\fcontent_type\x18\x10 \x01(\tR\vcontentTypeB\xaf\x02\n" +
 	"\x1ccom.company.gateway.event.v1B\x1dExternalResponseCapturedProtoP\x01Zmgithub.com/mateusmacedo/antecipa-market/apps/backend/gateway/contract/gen/go/company/gateway/event/v1;eventv1\xa2\x02\x03CGE\xaa\x02\x18Company.Gateway.Event.V1\xca\x02\x18Company\\Gateway\\Event\\V1\xe2\x02$Company\\Gateway\\Event\\V1\\GPBMetadata\xea\x02\x1bCompany::Gateway::Event::V1b\x06proto3"
 
 var (
