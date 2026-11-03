@@ -96,3 +96,31 @@ func TestRevokeQueryAuthorizationIsFinal(t *testing.T) {
 		t.Fatalf("a revoked authorization changed: %+v", a.Snapshot())
 	}
 }
+
+// The guard of ReceivablesQueryPort (fail-closed): only a granted
+// authorization covering the asset type lets a read through.
+func TestAnAuthorizationIsActiveOnlyGrantedForItsAssetTypes(t *testing.T) {
+	granted := newGranted(t)
+	revoked := newGranted(t)
+	if _, rej := revoked.Revoke(domain.RevokeQueryAuthorization{EffectiveAt: at + second}); rej != nil {
+		t.Fatalf("setup: Revoke rejected: %v", rej)
+	}
+
+	tests := []struct {
+		name      string
+		s         domain.QueryAuthorizationSnapshot
+		assetType string
+		want      bool
+	}{
+		{"granted for the asset type", granted.Snapshot(), "duplicata", true},
+		{"granted for another asset type", granted.Snapshot(), "cartao", false},
+		{"granted without an asset type", granted.Snapshot(), "", false},
+		{"revoked", revoked.Snapshot(), "duplicata", false},
+		{"absent", domain.QueryAuthorizationSnapshot{}, "duplicata", false},
+	}
+	for _, tc := range tests {
+		if got := tc.s.Active(tc.assetType); got != tc.want {
+			t.Errorf("%s: Active(%q) = %v, want %v", tc.name, tc.assetType, got, tc.want)
+		}
+	}
+}

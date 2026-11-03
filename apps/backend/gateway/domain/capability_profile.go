@@ -197,6 +197,17 @@ func (s CapabilityProfileSnapshot) Supports(operation, assetType string) (Operat
 	return OperationCapability{}, false
 }
 
+// Declaration is the operation as the profile declares it, supported or not:
+// what bounds a partner interaction of the operation.
+func (s CapabilityProfileSnapshot) Declaration(operation string) (OperationCapability, bool) {
+	for _, o := range s.Operations {
+		if o.Operation == operation {
+			return o.clone(), true
+		}
+	}
+	return OperationCapability{}, false
+}
+
 // EffectiveProfile is the version in force at an instant: the highest version
 // whose effectiveFrom has already arrived.
 func EffectiveProfile(profiles []CapabilityProfileSnapshot, at kernel.Instant) (CapabilityProfileSnapshot, bool) {

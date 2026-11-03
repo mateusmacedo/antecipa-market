@@ -40,7 +40,22 @@ const (
 
 	CodeExternalReferenceReferenceEmpty kernel.Code = "receivables-gateway/external-reference/reference-empty"
 	CodeExternalReferenceAlreadyLinked  kernel.Code = "receivables-gateway/external-reference/already-linked"
+
+	CodeQueryAuthorizationConsentNotActive kernel.Code = "receivables-gateway/query-authorization/consent-not-active"
+	CodeConnectorCapabilityNotEnabled      kernel.Code = "receivables-gateway/connector/capability-not-enabled"
 )
+
+// RejectQueryAuthorizationConsentNotActive is the refusal of a read of
+// ReceivablesQueryPort with no granted authorization for the organization and
+// the asset type: the guard answers it before any call, so no UPR produces it.
+var RejectQueryAuthorizationConsentNotActive = kernel.Reject(CodeQueryAuthorizationConsentNotActive,
+	"no query authorization is active for the organization and the asset type")
+
+// RejectConnectorCapabilityNotEnabled is the refusal of a partner interaction
+// or a read the profile in force does not declare, or one of an operation the
+// connector does not have enabled and unsuspended.
+var RejectConnectorCapabilityNotEnabled = kernel.Reject(CodeConnectorCapabilityNotEnabled,
+	"the operation is not enabled for the connector")
 
 // RejectExternalInteractionPayloadTooLarge is the refusal of a raw body above
 // the maxPayloadBytes of the operation: the edge answers it before writing

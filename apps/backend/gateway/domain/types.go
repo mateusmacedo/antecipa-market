@@ -57,4 +57,27 @@ func IsWriteOperation(operation string) bool {
 	}
 }
 
+// IsReadOperation tells the reads of the ports (04 §3), the vocabulary of
+// ReadExternal until the providers are mapped (decision 20).
+func IsReadOperation(operation string) bool {
+	switch operation {
+	case "queryOptInStatus", "listAuthorizations", "queryEffect", "queryEffectsByAsset",
+		"querySettlements", "querySettlementByAsset", "fetchEvidence":
+		return true
+	default:
+		return RequiresQueryAuthorization(operation)
+	}
+}
+
+// RequiresQueryAuthorization tells the reads of ReceivablesQueryPort, which a
+// QueryAuthorization of the organization guards (fail-closed).
+func RequiresQueryAuthorization(operation string) bool {
+	switch operation {
+	case "discoverSchedule", "queryAsset", "queryOwnership", "queryEncumbrances":
+		return true
+	default:
+		return false
+	}
+}
+
 const nanosPerSecond = 1_000_000_000

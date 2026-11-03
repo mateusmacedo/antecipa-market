@@ -158,3 +158,18 @@ func TestAReadOperationNeedsNoResendBudget(t *testing.T) {
 
 	tb.RequireAccepted(t, rej)
 }
+
+// Declaration answers the limits of an operation whatever its support, which
+// is what a partner interaction is bounded by.
+func TestDeclarationAnswersTheOperationDeclaredWhateverItsSupport(t *testing.T) {
+	unsupported := submitEffectCapability()
+	unsupported.Operation, unsupported.Supported, unsupported.MaxPayloadBytes = "requestRelease", false, 2048
+	s := domain.CapabilityProfileSnapshot{Operations: []domain.OperationCapability{submitEffectCapability(), unsupported}}
+
+	if got, ok := s.Declaration("requestRelease"); !ok || got.MaxPayloadBytes != 2048 {
+		t.Fatalf("Declaration(requestRelease) = %+v, %v; want the declaration of the operation", got, ok)
+	}
+	if got, ok := s.Declaration("queryAsset"); ok {
+		t.Fatalf("Declaration(queryAsset) = %+v, want none for an operation the profile does not declare", got)
+	}
+}

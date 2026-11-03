@@ -28,6 +28,7 @@ var edgeOperations = []application.Operation{
 	application.FindExternalInteraction{}, application.FindExternalInteractionByPartnerEvent{},
 	application.FindExternalInteractionsByCommand{}, application.FindExternalReference{},
 	application.FindExternalReferencesBySubject{},
+	application.ReceivePartnerInteraction{}, application.ReadExternal{},
 }
 
 // internalSteps have no method: the sweep and the consumer run them under the
@@ -85,6 +86,9 @@ func TestEveryEdgeOperationDeclaresItsPermission(t *testing.T) {
 		"FindExternalInteractionsByCommand":     {application.FindExternalInteractionsByCommand{}, "gateway:find-external-interactions-by-command"},
 		"FindExternalReference":                 {application.FindExternalReference{}, "gateway:find-external-reference"},
 		"FindExternalReferencesBySubject":       {application.FindExternalReferencesBySubject{}, "gateway:find-external-references-by-subject"},
+
+		"ReceivePartnerInteraction": {application.ReceivePartnerInteraction{}, "gateway:receive-partner-interaction"},
+		"ReadExternal":              {application.ReadExternal{}, "gateway:read-external"},
 	}
 	if len(cases) != len(edgeOperations) {
 		t.Fatalf("%d cases for %d edge operations: an operation lacks its expected permission", len(cases), len(edgeOperations))

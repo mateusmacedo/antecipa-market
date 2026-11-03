@@ -128,6 +128,28 @@ type RecordExternalInteraction struct {
 	DuplicateOf    domain.InteractionID
 }
 
+// ReceivePartnerInteraction is a callback or a file the bff hands over, with
+// the raw body as the partner sent it.
+type ReceivePartnerInteraction struct {
+	ConnectorKey   domain.ConnectorKey
+	Operation      string
+	Source         domain.InteractionSource
+	PartnerEventID string
+	BusinessDate   string
+	ContentType    string
+	Body           []byte
+}
+
+// ReadExternal is a read of a canonical port; OrganizationID and AssetType
+// name what the authorization of query of ReceivablesQueryPort guards.
+type ReadExternal struct {
+	ConnectorKey   domain.ConnectorKey
+	Operation      string
+	OrganizationID domain.OrganizationID
+	AssetType      string
+	Parameters     []byte
+}
+
 // ConcludeInteraction names the revision it concludes, which derives its
 // command key: a reprocessing is concluded under a key of its own.
 type ConcludeInteraction struct {
@@ -263,6 +285,8 @@ type FindExternalReferencesBySubject struct {
 }
 
 func (RecordExternalInteraction) isOperation()             {}
+func (ReceivePartnerInteraction) isOperation()             {}
+func (ReadExternal) isOperation()                          {}
 func (ConcludeInteraction) isOperation()                   {}
 func (ReprocessInteraction) isOperation()                  {}
 func (LinkExternalReference) isOperation()                 {}

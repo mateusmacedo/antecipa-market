@@ -71,6 +71,8 @@ const (
 	OperationConsumeResponseCaptured               = "gateway.ConsumeResponseCaptured"
 	OperationConsumeInteractionStored              = "gateway.ConsumeInteractionStored"
 	OperationConsumeSchemaMismatchDetected         = "gateway.ConsumeSchemaMismatchDetected"
+	OperationReceivePartnerInteraction             = "gateway.ReceivePartnerInteraction"
+	OperationReadExternal                          = "gateway.ReadExternal"
 
 	// OperationCaptureResponse only ever fails: it is how a response the store
 	// lost reaches the metrics while the submission stands (decision 17).

@@ -166,7 +166,9 @@ type harness struct {
 	service application.Service
 }
 
-func newHarness(t *testing.T) *harness {
+// newHarness serves the use cases over memory; configure sets what a test
+// adds to the service, such as the raw store and the partner adapters.
+func newHarness(t *testing.T, configure ...func(*application.Service)) *harness {
 	t.Helper()
 	store := memory.New()
 	r := relations{store: store, profiles: &written[domain.ProfileKey]{}, authorizations: &written[domain.ConsentID]{}, commands: &written[domain.IdempotencyKey]{},
@@ -219,6 +221,9 @@ func newHarness(t *testing.T) *harness {
 		OutboundKeys:                 usecase.OutboundKeyPolicy{Digest: func(c []byte) port.Fingerprint { return sha256.Sum256(c) }},
 		DerivedKeys:                  application.DerivedKeyPolicy{Digest: func(c []byte) port.Fingerprint { return sha256.Sum256(c) }},
 		Consumer:                     "gateway",
+	}
+	for _, apply := range configure {
+		apply(&service)
 	}
 
 	ctrl, err := admission.New(admission.Config{Limits: kernelgrpc.MethodLimits(rpc.ServiceName, rpc.Methods(), unlimited), MaxKeys: 16, Clock: obsclock.System()})

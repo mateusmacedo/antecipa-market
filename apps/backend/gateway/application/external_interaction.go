@@ -42,22 +42,28 @@ func (s Service) recordAs(ctx context.Context, x executor, as Operation, cmd Rec
 		Fingerprint: recordFingerprint(cmd),
 		Codec:       interactionCodec,
 		Run: func(ctx context.Context, res Resources, identity usecase.Identity) (usecase.Outcome[domain.InteractionResponse], error) {
-			outcome, err := usecase.Decide(ctx, res.ExternalInteractions, res.Outbox, normalizationOrigin(cmd.InteractionID), cmd.InteractionID, identity,
-				loadAbsentInteraction,
-				func(i *domain.ExternalInteraction) (kernel.Accepted[domain.InteractionResponse], *kernel.Rejection) {
-					return i.Record(domain.RecordExternalInteraction{
-						ConnectorKey: cmd.ConnectorKey, Operation: cmd.Operation, Direction: cmd.Direction, Source: cmd.Source,
-						ContentType: cmd.ContentType, CommandID: cmd.CommandID, PartnerEventID: cmd.PartnerEventID, BusinessDate: cmd.BusinessDate,
-						Request: cmd.Request, Response: cmd.Response, CapturedStep: cmd.CapturedStep, Mismatch: cmd.Mismatch,
-						DuplicateOf: cmd.DuplicateOf, At: identity.OccurredAt,
-					})
-				})
+			outcome, err := recordIn(ctx, res, identity, cmd)
 			if err != nil {
 				return outcome, fmt.Errorf("application: record external interaction %s: %w", cmd.InteractionID, err)
 			}
 			return outcome, nil
 		},
 	})
+}
+
+// recordIn creates the interaction in the unit of work of whichever command
+// records it: the record of the cycle, a partner interaction or a read.
+func recordIn(ctx context.Context, res Resources, identity usecase.Identity, cmd RecordExternalInteraction) (usecase.Outcome[domain.InteractionResponse], error) {
+	return usecase.Decide(ctx, res.ExternalInteractions, res.Outbox, normalizationOrigin(cmd.InteractionID), cmd.InteractionID, identity,
+		loadAbsentInteraction,
+		func(i *domain.ExternalInteraction) (kernel.Accepted[domain.InteractionResponse], *kernel.Rejection) {
+			return i.Record(domain.RecordExternalInteraction{
+				ConnectorKey: cmd.ConnectorKey, Operation: cmd.Operation, Direction: cmd.Direction, Source: cmd.Source,
+				ContentType: cmd.ContentType, CommandID: cmd.CommandID, PartnerEventID: cmd.PartnerEventID, BusinessDate: cmd.BusinessDate,
+				Request: cmd.Request, Response: cmd.Response, CapturedStep: cmd.CapturedStep, Mismatch: cmd.Mismatch,
+				DuplicateOf: cmd.DuplicateOf, At: identity.OccurredAt,
+			})
+		})
 }
 
 func recordFingerprint(cmd RecordExternalInteraction) *usecase.Fingerprint {

@@ -45,6 +45,8 @@ func TestRejectionCodesKeepTheirWireValues(t *testing.T) {
 		domain.CodeExternalInteractionPayloadTooLarge:         "receivables-gateway/external-interaction/payload-too-large",
 		domain.CodeExternalReferenceReferenceEmpty:            "receivables-gateway/external-reference/reference-empty",
 		domain.CodeExternalReferenceAlreadyLinked:             "receivables-gateway/external-reference/already-linked",
+		domain.CodeQueryAuthorizationConsentNotActive:         "receivables-gateway/query-authorization/consent-not-active",
+		domain.CodeConnectorCapabilityNotEnabled:              "receivables-gateway/connector/capability-not-enabled",
 	}
 	for code, wire := range codes {
 		if string(code) != wire {
@@ -71,5 +73,14 @@ func TestTheObservationRefusalsAreTheStaticRejectionsOfTheLedger(t *testing.T) {
 	}
 	if got := domain.RejectExternalCommandObservationSaturated.Code(); got != domain.CodeExternalCommandObservationSaturated {
 		t.Fatalf("Code() = %q, want %q", got, domain.CodeExternalCommandObservationSaturated)
+	}
+}
+
+func TestTheGuardsOfAReadAreStaticRejections(t *testing.T) {
+	if got := domain.RejectQueryAuthorizationConsentNotActive.Code(); got != domain.CodeQueryAuthorizationConsentNotActive {
+		t.Fatalf("Code() = %q, want %q", got, domain.CodeQueryAuthorizationConsentNotActive)
+	}
+	if got := domain.RejectConnectorCapabilityNotEnabled.Code(); got != domain.CodeConnectorCapabilityNotEnabled {
+		t.Fatalf("Code() = %q, want %q", got, domain.CodeConnectorCapabilityNotEnabled)
 	}
 }

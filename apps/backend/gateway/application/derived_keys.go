@@ -33,6 +33,14 @@ func (p DerivedKeyPolicy) InboundInteractionID(connector domain.ConnectorKey, pa
 	return domain.InteractionID(id), err
 }
 
+// ExternalReadInteractionID is the id of the read a command key asks for: a
+// replay of the key calls the partner again and writes a new version of the
+// same raw keys, which stays orphan (decision 16).
+func (p DerivedKeyPolicy) ExternalReadInteractionID(connector domain.ConnectorKey, commandKey string) (domain.InteractionID, error) {
+	id, err := p.digest("read", string(connector), commandKey)
+	return domain.InteractionID(id), err
+}
+
 // QueryInteractionID is the id of the state query the sweep makes of a command
 // due at nextQueryAt: a repeated sweep derives the same id and its record replays.
 func (p DerivedKeyPolicy) QueryInteractionID(command domain.IdempotencyKey, nextQueryAt kernel.Instant) (domain.InteractionID, error) {

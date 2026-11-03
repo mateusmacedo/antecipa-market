@@ -120,3 +120,22 @@ func TestDeclareCapabilityProfileTakesMaxQueriesBelowTheLedgerCap(t *testing.T) 
 		t.Fatalf("FindCapabilityProfile() = %+v, %v, want the budget and the queries kept", profile, err)
 	}
 }
+
+// The edge takes a gRPC message of 4 MiB at most, which the kernel's serve
+// does not let a context raise: a body no message could carry is no limit to
+// declare.
+func TestDeclareCapabilityProfileRefusesAMaxPayloadBytesNoMessageOfTheEdgeCarries(t *testing.T) {
+	atTheCeiling := simulatorOperation("submitEffect")
+	atTheCeiling.MaxPayloadBytes = application.MaxPayloadBytes
+	aboveTheCeiling := simulatorOperation("queryAsset")
+	aboveTheCeiling.MaxPayloadBytes = application.MaxPayloadBytes + 1
+	h := newHarness(t)
+
+	must(h.service.DeclareCapabilityProfile(withExecution(t), declareProfile(atTheCeiling, aboveTheCeiling))).
+		refused(t, string(domain.CodeCapabilityProfileExternalProfileInvalid))
+	must(h.service.DeclareCapabilityProfile(withExecution(t), declareProfile(atTheCeiling))).accepted(t)
+
+	if application.MaxPayloadBytes+64<<10 != 4<<20 {
+		t.Fatalf("MaxPayloadBytes = %d, want 4 MiB less the envelope", application.MaxPayloadBytes)
+	}
+}

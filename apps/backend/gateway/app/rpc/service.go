@@ -25,6 +25,7 @@ func Commands() []string {
 		"GrantQueryAuthorization", "RevokeQueryAuthorization",
 		"CreateExternalCommand", "CancelExternalCommand", "ResolveUnknownOutcome", "SweepExternalCommands",
 		"ReprocessInteraction", "LinkExternalReference",
+		"ReceivePartnerInteraction", "ReadExternal",
 	}
 }
 
@@ -57,6 +58,8 @@ type GatewayServer interface {
 	FindExternalInteractionsByCommand(context.Context, *servicev1.FindExternalInteractionsByCommandRequest) (*servicev1.FindExternalInteractionsByCommandResponse, error)
 	FindExternalReference(context.Context, *servicev1.FindExternalReferenceRequest) (*servicev1.FindExternalReferenceResponse, error)
 	FindExternalReferencesBySubject(context.Context, *servicev1.FindExternalReferencesBySubjectRequest) (*servicev1.FindExternalReferencesBySubjectResponse, error)
+	ReceivePartnerInteraction(context.Context, *servicev1.ReceivePartnerInteractionRequest) (*servicev1.ReceivePartnerInteractionResponse, error)
+	ReadExternal(context.Context, *servicev1.ReadExternalRequest) (*servicev1.ReadExternalResponse, error)
 }
 
 // ServiceDesc binds GatewayService in the app block: protoc-gen-go-grpc would
@@ -89,6 +92,8 @@ var ServiceDesc = grpc.ServiceDesc{
 		kernelgrpc.Unary(ServiceName, kernelgrpc.Method(descriptor, "FindExternalInteractionsByCommand"), GatewayServer.FindExternalInteractionsByCommand),
 		kernelgrpc.Unary(ServiceName, kernelgrpc.Method(descriptor, "FindExternalReference"), GatewayServer.FindExternalReference),
 		kernelgrpc.Unary(ServiceName, kernelgrpc.Method(descriptor, "FindExternalReferencesBySubject"), GatewayServer.FindExternalReferencesBySubject),
+		kernelgrpc.Unary(ServiceName, kernelgrpc.Method(descriptor, "ReceivePartnerInteraction"), GatewayServer.ReceivePartnerInteraction),
+		kernelgrpc.Unary(ServiceName, kernelgrpc.Method(descriptor, "ReadExternal"), GatewayServer.ReadExternal),
 	},
 	Metadata: descriptor.ParentFile().Path(),
 }

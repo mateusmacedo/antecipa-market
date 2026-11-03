@@ -52,6 +52,10 @@ func permissionOf(op application.Operation) port.Permission {
 		return "gateway:reprocess-interaction"
 	case application.LinkExternalReference:
 		return "gateway:link-external-reference"
+	case application.ReceivePartnerInteraction:
+		return "gateway:receive-partner-interaction"
+	case application.ReadExternal:
+		return "gateway:read-external"
 	case application.FindConnector:
 		return "gateway:find-connector"
 	case application.FindEffectiveCapabilityProfile:
