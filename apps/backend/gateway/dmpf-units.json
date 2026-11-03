@@ -53,6 +53,13 @@
       "bounded_context": "receivables-gateway",
       "public_integration_surface": false,
       "include": ["github.com/mateusmacedo/antecipa-market/apps/backend/gateway/distkit"]
+    },
+    {
+      "id": "receivables-gateway/partnersim",
+      "block": "app",
+      "bounded_context": "receivables-gateway",
+      "public_integration_surface": false,
+      "include": ["github.com/mateusmacedo/antecipa-market/apps/backend/gateway/appkit/partnersim"]
     }
   ],
   "external": [
