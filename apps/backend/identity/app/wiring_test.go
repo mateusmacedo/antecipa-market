@@ -49,10 +49,10 @@ func TestTheIdentityChannelCarriesTheTypeTheMapperWrites(t *testing.T) {
 
 	ch := app.IdentityChannel(cfg)
 
-	if got := channel.EventTypeOf(ch); got != "com.company.identity.organization-registered.v1" {
-		t.Fatalf("EventTypeOf() = %q, want the type the outbox mapper writes (PTB-03)", got)
+	if got := channel.WireTypes(ch); len(got) != 1 || got[0] != "com.company.identity.organization-registered.v1" {
+		t.Fatalf("WireTypes() = %v, want the type the outbox mapper writes (PTB-03)", got)
 	}
-	if ch.ContractRef != "company/identity/event/v1/organization_registered.proto#OrganizationRegistered" || ch.Containment != cfg.IdentityDLQ {
+	if ch.Events[0].ContractRef != "company/identity/event/v1/organization_registered.proto#OrganizationRegistered" || ch.Containment != cfg.IdentityDLQ {
 		t.Fatalf("channel = %+v, want the OrganizationRegistered contract and the DLQ as containment", ch)
 	}
 }
