@@ -1,6 +1,8 @@
 package application
 
 import (
+	"strconv"
+
 	usecase "github.com/mateusmacedo/dmpf/libs/backend/go/application"
 	port "github.com/mateusmacedo/dmpf/libs/backend/go/ports"
 
@@ -68,11 +70,33 @@ func externalEfficacy(e domain.Efficacy) port.Efficacy {
 	}
 }
 
+// MaxPayloadBytes is the largest body an operation may declare. WHY: the edge
+// receives a gRPC message of at most 4 MiB, the default that serve.ServeAPI of
+// the kernel does not let a context raise, and 64 KiB stay for the envelope of
+// ReceivePartnerInteraction beside the body.
+const MaxPayloadBytes = 4<<20 - 64<<10
+
+// invalidProfiles also refuses maxQueries at the ledger's cap: the row of an
+// attempt would saturate before the query budget ran out (decision 13); and a
+// maxPayloadBytes no message of the edge could carry.
 func invalidProfiles(operations []domain.OperationCapability) []domain.InvalidProfile {
 	var invalid []domain.InvalidProfile
 	for _, o := range operations {
 		if err := usecase.ValidateExternalProfile(declaredProfile(o)); err != nil {
 			invalid = append(invalid, domain.InvalidProfile{Operation: o.Operation, Reason: err.Error()})
+			continue
+		}
+		if o.MaxQueries >= port.MaxAttemptEntries {
+			invalid = append(invalid, domain.InvalidProfile{
+				Operation: o.Operation,
+				Reason:    "maxQueries " + strconv.Itoa(o.MaxQueries) + " reaches the ledger cap of " + strconv.Itoa(port.MaxAttemptEntries),
+			})
+		}
+		if o.MaxPayloadBytes > MaxPayloadBytes {
+			invalid = append(invalid, domain.InvalidProfile{
+				Operation: o.Operation,
+				Reason:    "maxPayloadBytes " + strconv.Itoa(o.MaxPayloadBytes) + " exceeds the " + strconv.Itoa(MaxPayloadBytes) + " a message of the edge carries",
+			})
 		}
 	}
 	return invalid

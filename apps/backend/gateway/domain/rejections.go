@@ -10,6 +10,7 @@ const (
 	CodeCapabilityProfileExternalProfileInvalid   kernel.Code = "receivables-gateway/capability-profile/external-profile-invalid"
 	CodeCapabilityProfileAmbiguityDeadlineMissing kernel.Code = "receivables-gateway/capability-profile/ambiguity-deadline-missing"
 	CodeCapabilityProfileQueryIntervalMissing     kernel.Code = "receivables-gateway/capability-profile/query-interval-missing"
+	CodeCapabilityProfileMaxSubmissionsMissing    kernel.Code = "receivables-gateway/capability-profile/max-submissions-missing"
 
 	CodeExternalCommandCapabilityNotEnabled        kernel.Code = "receivables-gateway/external-command/capability-not-enabled"
 	CodeExternalCommandOperationSuspended          kernel.Code = "receivables-gateway/external-command/operation-suspended"
@@ -26,10 +27,56 @@ const (
 	CodeExternalCommandQueryEvidenceMissing        kernel.Code = "receivables-gateway/external-command/query-evidence-missing"
 	CodeExternalCommandPartialResultNotSupported   kernel.Code = "receivables-gateway/external-command/partial-result-not-supported"
 	CodeExternalCommandAlreadySent                 kernel.Code = "receivables-gateway/external-command/already-sent"
+	CodeExternalCommandNotHoldable                 kernel.Code = "receivables-gateway/external-command/not-holdable"
+	CodeExternalCommandObservationConflict         kernel.Code = "receivables-gateway/external-command/observation-conflict"
+	CodeExternalCommandObservationSaturated        kernel.Code = "receivables-gateway/external-command/observation-saturated"
+
+	CodeExternalInteractionRawPayloadMissing     kernel.Code = "receivables-gateway/external-interaction/raw-payload-missing"
+	CodeExternalInteractionAlreadyConcluded      kernel.Code = "receivables-gateway/external-interaction/already-concluded"
+	CodeExternalInteractionMismatchDetailMissing kernel.Code = "receivables-gateway/external-interaction/mismatch-detail-missing"
+	CodeExternalInteractionNotConcluded          kernel.Code = "receivables-gateway/external-interaction/not-concluded"
+	CodeExternalInteractionJustificationMissing  kernel.Code = "receivables-gateway/external-interaction/justification-missing"
+	CodeExternalInteractionPayloadTooLarge       kernel.Code = "receivables-gateway/external-interaction/payload-too-large"
+
+	CodeExternalReferenceReferenceEmpty  kernel.Code = "receivables-gateway/external-reference/reference-empty"
+	CodeExternalReferenceProviderInvalid kernel.Code = "receivables-gateway/external-reference/provider-invalid"
+	CodeExternalReferenceAlreadyLinked   kernel.Code = "receivables-gateway/external-reference/already-linked"
+
+	CodeQueryAuthorizationConsentNotActive kernel.Code = "receivables-gateway/query-authorization/consent-not-active"
+	CodeConnectorCapabilityNotEnabled      kernel.Code = "receivables-gateway/connector/capability-not-enabled"
 )
+
+// RejectQueryAuthorizationConsentNotActive is the refusal of a read of
+// ReceivablesQueryPort with no granted authorization for the organization and
+// the asset type: the guard answers it before any call, so no UPR produces it.
+var RejectQueryAuthorizationConsentNotActive = kernel.Reject(CodeQueryAuthorizationConsentNotActive,
+	"no query authorization is active for the organization and the asset type")
+
+// RejectConnectorCapabilityNotEnabled is the refusal of a partner interaction
+// or a read the profile in force does not declare, or one of an operation the
+// connector does not have enabled and unsuspended.
+var RejectConnectorCapabilityNotEnabled = kernel.Reject(CodeConnectorCapabilityNotEnabled,
+	"the operation is not enabled for the connector")
+
+// RejectExternalInteractionPayloadTooLarge is the refusal of a raw body above
+// the maxPayloadBytes of the operation: the edge answers it before writing
+// anything to the store, so no UPR produces it.
+var RejectExternalInteractionPayloadTooLarge = kernel.Reject(CodeExternalInteractionPayloadTooLarge,
+	"the raw payload exceeds the maxPayloadBytes of the operation")
 
 // RejectCapabilityProfileAlreadyDeclared is the refusal of a version that
 // already exists: the profile key is the identity, so no UPR produces it and
 // the use case answers it when the reader finds the key taken.
 var RejectCapabilityProfileAlreadyDeclared = kernel.Reject(CodeCapabilityProfileAlreadyDeclared,
 	"this version of the capability profile is already declared")
+
+// RejectExternalCommandObservationConflict is the refusal of an observation
+// whose terminal finding contradicts the one the kernel's ledger holds for the
+// attempt: the ledger decides it, so no UPR produces it.
+var RejectExternalCommandObservationConflict = kernel.Reject(CodeExternalCommandObservationConflict,
+	"the observation contradicts the terminal finding the ledger holds for the attempt")
+
+// RejectExternalCommandObservationSaturated is the refusal of an observation
+// the ledger has no room left to keep for the attempt.
+var RejectExternalCommandObservationSaturated = kernel.Reject(CodeExternalCommandObservationSaturated,
+	"the ledger keeps no more observations for the attempt")

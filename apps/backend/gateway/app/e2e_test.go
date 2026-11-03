@@ -133,7 +133,7 @@ func (e *e2e) ready(t *testing.T) {
 		Operations: []*servicev1.OperationCapability{{
 			Operation: "submitEffect", Supported: true, IdempotencySupport: servicev1.IdempotencySupport_IDEMPOTENCY_SUPPORT_KEY_HEADER,
 			Efficacy: servicev1.Efficacy_EFFICACY_ON_SUBMIT, Quiescence: 1, MaxQueries: 3, KeyAlphabet: "0123456789abcdef",
-			KeyMaxLength: 32, AmbiguityDeadline: 3600, Protocol: servicev1.Protocol_PROTOCOL_SYNC_HTTP,
+			KeyMaxLength: 32, AmbiguityDeadline: 3600, MaxSubmissions: 3, Protocol: servicev1.Protocol_PROTOCOL_SYNC_HTTP,
 			EncumbranceCoverage: servicev1.EncumbranceCoverage_ENCUMBRANCE_COVERAGE_UNAVAILABLE,
 		}},
 	}, &declared)
@@ -219,5 +219,60 @@ func TestAHumanResolutionCommitsWithTheObservationOverPostgres(t *testing.T) {
 	var observations int
 	if err := e.pool.QueryRow(context.Background(), "SELECT queries FROM external_attempt WHERE outbound_key = $1", string(outbound)).Scan(&observations); err != nil || observations != 1 {
 		t.Fatalf("ledger observations = %d, %v, want the resolution recorded once", observations, err)
+	}
+}
+
+func (e *e2e) commandUnder(t *testing.T, key, method string, req, resp proto.Message) {
+	t.Helper()
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	t.Cleanup(cancel)
+	ctx = metadata.AppendToOutgoingContext(ctx, kernelgrpc.TenantKey, string(testTenant), kernelgrpc.IdempotencyKey, key)
+	if err := e.conn.Invoke(ctx, rpc.FullMethod(method), req, resp); err != nil {
+		t.Fatalf("%s() = %v", method, err)
+	}
+}
+
+// A conflict is the use case's refusal, never its error: the unit of work
+// commits the conflict the ledger recorded, and the inbox answers the repeat of
+// the key with the same refusal without touching the ledger again (decision 13).
+func TestAnObservationConflictCommitsInTheLedgerAndReplaysTheRefusalOverPostgres(t *testing.T) {
+	e := serve(t)
+	e.ready(t)
+	e.command(t, "CreateExternalCommand", create("idem-1", 1), &servicev1.CreateExternalCommandResponse{})
+	outbound := commandOutboundKey(t, e.pool, "idem-1")
+	ledger := postgres.NewAttemptStore(e.pool)
+	if _, err := ledger.Begin(withExecution(t), outbound, "m-1", occurred); err != nil {
+		t.Fatalf("Begin() = %v", err)
+	}
+	if _, err := e.service.AbandonExternalAttempt(withExecution(t), ports.Attempt{Tenant: testTenant, Key: outbound, N: 1, MessageID: "m-1", StartedAt: occurred}); err != nil {
+		t.Fatalf("AbandonExternalAttempt() = %v", err)
+	}
+	if observed, err := ledger.Observe(withExecution(t), ports.Observation{
+		Key: outbound, Finding: ports.FindingApplied, SourceAt: occurred, Provider: "registry", ID: "obs-applied",
+	}, occurred); err != nil || observed.Result != ports.ObserveRecorded {
+		t.Fatalf("Observe(applied) = %+v, %v", observed, err)
+	}
+	resolve := &servicev1.ResolveUnknownOutcomeRequest{
+		IdempotencyKey: "idem-1", Resolution: servicev1.Resolution_RESOLUTION_FINAL_FAILURE, QueryInteractionId: "int-9", Justification: "registry refused it",
+	}
+
+	var first, again servicev1.ResolveUnknownOutcomeResponse
+	e.commandUnder(t, "resolve-1", "ResolveUnknownOutcome", resolve, &first)
+	e.commandUnder(t, "resolve-1", "ResolveUnknownOutcome", resolve, &again)
+
+	for _, got := range []*servicev1.ResolveUnknownOutcomeResponse{&first, &again} {
+		if got.GetRejection().GetCode() != string(domain.CodeExternalCommandObservationConflict) {
+			t.Fatalf("ResolveUnknownOutcome() = %v, want observation-conflict", got)
+		}
+	}
+	var conflicts int
+	if err := e.pool.QueryRow(context.Background(),
+		"SELECT coalesce(sum(jsonb_array_length(conflicts)), 0) FROM external_attempt WHERE outbound_key = $1", string(outbound)).Scan(&conflicts); err != nil || conflicts != 1 {
+		t.Fatalf("ledger conflicts = %d, %v, want the one conflict committed and the replay leaving the ledger alone", conflicts, err)
+	}
+	var found servicev1.FindExternalCommandResponse
+	e.command(t, "FindExternalCommand", &servicev1.FindExternalCommandRequest{IdempotencyKey: "idem-1"}, &found)
+	if found.GetCommand().GetStatus() != servicev1.ExternalCommandStatus_EXTERNAL_COMMAND_STATUS_UNKNOWN_OUTCOME {
+		t.Fatalf("FindExternalCommand() = %v, want the command unchanged by the conflict", found.GetCommand())
 	}
 }

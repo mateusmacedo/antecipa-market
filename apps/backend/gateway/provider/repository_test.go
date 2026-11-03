@@ -36,7 +36,7 @@ func operation() domain.OperationCapability {
 		MaxItemsPerRequest: 10, MaxRequestsPerMinute: 60, MaxPayloadBytes: 4096, BusinessCalendar: "BR-B3", CutoffTime: "17:00",
 		ProcessingWindow: "08:00-18:00", EncumbranceCoverage: domain.CoveragePartial, PositionFreshnessSLA: 300,
 		Efficacy: domain.EfficacyByObservation, Quiescence: 30_000_000_000, AuthoritativeAbsence: true, MaxQueries: 5,
-		KeyAlphabet: "0123456789abcdef", KeyMaxLength: 32, QueryInterval: 60, AmbiguityDeadline: 3600,
+		KeyAlphabet: "0123456789abcdef", KeyMaxLength: 32, QueryInterval: 60, AmbiguityDeadline: 3600, MaxSubmissions: 3,
 	}
 }
 
@@ -60,7 +60,28 @@ func command(marker int) domain.ExternalCommandSnapshot {
 		Profile: domain.CommandProfileOf(2, operation(), true), OutboundKey: "out-" + strconv.Itoa(marker),
 		Status: domain.StatusUnknownOutcome, FailureCategory: domain.CategoryUnknownSent, CreatedAt: 1, Submissions: 2, LastSubmittedAt: 3,
 		WaitingSince: 4, AcknowledgedNotified: true, UnknownNotified: true, NextQueryAt: 5, ResendAfter: 6, ReconciliationRequired: true,
-		AmbiguityExpiredAt: 7, ConfirmedAt: 8, ExternalReferenceID: "ext-1",
+		AmbiguityExpiredAt: 7, ConfirmedAt: 8, ExternalReferenceID: "ext-1", DispatchHeldSince: 9,
+	}
+}
+
+func interaction(marker int) domain.ExternalInteractionSnapshot {
+	return domain.ExternalInteractionSnapshot{
+		ConnectorKey: "prt-1:production", Operation: "submitEffect", Direction: domain.DirectionOutbound, Source: domain.InteractionSubmitResponse,
+		CommandID: "idem-1", ContentType: "application/json", CapturedStep: domain.StepSuspend, PartnerEventID: "evt-p-1", BusinessDate: "2026-09-02",
+		Request:     domain.RawPayload{Ref: "interactions/prt-1:production/int-1/request", VersionID: "vq", Hash: "hq"},
+		Response:    domain.RawPayload{Ref: "interactions/prt-1:production/int-1/response", VersionID: "vs", Hash: "hs"},
+		DuplicateOf: "int-0", Status: domain.InteractionSchemaMismatch, NormalizationRevision: marker, ReadingHash: "rh-2",
+		Finding: domain.FindingApplied, FindingAsOf: 1_755_432_000_000_000_001, FindingExternalRef: "ext-1",
+		PreviousOutcome: domain.InteractionNormalized, PreviousReadingHash: "rh-1",
+		Mismatch:   domain.Mismatch{Kind: domain.MismatchType, Detail: "amount is a string", PartnerDeclaredVersion: "2.1"},
+		ReceivedAt: 1_755_432_000_000_000_002,
+	}
+}
+
+func reference(marker int) domain.ExternalReferenceSnapshot {
+	return domain.ExternalReferenceSnapshot{
+		ProviderID: "prt-1", System: domain.SystemRegistry, ReferenceType: domain.ReferenceAsset, Reference: " dup-1 ",
+		NormalizedReference: "DUP-1", SubjectType: "asset", SubjectID: "ast-1", AsOf: kernel.Instant(marker), ObservedVersion: "v1",
 	}
 }
 
@@ -104,6 +125,14 @@ func TestTheRepositoriesConformToTheKit(t *testing.T) {
 	t.Run("external commands", func(t *testing.T) {
 		certify(t, provider.NewExternalCommandRepository, readOver(provider.NewExternalCommandReader), command,
 			func(s domain.ExternalCommandSnapshot) int { return s.PayloadVersion })
+	})
+	t.Run("external interactions", func(t *testing.T) {
+		certify(t, provider.NewExternalInteractionRepository, readOver(provider.NewExternalInteractionReader), interaction,
+			func(s domain.ExternalInteractionSnapshot) int { return s.NormalizationRevision })
+	})
+	t.Run("external references", func(t *testing.T) {
+		certify(t, provider.NewExternalReferenceRepository, readOver(provider.NewExternalReferenceReader), reference,
+			func(s domain.ExternalReferenceSnapshot) int { return int(s.AsOf) })
 	})
 }
 
@@ -155,6 +184,20 @@ func TestEachAggregateRoundTripsItsWholeState(t *testing.T) {
 	pg.Seed(t, ctx, pool, provider.NewExternalCommandRepository, wantCommand.Key, wantCommand)
 	if got, _, err := provider.NewExternalCommandReader(reads).Load(ctx, wantCommand.Key); err != nil || !got.Equal(wantCommand) {
 		t.Fatalf("command = %+v, %v; want %+v", got, err, wantCommand)
+	}
+
+	wantInteraction := interaction(2)
+	wantInteraction.ID = "int-1"
+	pg.Seed(t, ctx, pool, provider.NewExternalInteractionRepository, wantInteraction.ID, wantInteraction)
+	if got, _, err := provider.NewExternalInteractionReader(reads).Load(ctx, wantInteraction.ID); err != nil || !got.Equal(wantInteraction) {
+		t.Fatalf("interaction = %+v, %v; want %+v", got, err, wantInteraction)
+	}
+
+	wantReference := reference(1)
+	wantReference.Key = domain.ReferenceKeyOf("prt-1", domain.SystemRegistry, domain.ReferenceAsset, " dup-1 ")
+	pg.Seed(t, ctx, pool, provider.NewExternalReferenceRepository, wantReference.Key, wantReference)
+	if got, _, err := provider.NewExternalReferenceReader(reads).Load(ctx, wantReference.Key); err != nil || !got.Equal(wantReference) {
+		t.Fatalf("reference = %+v, %v; want %+v", got, err, wantReference)
 	}
 
 	wantAuthorization := authorization("org-1", 1)

@@ -2,10 +2,12 @@ package rpc
 
 import (
 	"context"
+	"errors"
 
 	kernel "github.com/mateusmacedo/dmpf/libs/backend/go/domain"
 	kernelgrpc "github.com/mateusmacedo/dmpf/libs/backend/go/grpc"
 
+	"github.com/mateusmacedo/antecipa-market/apps/backend/gateway/application"
 	servicev1 "github.com/mateusmacedo/antecipa-market/apps/backend/gateway/contract/gen/go/company/gateway/service/v1"
 	"github.com/mateusmacedo/antecipa-market/apps/backend/gateway/domain"
 )
@@ -115,7 +117,10 @@ func (s Server) FindExternalCommandsByStatus(ctx context.Context, req *servicev1
 		return nil, err
 	}
 	found, err := s.Service.FindExternalCommandsByStatus(ctx, status, domain.ConnectorKey(req.GetConnectorId()))
-	if err != nil {
+	switch {
+	case errors.Is(err, application.ErrStatusNotInFlight):
+		return nil, invalid("status", "must be a status still in flight")
+	case err != nil:
 		return nil, kernelgrpc.StatusOf(err)
 	}
 	return &servicev1.FindExternalCommandsByStatusResponse{Commands: onTheWire(found, commandOnTheWire)}, nil

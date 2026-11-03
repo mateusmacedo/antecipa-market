@@ -83,6 +83,12 @@ func (s QueryAuthorizationSnapshot) Equal(other QueryAuthorizationSnapshot) bool
 		s.RevokedAt == other.RevokedAt
 }
 
+// Active tells whether the authorization lets a read of the asset type
+// through: granted, and with the asset type in its scope.
+func (s QueryAuthorizationSnapshot) Active(assetType string) bool {
+	return s.Status == AuthorizationGranted && assetType != "" && slices.Contains(s.AssetTypes, assetType)
+}
+
 func (a *QueryAuthorization) clone() QueryAuthorization {
 	c := *a
 	c.assetTypes = slices.Clone(a.assetTypes)

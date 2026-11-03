@@ -1,6 +1,6 @@
 {
   "schema": "dmpf/units-baseline@1",
-  "digest": "sha256:fb561f63f52f195c086ee04eb65949296c819f9b989fa3077191ccb0687b8f21",
+  "digest": "sha256:90c4e62adc2659f54ce44b8faedae122db6cae0f78adc25ddac05a55c15e50b1",
   "entries": [
     {
       "unit": "bff/app",
@@ -59,6 +59,15 @@
       "bounded_context": "receivables-gateway",
       "membership": [
         "github.com/mateusmacedo/antecipa-market/apps/backend/gateway/domain"
+      ]
+    },
+    {
+      "unit": "receivables-gateway/partnersim",
+      "module": "github.com/mateusmacedo/antecipa-market/apps/backend/gateway",
+      "block": "app",
+      "bounded_context": "receivables-gateway",
+      "membership": [
+        "github.com/mateusmacedo/antecipa-market/apps/backend/gateway/appkit/partnersim"
       ]
     },
     {

@@ -81,7 +81,9 @@ func TestTheRelayKeepsItsDSNAsTheEnvironmentGivesIt(t *testing.T) {
 	cfg, err := app.FromEnv(app.RoleRelay, lookup("PG_DSN", dsn,
 		"KAFKA_BROKERS", "b:9092", "KAFKA_INSECURE", "true",
 		"KAFKA_GATEWAY_TOPIC", "t", "KAFKA_GATEWAY_DLQ", "d",
-		"KAFKA_GATEWAY_DISPATCH_TOPIC", "dt", "KAFKA_GATEWAY_DISPATCH_DLQ", "dd", "KAFKA_GROUP", "g"))
+		"KAFKA_GATEWAY_DISPATCH_TOPIC", "dt", "KAFKA_GATEWAY_DISPATCH_DLQ", "dd", "KAFKA_GROUP", "g",
+		"KAFKA_GATEWAY_INTERACTIONS_TOPIC", "it", "KAFKA_GATEWAY_INTERACTIONS_DLQ", "id",
+		"KAFKA_GATEWAY_NORMALIZATIONS_TOPIC", "nt", "KAFKA_GATEWAY_NORMALIZATIONS_DLQ", "nd"))
 	if err != nil {
 		t.Fatalf("FromEnv(relay) = %v, want nil", err)
 	}

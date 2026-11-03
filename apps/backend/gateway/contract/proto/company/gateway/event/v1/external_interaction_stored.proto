@@ -1,0 +1,22 @@
+syntax = "proto3";
+
+package company.gateway.event.v1;
+
+import "company/gateway/event/v1/types.proto";
+import "google/protobuf/timestamp.proto";
+
+// An interaction stored for normalization, internal to the receivables-gateway
+// context: channel gateway.normalizations, consumed only by itself (decision
+// 18). The raw payload does not travel; the consumer reads it from the store by
+// the version the interaction recorded.
+// Envelope type: com.company.gateway.external-interaction-stored.v1.
+message ExternalInteractionStored {
+  string interaction_id = 1;
+  string connector_id = 2;
+  string operation = 3;
+  InteractionDirection direction = 4;
+  InteractionSource source = 5;
+  string command_id = 6;
+  int32 normalization_revision = 7;
+  google.protobuf.Timestamp at = 8;
+}

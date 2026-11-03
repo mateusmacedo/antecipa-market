@@ -13,7 +13,9 @@ info:
     bound the form only; within those bounds, the emptiness and validity
     refusals the spec declares come back from the domain as 422 rejections.
     Credentials travel only as vault references and the payload of an
-    external command is never returned. The contract is not covered by the
+    external command is never returned. ReceivePartnerInteraction, the gRPC
+    entry of a partner's callback or file, has no route here: the webhook the
+    bff receives has a spec of its own. The contract is not covered by the
     Buf gates.
 servers:
   - url: http://localhost:8080
@@ -562,7 +564,8 @@ paths:
       summary: Run the sweep of the external command cycle, for an external scheduler
       description: >-
         Requests the resend of the retryable failures past their quiescence
-        and escalates the waits past their deadline. Each command it acts on
+        and of the dispatches a suspension held, queries the state of the
+        commands due and escalates the waits past their deadline. Each command it acts on
         runs under a key derived from the instant that enabled it, so a
         repeated sweep is safe.
       parameters:
@@ -577,6 +580,276 @@ paths:
                 $ref: '#/components/schemas/SweepReport'
         '400':
           $ref: '#/components/responses/BadRequest'
+        '429':
+          $ref: '#/components/responses/AdmissionRefused'
+        '503':
+          $ref: '#/components/responses/Unavailable'
+        '504':
+          $ref: '#/components/responses/Timeout'
+        default:
+          $ref: '#/components/responses/Failure'
+  /gateway/connectors/{connectorKey}/external-interactions:
+    get:
+      operationId: findExternalInteractionByPartnerEvent
+      summary: Read the first reception of an event of the partner
+      description: >-
+        The interaction that deduplicates the partner event; a repeated
+        reception is an interaction of its own, which names this one in
+        duplicateOf.
+      parameters:
+        - $ref: '#/components/parameters/ConnectorKey'
+        - $ref: '#/components/parameters/PartnerEventIDQuery'
+        - $ref: '#/components/parameters/CorrelationID'
+      responses:
+        '200':
+          description: The interaction of the first reception
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ExternalInteraction'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '429':
+          $ref: '#/components/responses/AdmissionRefused'
+        '503':
+          $ref: '#/components/responses/Unavailable'
+        '504':
+          $ref: '#/components/responses/Timeout'
+        default:
+          $ref: '#/components/responses/Failure'
+  /gateway/external-commands/{commandKey}/external-interactions:
+    get:
+      operationId: findExternalInteractionsByCommand
+      summary: List the interactions with the partner about an external command
+      parameters:
+        - $ref: '#/components/parameters/CommandKey'
+        - $ref: '#/components/parameters/CorrelationID'
+      responses:
+        '200':
+          description: The interactions of the command, empty when none
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/ExternalInteraction'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '429':
+          $ref: '#/components/responses/AdmissionRefused'
+        '503':
+          $ref: '#/components/responses/Unavailable'
+        '504':
+          $ref: '#/components/responses/Timeout'
+        default:
+          $ref: '#/components/responses/Failure'
+  /gateway/external-interactions/{interactionId}:
+    get:
+      operationId: findExternalInteraction
+      summary: Read an interaction with a partner, without its raw payload
+      parameters:
+        - $ref: '#/components/parameters/InteractionID'
+        - $ref: '#/components/parameters/CorrelationID'
+      responses:
+        '200':
+          description: Current snapshot of the interaction
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ExternalInteraction'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '429':
+          $ref: '#/components/responses/AdmissionRefused'
+        '503':
+          $ref: '#/components/responses/Unavailable'
+        '504':
+          $ref: '#/components/responses/Timeout'
+        default:
+          $ref: '#/components/responses/Failure'
+  /gateway/external-interactions/{interactionId}/reprocessing:
+    post:
+      operationId: reprocessInteraction
+      summary: Normalize again the raw payload of a concluded interaction
+      description: >-
+        A backoffice operation with a justification. The interaction gets a new
+        revision and is normalized again from the raw payload kept in the
+        object store; no external command is ever resent, and a terminal
+        command is never changed by the new reading.
+      parameters:
+        - $ref: '#/components/parameters/InteractionID'
+        - $ref: '#/components/parameters/IdempotencyKey'
+        - $ref: '#/components/parameters/CorrelationID'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ReprocessInteractionRequest'
+      responses:
+        '200':
+          description: The interaction is stored again for normalization under a new revision
+          headers:
+            Idempotent-Replayed:
+              $ref: '#/components/headers/IdempotentReplayed'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ReprocessedInteractionResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/VersionConflict'
+        '422':
+          $ref: '#/components/responses/Rejected'
+        '429':
+          $ref: '#/components/responses/AdmissionRefused'
+        '503':
+          $ref: '#/components/responses/Unavailable'
+        '504':
+          $ref: '#/components/responses/Timeout'
+        default:
+          $ref: '#/components/responses/Failure'
+  /gateway/external-references:
+    post:
+      operationId: linkExternalReference
+      summary: Link a reference of an external system to an internal object
+      description: >-
+        The reference is kept exactly as received, beside a normalized form. A
+        reference points to one internal object only; linking it again to the
+        same object renews asOf and observedVersion when asOf is more recent.
+      parameters:
+        - $ref: '#/components/parameters/IdempotencyKey'
+        - $ref: '#/components/parameters/CorrelationID'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LinkExternalReferenceRequest'
+      responses:
+        '200':
+          description: Reference linked, renewed or kept as it was
+          headers:
+            Idempotent-Replayed:
+              $ref: '#/components/headers/IdempotentReplayed'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ReferenceKeyResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '409':
+          $ref: '#/components/responses/VersionConflict'
+        '422':
+          $ref: '#/components/responses/Rejected'
+        '429':
+          $ref: '#/components/responses/AdmissionRefused'
+        '503':
+          $ref: '#/components/responses/Unavailable'
+        '504':
+          $ref: '#/components/responses/Timeout'
+        default:
+          $ref: '#/components/responses/Failure'
+    get:
+      operationId: findExternalReferencesBySubject
+      summary: List the external references of an internal object
+      parameters:
+        - $ref: '#/components/parameters/SubjectTypeQuery'
+        - $ref: '#/components/parameters/SubjectIDQuery'
+        - $ref: '#/components/parameters/CorrelationID'
+      responses:
+        '200':
+          description: The references of the object, empty when none
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/ExternalReference'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '429':
+          $ref: '#/components/responses/AdmissionRefused'
+        '503':
+          $ref: '#/components/responses/Unavailable'
+        '504':
+          $ref: '#/components/responses/Timeout'
+        default:
+          $ref: '#/components/responses/Failure'
+  /gateway/external-references/{referenceKey}:
+    get:
+      operationId: findExternalReference
+      summary: Read the link of an external reference
+      parameters:
+        - $ref: '#/components/parameters/ReferenceKey'
+        - $ref: '#/components/parameters/CorrelationID'
+      responses:
+        '200':
+          description: Current snapshot of the link
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ExternalReference'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '429':
+          $ref: '#/components/responses/AdmissionRefused'
+        '503':
+          $ref: '#/components/responses/Unavailable'
+        '504':
+          $ref: '#/components/responses/Timeout'
+        default:
+          $ref: '#/components/responses/Failure'
+  /gateway/connectors/{connectorKey}/external-reads:
+    post:
+      operationId: readExternal
+      summary: Read from a partner through a canonical port
+      description: >-
+        Generic until the providers are mapped. The guard of the port runs
+        before any call to the partner: the reads of ReceivablesQueryPort need
+        an authorization of query active for the organization and the asset
+        type, and every read needs the operation supported by the profile in
+        force and enabled, unsuspended, for the connector. Both raw sides are
+        kept in the object store and the interaction is recorded; a retry with
+        the same Idempotency-Key calls the partner again and answers the
+        reading recorded the first time. A partner that answers outside its
+        contract, or no partner adapter configured, is a failure, not a
+        rejection.
+      parameters:
+        - $ref: '#/components/parameters/ConnectorKey'
+        - $ref: '#/components/parameters/IdempotencyKey'
+        - $ref: '#/components/parameters/CorrelationID'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ReadExternalRequest'
+      responses:
+        '200':
+          description: The normalized reading with its provenance
+          headers:
+            Idempotent-Replayed:
+              $ref: '#/components/headers/IdempotentReplayed'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ExternalReading'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '409':
+          $ref: '#/components/responses/VersionConflict'
+        '422':
+          $ref: '#/components/responses/Rejected'
         '429':
           $ref: '#/components/responses/AdmissionRefused'
         '503':
@@ -661,13 +934,46 @@ components:
       name: status
       in: query
       required: true
+      description: A status still in flight; a terminal one is a bad request
       schema:
-        $ref: '#/components/schemas/CommandStatus'
+        type: string
+        enum: [created, acknowledged, retryable_failure, unknown_outcome]
     ConnectorIDQuery:
       name: connectorId
       in: query
       required: false
       description: When absent, every connector
+      schema:
+        $ref: '#/components/schemas/Identifier'
+    InteractionID:
+      name: interactionId
+      in: path
+      required: true
+      schema:
+        $ref: '#/components/schemas/Identifier'
+    ReferenceKey:
+      name: referenceKey
+      in: path
+      required: true
+      description: '<providerId>:<system>:<referenceType>:<reference>, URL-encoded'
+      schema:
+        $ref: '#/components/schemas/ReferenceKey'
+    PartnerEventIDQuery:
+      name: partnerEventId
+      in: query
+      required: true
+      schema:
+        $ref: '#/components/schemas/Identifier'
+    SubjectTypeQuery:
+      name: subjectType
+      in: query
+      required: true
+      schema:
+        $ref: '#/components/schemas/Identifier'
+    SubjectIDQuery:
+      name: subjectId
+      in: query
+      required: true
       schema:
         $ref: '#/components/schemas/Identifier'
   headers:
@@ -790,11 +1096,40 @@ components:
       enum: [created, acknowledged, confirmed, retryable_failure, final_failure, unknown_outcome, cancelled]
     FailureCategory:
       type: string
-      enum: [final_validation, final_business, final_authorization, unknown_sent, unknown_ambiguous, schema_mismatch]
+      enum: [final_validation, final_business, final_authorization, unknown_sent, unknown_ambiguous, schema_mismatch, resend_budget_exhausted]
       description: Absent when the last outcome was not a failure
     Resolution:
       type: string
       enum: [confirmed, final_failure, not_received]
+    InteractionDirection:
+      type: string
+      enum: [outbound, inbound]
+    InteractionSource:
+      type: string
+      enum: [submit_response, state_query, callback, file, external_read]
+    InteractionStatus:
+      type: string
+      enum: [stored, duplicate, normalized, uncorrelated, schema_mismatch]
+    Finding:
+      type: string
+      enum: [applied, rejected, absent, pending, inconclusive]
+      description: Absent when the reading said nothing on a command
+    MismatchKind:
+      type: string
+      enum: [structure, missing_field, type, version]
+    Step:
+      type: string
+      enum: [confirm, await, retry, fail, query, reconcile, suspend]
+    ExternalSystem:
+      type: string
+      enum: [registry, bookkeeper, acquirer, funder, depository]
+    ReferenceType:
+      type: string
+      enum: [asset, effect, authorization, command, settlement]
+    ReferenceKey:
+      type: string
+      minLength: 1
+      maxLength: 512
     Rejection:
       type: object
       required: [code, message]
@@ -902,6 +1237,11 @@ components:
           type: integer
           format: int32
           minimum: 0
+          description: >-
+            The largest body of a partner interaction and of a reading of the
+            operation. Above 4128768, what a gRPC message of 4 MiB carries
+            beside its envelope, the profile is refused with
+            external-profile-invalid.
         businessCalendar:
           $ref: '#/components/schemas/Text'
         cutoffTime:
@@ -946,6 +1286,11 @@ components:
           format: int32
           minimum: 0
           description: Seconds a wait lasts before it escalates
+        maxSubmissions:
+          type: integer
+          format: int32
+          minimum: 0
+          description: Sends per command, the first included; a write declares it greater than zero
     DeclareCapabilityProfileRequest:
       type: object
       additionalProperties: false
@@ -1200,6 +1545,9 @@ components:
         ambiguityDeadline:
           type: integer
           format: int32
+        maxSubmissions:
+          type: integer
+          format: int32
     ExternalCommand:
       type: object
       description: The command without its payload, which is CONFIDENTIAL
@@ -1250,13 +1598,21 @@ components:
           $ref: '#/components/schemas/Instant'
         externalReferenceId:
           type: string
+        dispatchHeldSince:
+          $ref: '#/components/schemas/Instant'
     SweepReport:
       type: object
-      required: [resendRequested, ambiguityExpired, skipped, failed]
+      required: [resendRequested, stateQueried, ambiguityExpired, skipped, failed]
       properties:
         resendRequested:
           type: integer
           format: int32
+        stateQueried:
+          type: integer
+          format: int32
+          description: >-
+            State queries made and recorded; the finding reaches the command
+            through the normalization
         ambiguityExpired:
           type: integer
           format: int32
@@ -1268,3 +1624,186 @@ components:
           type: integer
           format: int32
           description: Commands the next sweep retries
+    ReprocessInteractionRequest:
+      type: object
+      additionalProperties: false
+      required: [justification]
+      properties:
+        justification:
+          $ref: '#/components/schemas/Text'
+    ReprocessedInteractionResponse:
+      type: object
+      required: [interactionId, normalizationRevision]
+      properties:
+        interactionId:
+          $ref: '#/components/schemas/Identifier'
+        normalizationRevision:
+          type: integer
+          format: int32
+    LinkExternalReferenceRequest:
+      type: object
+      additionalProperties: false
+      required: [providerId, system, referenceType, reference, subjectType, subjectId, asOf]
+      properties:
+        providerId:
+          $ref: '#/components/schemas/Identifier'
+        system:
+          $ref: '#/components/schemas/ExternalSystem'
+        referenceType:
+          $ref: '#/components/schemas/ReferenceType'
+        reference:
+          type: string
+          maxLength: 256
+          description: Exactly as the partner sent it; it is never normalized in place
+        normalizedReference:
+          type: string
+          maxLength: 256
+          description: Derived from the reference by trimming and upper-casing when absent
+        subjectType:
+          $ref: '#/components/schemas/Identifier'
+        subjectId:
+          $ref: '#/components/schemas/Identifier'
+        asOf:
+          $ref: '#/components/schemas/Instant'
+        observedVersion:
+          type: string
+          maxLength: 128
+    ReferenceKeyResponse:
+      type: object
+      required: [referenceKey]
+      properties:
+        referenceKey:
+          $ref: '#/components/schemas/ReferenceKey'
+    ReadExternalRequest:
+      type: object
+      additionalProperties: false
+      required: [operation, parameters]
+      properties:
+        operation:
+          type: string
+          enum:
+            - discoverSchedule
+            - queryAsset
+            - queryOwnership
+            - queryEncumbrances
+            - queryOptInStatus
+            - listAuthorizations
+            - queryEffect
+            - queryEffectsByAsset
+            - querySettlements
+            - querySettlementByAsset
+            - fetchEvidence
+        organizationId:
+          $ref: '#/components/schemas/OptionalIdentifier'
+          description: Required by discoverSchedule, queryAsset, queryOwnership and queryEncumbrances
+        assetType:
+          $ref: '#/components/schemas/AssetType'
+          description: Required by discoverSchedule, queryAsset, queryOwnership and queryEncumbrances
+        parameters:
+          type: string
+          minLength: 2
+          maxLength: 65536
+          description: The parameters of the read as canonical JSON
+    ExternalReading:
+      type: object
+      required: [interactionId, asOf, providerId, reading, readingHash]
+      properties:
+        interactionId:
+          type: string
+        asOf:
+          $ref: '#/components/schemas/Instant'
+        providerId:
+          type: string
+        externalReference:
+          type: string
+        reading:
+          type: string
+          description: The normalized reading as canonical JSON, up to the maxPayloadBytes of the operation
+        readingHash:
+          type: string
+          description: SHA-256 of reading, in hexadecimal
+    ExternalInteraction:
+      type: object
+      description: >-
+        An interaction with a partner. The raw payloads live in the object
+        store: the interaction keeps their key, version and SHA-256, never the
+        bytes.
+      properties:
+        interactionId:
+          type: string
+        connectorId:
+          type: string
+        operation:
+          type: string
+        direction:
+          $ref: '#/components/schemas/InteractionDirection'
+        source:
+          $ref: '#/components/schemas/InteractionSource'
+        commandId:
+          type: string
+        contentType:
+          type: string
+        capturedStep:
+          $ref: '#/components/schemas/Step'
+        partnerEventId:
+          type: string
+        businessDate:
+          type: string
+        requestRef:
+          type: string
+        requestVersionId:
+          type: string
+        requestHash:
+          type: string
+        responseRef:
+          type: string
+        responseVersionId:
+          type: string
+        responseHash:
+          type: string
+        duplicateOf:
+          type: string
+        status:
+          $ref: '#/components/schemas/InteractionStatus'
+        normalizationRevision:
+          type: integer
+          format: int32
+        readingHash:
+          type: string
+        finding:
+          $ref: '#/components/schemas/Finding'
+        previousOutcome:
+          $ref: '#/components/schemas/InteractionStatus'
+        previousReadingHash:
+          type: string
+        mismatchKind:
+          $ref: '#/components/schemas/MismatchKind'
+        mismatchDetail:
+          type: string
+        partnerDeclaredVersion:
+          type: string
+        receivedAt:
+          $ref: '#/components/schemas/Instant'
+    ExternalReference:
+      type: object
+      properties:
+        referenceKey:
+          $ref: '#/components/schemas/ReferenceKey'
+        providerId:
+          type: string
+        system:
+          $ref: '#/components/schemas/ExternalSystem'
+        referenceType:
+          $ref: '#/components/schemas/ReferenceType'
+        reference:
+          type: string
+        normalizedReference:
+          type: string
+        subjectType:
+          type: string
+        subjectId:
+          type: string
+        asOf:
+          $ref: '#/components/schemas/Instant'
+        observedVersion:
+          type: string

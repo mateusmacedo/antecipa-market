@@ -26,11 +26,11 @@ import (
 // relay drains without filtering by destination, so one missing here would
 // refuse the start (AssertOwnOutbox) or the publication.
 func RelayCatalog(cfg Config) (channel.Catalog, error) {
-	return channel.NewCatalog(GatewayChannel(cfg), DispatchChannel(cfg))
+	return channel.NewCatalog(GatewayChannel(cfg), DispatchChannel(cfg), InteractionChannel(cfg), NormalizationChannel(cfg))
 }
 
 // WHY: serve.RunRelay of kernel rc.7 takes one channel, and this outbox holds
-// two destinations; the steps are serve's, over a catalogue of both.
+// four destinations; the steps are serve's, over a catalogue of all of them.
 func runRelay(ctx context.Context, rt *otelboot.Runtime, cfg Config) error {
 	if rt == nil {
 		return serve.ErrNoRuntime

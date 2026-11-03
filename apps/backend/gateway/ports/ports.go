@@ -16,7 +16,29 @@ type (
 	QueryAuthorizationRepository = port.Repository[domain.ConsentID, domain.QueryAuthorizationSnapshot]
 	ExternalCommandRepository    = port.Repository[domain.IdempotencyKey, domain.ExternalCommandSnapshot]
 	ExternalCommandReader        = port.Reader[domain.IdempotencyKey, domain.ExternalCommandSnapshot]
+
+	ExternalInteractionRepository = port.Repository[domain.InteractionID, domain.ExternalInteractionSnapshot]
+	ExternalInteractionReader     = port.Reader[domain.InteractionID, domain.ExternalInteractionSnapshot]
+	ExternalReferenceRepository   = port.Repository[domain.ReferenceKey, domain.ExternalReferenceSnapshot]
+	ExternalReferenceReader       = port.Reader[domain.ReferenceKey, domain.ExternalReferenceSnapshot]
 )
+
+// ExternalInteractionsByPartnerEventReader filters by the partner event alone;
+// the caller narrows to the connector, because the kernel Relation takes one
+// column. A duplicate is a row of its own, so the answer may hold several.
+type ExternalInteractionsByPartnerEventReader interface {
+	LoadByPartnerEvent(ctx context.Context, partnerEventID string) ([]domain.ExternalInteractionSnapshot, error)
+}
+
+type ExternalInteractionsByCommandReader interface {
+	LoadByCommand(ctx context.Context, command domain.IdempotencyKey) ([]domain.ExternalInteractionSnapshot, error)
+}
+
+// ExternalReferencesBySubjectReader filters by the subject id alone; the
+// caller narrows to the subject type.
+type ExternalReferencesBySubjectReader interface {
+	LoadBySubject(ctx context.Context, subject domain.SubjectID) ([]domain.ExternalReferenceSnapshot, error)
+}
 
 // CapabilityProfilesByConnectorReader lists every version of the profile of a
 // connector: FindEffectiveCapabilityProfile reads it outside the unit of work

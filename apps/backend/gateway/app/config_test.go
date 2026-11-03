@@ -12,8 +12,10 @@ import (
 	"github.com/mateusmacedo/antecipa-market/apps/backend/gateway/app"
 )
 
+// lookup answers the pairs over the bucket that every role keeping raw
+// payloads needs since decision 21; a pair given overrides it.
 func lookup(pairs ...string) func(string) string {
-	values := map[string]string{}
+	values := map[string]string{"S3_BUCKET": "gateway-interactions", "AWS_REGION": "us-east-1"}
 	for i := 0; i+1 < len(pairs); i += 2 {
 		values[pairs[i]] = pairs[i+1]
 	}
@@ -45,6 +47,7 @@ func TestTheAPIRequiresATransportPolicy(t *testing.T) {
 func TestTheAPIRefusesANonPositivePurgeBatchUnderItsOwnSentinel(t *testing.T) {
 	cfg := app.Defaults(app.RoleAPI)
 	cfg.DSN, cfg.API.GRPCInsecure = "postgres://x", true
+	cfg.RawStore.Bucket, cfg.RawStore.Region = "gateway-interactions", "us-east-1"
 	cfg.Policies.PurgeBatch = 0
 
 	err := cfg.Validate()
@@ -59,6 +62,8 @@ func TestTheRelayNamesEachMissingVariable(t *testing.T) {
 		"PG_DSN", "postgres://x", "KAFKA_BROKERS", "b:9092", "KAFKA_SASL_MECHANISM", "SCRAM-SHA-256",
 		"KAFKA_GATEWAY_TOPIC", "gateway", "KAFKA_GATEWAY_DLQ", "gateway.dlq",
 		"KAFKA_GATEWAY_DISPATCH_TOPIC", "gateway.dispatch", "KAFKA_GATEWAY_DISPATCH_DLQ", "gateway.dispatch.dlq", "KAFKA_GROUP", "g",
+		"KAFKA_GATEWAY_INTERACTIONS_TOPIC", "gateway.interactions", "KAFKA_GATEWAY_INTERACTIONS_DLQ", "gateway.interactions.dlq",
+		"KAFKA_GATEWAY_NORMALIZATIONS_TOPIC", "gateway.normalizations", "KAFKA_GATEWAY_NORMALIZATIONS_DLQ", "gateway.normalizations.dlq",
 	}
 	if _, err := app.FromEnv(app.RoleRelay, lookup(full...)); err != nil {
 		t.Fatalf("FromEnv(full) = %v, want nil", err)
@@ -77,23 +82,41 @@ func TestTheRelayNamesEachMissingVariable(t *testing.T) {
 	}
 }
 
-func TestTheConsumerNamesEachMissingVariable(t *testing.T) {
-	full := []string{
+// consumerVariables are the variables of the channels the consumer role reads:
+// partner.events and the four of this context, each under its group; lookup
+// adds the bucket of the raw payloads.
+func consumerVariables() []string {
+	return []string{
 		"PG_DSN", "postgres://x", "KAFKA_BROKERS", "b:9092", "KAFKA_INSECURE", "true",
 		"KAFKA_PARTNER_TOPIC", "partner.events", "KAFKA_PARTNER_DLQ", "partner.events.dlq", "KAFKA_GROUP", "gateway",
+		"KAFKA_GATEWAY_TOPIC", "gateway.events", "KAFKA_GATEWAY_DLQ", "gateway.events.dlq", "KAFKA_GATEWAY_EVENTS_GROUP", "gateway.events",
+		"KAFKA_GATEWAY_DISPATCH_TOPIC", "gateway.dispatch", "KAFKA_GATEWAY_DISPATCH_DLQ", "gateway.dispatch.dlq",
+		"KAFKA_GATEWAY_DISPATCH_GROUP", "gateway.dispatch",
+		"KAFKA_GATEWAY_INTERACTIONS_TOPIC", "gateway.interactions", "KAFKA_GATEWAY_INTERACTIONS_DLQ", "gateway.interactions.dlq",
+		"KAFKA_GATEWAY_INTERACTIONS_GROUP", "gateway.interactions",
+		"KAFKA_GATEWAY_NORMALIZATIONS_TOPIC", "gateway.normalizations", "KAFKA_GATEWAY_NORMALIZATIONS_DLQ", "gateway.normalizations.dlq",
+		"KAFKA_GATEWAY_NORMALIZATIONS_GROUP", "gateway.normalizations",
 	}
+}
+
+func TestTheConsumerNamesEachMissingVariable(t *testing.T) {
+	full := consumerVariables()
 	cfg, err := app.FromEnv(app.RoleConsumer, lookup(full...))
 	if err != nil || cfg.PartnerSource != "urn:dmpf:reference-partner" {
 		t.Fatalf("FromEnv(full) = %+v, %v, want the default Partner source", cfg.PartnerSource, err)
 	}
-	for _, variable := range []string{"PG_DSN", "KAFKA_BROKERS", "KAFKA_PARTNER_TOPIC", "KAFKA_PARTNER_DLQ", "KAFKA_GROUP"} {
+	if cfg.DispatchGroup != "gateway.dispatch" || cfg.GatewayGroup != "gateway.events" || cfg.InteractionGroup != "gateway.interactions" ||
+		cfg.NormalizationGroup != "gateway.normalizations" || cfg.Group != "gateway" {
+		t.Fatalf("FromEnv(full) groups = %q %q %q %q %q, want one per channel", cfg.Group, cfg.GatewayGroup, cfg.DispatchGroup,
+			cfg.InteractionGroup, cfg.NormalizationGroup)
+	}
+	for i := 0; i < len(full); i += 2 {
+		variable := full[i]
+		if variable == "KAFKA_INSECURE" {
+			continue
+		}
 		t.Run("without "+variable, func(t *testing.T) {
-			var pairs []string
-			for i := 0; i < len(full); i += 2 {
-				if full[i] != variable {
-					pairs = append(pairs, full[i], full[i+1])
-				}
-			}
+			pairs := append(append([]string{}, full[:i]...), full[i+2:]...)
 
 			_, err := app.FromEnv(app.RoleConsumer, lookup(pairs...))
 
@@ -104,9 +127,12 @@ func TestTheConsumerNamesEachMissingVariable(t *testing.T) {
 	}
 }
 
+// INB-14 holds for every channel the consumer reads, not only partner.events.
 func TestTheConsumerKeepsItsInboxForTheWholeRedeliveryWindow(t *testing.T) {
-	cfg := app.Defaults(app.RoleConsumer)
-	cfg.DSN, cfg.Brokers, cfg.KafkaInsecure, cfg.PartnerTopic, cfg.PartnerDLQ, cfg.Group = "postgres://x", []string{"b:9092"}, true, "p", "p.dlq", "g"
+	cfg, err := app.FromEnv(app.RoleConsumer, lookup(consumerVariables()...))
+	if err != nil {
+		t.Fatalf("FromEnv() = %v", err)
+	}
 	cfg.Policies.InboxRetention = time.Hour
 
 	if err := cfg.Validate(); !errors.Is(err, app.ErrInvalidPolicy) || !strings.Contains(err.Error(), "INB-14") {
@@ -167,7 +193,9 @@ func TestFromEnvHandsTheMigratingDSNToTheAPIOnly(t *testing.T) {
 
 	relay, err := app.FromEnv(app.RoleRelay, lookup("PG_DSN", "postgres://x", "MIGRATE", "true", "PG_MIGRATE_DSN", migrator,
 		"KAFKA_BROKERS", "b:9092", "KAFKA_INSECURE", "true", "KAFKA_GATEWAY_TOPIC", "t", "KAFKA_GATEWAY_DLQ", "d",
-		"KAFKA_GATEWAY_DISPATCH_TOPIC", "dt", "KAFKA_GATEWAY_DISPATCH_DLQ", "dd", "KAFKA_GROUP", "g"))
+		"KAFKA_GATEWAY_DISPATCH_TOPIC", "dt", "KAFKA_GATEWAY_DISPATCH_DLQ", "dd", "KAFKA_GROUP", "g",
+		"KAFKA_GATEWAY_INTERACTIONS_TOPIC", "it", "KAFKA_GATEWAY_INTERACTIONS_DLQ", "id",
+		"KAFKA_GATEWAY_NORMALIZATIONS_TOPIC", "nt", "KAFKA_GATEWAY_NORMALIZATIONS_DLQ", "nd"))
 	if err != nil {
 		t.Fatalf("FromEnv(relay) = %v, want nil", err)
 	}

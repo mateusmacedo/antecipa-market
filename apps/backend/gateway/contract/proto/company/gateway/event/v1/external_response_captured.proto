@@ -1,0 +1,32 @@
+syntax = "proto3";
+
+package company.gateway.event.v1;
+
+import "company/gateway/event/v1/types.proto";
+import "google/protobuf/timestamp.proto";
+
+// The response of a submission captured in the object store, internal to the
+// receivables-gateway context: channel gateway.interactions, consumed only by
+// itself to record the outbound interaction. The raw payload does not travel;
+// the references name the versions the store returned.
+// Envelope type: com.company.gateway.external-response-captured.v1.
+message ExternalResponseCaptured {
+  string interaction_id = 1;
+  string command_id = 2;
+  string connector_id = 3;
+  string operation = 4;
+  string request_ref = 5;
+  string request_version_id = 6;
+  string request_hash = 7;
+  string response_ref = 8;
+  string response_version_id = 9;
+  string response_hash = 10;
+  Step step = 11;
+  // Set when the step was a suspension for a schema mismatch.
+  MismatchKind mismatch_kind = 12;
+  string mismatch_detail = 13;
+  string partner_declared_version = 14;
+  google.protobuf.Timestamp at = 15;
+  // The content type of the response, which the record of the interaction keeps.
+  string content_type = 16;
+}

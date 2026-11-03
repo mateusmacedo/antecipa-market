@@ -65,3 +65,40 @@ CREATE INDEX IF NOT EXISTS external_commands_business_key_idx ON external_comman
 CREATE INDEX IF NOT EXISTS external_commands_series_key_idx ON external_commands (series_key);
 CREATE INDEX IF NOT EXISTS external_commands_status_idx ON external_commands (status);
 CREATE INDEX IF NOT EXISTS external_commands_outbound_key_idx ON external_commands (outbound_key);
+
+-- command_id is the guard of the relation of a command's interactions
+-- (ADR-067); partner_event_id finds the first reception of a partner event and
+-- carries no UNIQUE, because a repeated reception is a row of its own, in
+-- status duplicate. The raw payloads stay in the object store.
+CREATE TABLE IF NOT EXISTS external_interactions (
+  tenant_id               text   NOT NULL,
+  external_interaction_id text   NOT NULL,
+  version                 bigint NOT NULL DEFAULT 0,
+  connector_id            text   NOT NULL,
+  partner_event_id        text   NOT NULL,
+  command_id              text   NOT NULL,
+  snapshot                jsonb  NOT NULL,
+  CONSTRAINT external_interactions_pkey PRIMARY KEY (tenant_id, external_interaction_id)
+);
+
+CREATE INDEX IF NOT EXISTS external_interactions_tenant_id_partner_event_id_idx ON external_interactions (tenant_id, partner_event_id);
+CREATE INDEX IF NOT EXISTS external_interactions_tenant_id_command_id_idx ON external_interactions (tenant_id, command_id);
+CREATE INDEX IF NOT EXISTS external_interactions_external_interaction_id_idx ON external_interactions (external_interaction_id);
+CREATE INDEX IF NOT EXISTS external_interactions_partner_event_id_idx ON external_interactions (partner_event_id);
+CREATE INDEX IF NOT EXISTS external_interactions_command_id_idx ON external_interactions (command_id);
+
+-- The id is the reference key, <providerId>:<system>:<referenceType>:<reference>:
+-- one reference names one internal object, which has N references.
+CREATE TABLE IF NOT EXISTS external_references (
+  tenant_id             text   NOT NULL,
+  external_reference_id text   NOT NULL,
+  version               bigint NOT NULL DEFAULT 0,
+  subject_type          text   NOT NULL,
+  subject_id            text   NOT NULL,
+  snapshot              jsonb  NOT NULL,
+  CONSTRAINT external_references_pkey PRIMARY KEY (tenant_id, external_reference_id)
+);
+
+CREATE INDEX IF NOT EXISTS external_references_tenant_id_subject_id_idx ON external_references (tenant_id, subject_id);
+CREATE INDEX IF NOT EXISTS external_references_external_reference_id_idx ON external_references (external_reference_id);
+CREATE INDEX IF NOT EXISTS external_references_subject_id_idx ON external_references (subject_id);

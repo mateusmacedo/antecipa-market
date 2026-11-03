@@ -4,6 +4,7 @@ import (
 	"context"
 	"crypto/sha256"
 	"fmt"
+	"reflect"
 	"time"
 
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -21,6 +22,7 @@ import (
 
 	"github.com/mateusmacedo/antecipa-market/apps/backend/gateway/app/rpc"
 	"github.com/mateusmacedo/antecipa-market/apps/backend/gateway/application"
+	gatewayports "github.com/mateusmacedo/antecipa-market/apps/backend/gateway/ports"
 	"github.com/mateusmacedo/antecipa-market/apps/backend/gateway/provider"
 )
 
@@ -35,7 +37,11 @@ func Run(ctx context.Context, cfg Config) error {
 func RunWith(ctx context.Context, cfg Config, rt *otelboot.Runtime) error {
 	switch cfg.Role {
 	case RoleAPI:
-		return serve.ServeAPI(ctx, rt, apiRole(cfg), api(cfg, rt))
+		raw, err := OpenRawStore(ctx, cfg.RawStore, rt)
+		if err != nil {
+			return err
+		}
+		return serve.ServeAPI(ctx, rt, apiRole(cfg), api(cfg, rt, raw))
 	case RoleRelay:
 		return runRelay(ctx, rt, cfg)
 	case RoleConsumer:
@@ -54,20 +60,27 @@ type Waits struct {
 
 // Bind is the composition root's half of ADR-034: one open transaction becomes
 // the resource set application declares, so the inboxes, the attempt ledger,
-// the state and the outbox share the same pgx.Tx (INB-07).
+// the state and the outbox share the same pgx.Tx (INB-07). Each channel the
+// consumer reads keeps a message inbox of its own name.
 func Bind(waits Waits) func(tx *postgres.Tx) application.Resources {
 	return func(tx *postgres.Tx) application.Resources {
 		return application.Resources{
-			Connectors:          provider.NewConnectorRepository(tx),
-			Profiles:            provider.NewCapabilityProfileRepository(tx),
-			Authorizations:      provider.NewQueryAuthorizationRepository(tx),
-			ExternalCommands:    provider.NewExternalCommandRepository(tx),
-			ProfilesByConnector: provider.NewCapabilityProfilesByConnectorWithin(tx),
-			CommandsBySeries:    provider.NewExternalCommandsBySeriesWithin(tx),
-			Ledger:              tx.AttemptLedger(),
-			Outbox:              tx.Outbox(provider.Mapper{}),
-			Commands:            tx.CommandInbox(application.CommandConsumer, waits.Command),
-			Inbox:               tx.Inbox(ConsumerName, waits.Message),
+			Connectors:           provider.NewConnectorRepository(tx),
+			Profiles:             provider.NewCapabilityProfileRepository(tx),
+			Authorizations:       provider.NewQueryAuthorizationRepository(tx),
+			ExternalCommands:     provider.NewExternalCommandRepository(tx),
+			ExternalInteractions: provider.NewExternalInteractionRepository(tx),
+			ExternalReferences:   provider.NewExternalReferenceRepository(tx),
+			ProfilesByConnector:  provider.NewCapabilityProfilesByConnectorWithin(tx),
+			CommandsBySeries:     provider.NewExternalCommandsBySeriesWithin(tx),
+			Ledger:               tx.AttemptLedger(),
+			Outbox:               tx.Outbox(provider.Mapper{}),
+			Commands:             tx.CommandInbox(application.CommandConsumer, waits.Command),
+			Inbox:                tx.Inbox(ConsumerName, waits.Message),
+			DispatchInbox:        tx.Inbox(application.DispatchConsumer, waits.Message),
+			InteractionInbox:     tx.Inbox(application.InteractionConsumer, waits.Message),
+			NormalizationInbox:   tx.Inbox(application.NormalizationConsumer, waits.Message),
+			EventsInbox:          tx.Inbox(application.EventsConsumer, waits.Message),
 		}
 	}
 }
@@ -77,6 +90,7 @@ func Bind(waits Waits) func(tx *postgres.Tx) application.Resources {
 func NewService(pool *pgxpool.Pool, clock ports.Clock, ids ports.IDGenerator, waits Waits) application.Service {
 	reads := postgres.NewReadPool(pool)
 	commands := provider.NewExternalCommandsReader(reads)
+	interactions := provider.NewExternalInteractionsReader(reads)
 	return application.Service{
 		UoW:                          unitOfWork(pool, Bind(waits)),
 		ConnectorReader:              provider.NewConnectorReader(reads),
@@ -87,10 +101,16 @@ func NewService(pool *pgxpool.Pool, clock ports.Clock, ids ports.IDGenerator, wa
 		CommandsByBusinessKey:        commands,
 		CommandsByStatus:             commands,
 		CommandsByOutboundKey:        commands,
+		InteractionReader:            provider.NewExternalInteractionReader(reads),
+		InteractionsByPartnerEvent:   interactions,
+		InteractionsByCommand:        interactions,
+		ReferenceReader:              provider.NewExternalReferenceReader(reads),
+		ReferencesBySubject:          provider.NewExternalReferencesReader(reads),
 		Clock:                        clock,
 		IDs:                          ids,
 		Authorize:                    Authorization(),
 		OutboundKeys:                 OutboundKeyPolicy(),
+		DerivedKeys:                  DerivedKeyPolicy(),
 		Consumer:                     ConsumerName,
 	}
 }
@@ -98,24 +118,62 @@ func NewService(pool *pgxpool.Pool, clock ports.Clock, ids ports.IDGenerator, wa
 // OutboundKeyPolicy is SHA-256 over the canonical intent (IDM-11); the
 // application block imports no crypto, so the composition root fixes it.
 func OutboundKeyPolicy() usecase.OutboundKeyPolicy {
-	return usecase.OutboundKeyPolicy{Digest: func(canonical []byte) ports.Fingerprint { return sha256.Sum256(canonical) }}
+	return usecase.OutboundKeyPolicy{Digest: digest}
 }
 
-func NewGatewayService(pool *pgxpool.Pool, rt *otelboot.Runtime, cfg Config) (application.Service, error) {
+// DerivedKeyPolicy is SHA-256 too, over the parts of a command key that an
+// internal step derives and that IDM-02 cannot hold as they are.
+func DerivedKeyPolicy() application.DerivedKeyPolicy {
+	return application.DerivedKeyPolicy{Digest: digest}
+}
+
+func digest(canonical []byte) ports.Fingerprint { return sha256.Sum256(canonical) }
+
+// partnerAdapters is NoPartnerAdapters for every Config the environment
+// builds; only a suite of this package sets partners, so the simulator never
+// links into the binary.
+func (c Config) partnerAdapters() gatewayports.PartnerAdapters {
+	if c.partners == nil {
+		return gatewayports.NoPartnerAdapters{}
+	}
+	return c.partners
+}
+
+// NewGatewayService is the service of the runtime: no partner adapter is
+// configured until the providers are mapped, so every way to a partner fails
+// closed as an unavailable dependency (decision 21).
+func NewGatewayService(pool *pgxpool.Pool, rt *otelboot.Runtime, cfg Config, raw gatewayports.RawStore) (application.Service, error) {
 	policy, err := kernelapp.IdempotencyPolicy(cfg.Policies.IdempotencyWait, cfg.Policies.IdempotencyRetention)
 	if err != nil {
 		return application.Service{}, err
 	}
 	service := NewService(pool, idclock.SystemClock{}, idclock.NewMessageIDs("gateway"), Waits{Message: cfg.Wait, Command: cfg.Policies.IdempotencyWait})
 	service.Idempotency = policy
+	service.Raw, service.Partners = raw, cfg.partnerAdapters()
 	service.Instrumentation = obsusecase.New(rt, audit.NewLogSink(rt.LoggerProvider()), ports.SubjectOf, usecase.CategoryOf)
 	return service, nil
 }
 
-// grants is what the consumer waits for besides the kernel's tables.
-func grants() []postgres.Grant { return provider.Grants }
+// NewConsumerService is the service of the consumer role: the runtime's, plus
+// the kernel's attempt ledger the dispatch begins in and the budget of one
+// submission, whose stale cut the sweep of attempts shares (decision 21).
+func NewConsumerService(pool *pgxpool.Pool, rt *otelboot.Runtime, cfg Config, raw gatewayports.RawStore, budget kernelapp.ExternalBudget) (application.Service, error) {
+	service, err := NewGatewayService(pool, rt, cfg, raw)
+	if err != nil {
+		return application.Service{}, err
+	}
+	service.Attempts, service.Budget = postgres.NewAttemptStore(pool), DispatchBudgetOf(budget)
+	service.Logger = rt.LoggerFor(reflect.TypeFor[application.Service]().PkgPath())
+	return service, nil
+}
 
-func api(cfg Config, rt *otelboot.Runtime) serve.API {
+// consumerGrants is what the consumer waits for: the kernel's outbox, inbox and
+// attempt ledger, which the dispatch writes, and the tables of this context.
+func consumerGrants() []postgres.Grant {
+	return append(postgres.KernelGrants(postgres.Outbox, postgres.Inbox, postgres.ExternalAttempt), provider.Grants...)
+}
+
+func api(cfg Config, rt *otelboot.Runtime, raw gatewayports.RawStore) serve.API {
 	return serve.API{
 		Desc: &rpc.ServiceDesc, Commands: rpc.Commands(), Schema: provider.Schema, Grants: provider.Grants, Uniques: provider.Uniques,
 		CommandConsumer: application.CommandConsumer,
@@ -123,7 +181,7 @@ func api(cfg Config, rt *otelboot.Runtime) serve.API {
 		// ResolveUnknownOutcome records its observation there.
 		ExternalCommands: true,
 		Register: func(server *grpc.Server, pool *pgxpool.Pool) error {
-			service, err := NewGatewayService(pool, rt, cfg)
+			service, err := NewGatewayService(pool, rt, cfg, raw)
 			if err != nil {
 				return err
 			}

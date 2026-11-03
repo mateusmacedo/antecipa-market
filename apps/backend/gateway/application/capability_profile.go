@@ -56,7 +56,8 @@ func profileFingerprint(cmd DeclareCapabilityProfile) *usecase.Fingerprint {
 		f.Int(int64(o.MaxItemsPerRequest)).Int(int64(o.MaxRequestsPerMinute)).Int(int64(o.MaxPayloadBytes)).
 			String(o.BusinessCalendar).String(o.CutoffTime).String(o.ProcessingWindow).String(string(o.EncumbranceCoverage)).
 			Int(int64(o.PositionFreshnessSLA)).String(string(o.Efficacy)).Int(o.Quiescence).Int(flag(o.AuthoritativeAbsence)).
-			Int(int64(o.MaxQueries)).String(o.KeyAlphabet).Int(int64(o.KeyMaxLength)).Int(int64(o.QueryInterval)).Int(int64(o.AmbiguityDeadline))
+			Int(int64(o.MaxQueries)).String(o.KeyAlphabet).Int(int64(o.KeyMaxLength)).Int(int64(o.QueryInterval)).Int(int64(o.AmbiguityDeadline)).
+			Int(int64(o.MaxSubmissions))
 	}
 	return f
 }

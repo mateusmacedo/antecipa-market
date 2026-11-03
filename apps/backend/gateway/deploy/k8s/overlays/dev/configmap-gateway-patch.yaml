@@ -6,4 +6,6 @@ data:
   # O Redpanda da base roda sem TLS em dev, e o gRPC interno também.
   KAFKA_INSECURE: 'true'
   GRPC_INSECURE: 'true'
+  S3_BUCKET: gateway-interactions-dev
+  AWS_REGION: us-east-1
   OTEL_RESOURCE_ATTRIBUTES: service.version=dev,deployment.environment.name=dev

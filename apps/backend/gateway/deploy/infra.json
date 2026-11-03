@@ -34,6 +34,22 @@
       {
         "name": "gateway.dispatch.dlq",
         "env": "KAFKA_GATEWAY_DISPATCH_DLQ"
+      },
+      {
+        "name": "gateway.interactions",
+        "env": "KAFKA_GATEWAY_INTERACTIONS_TOPIC"
+      },
+      {
+        "name": "gateway.interactions.dlq",
+        "env": "KAFKA_GATEWAY_INTERACTIONS_DLQ"
+      },
+      {
+        "name": "gateway.normalizations",
+        "env": "KAFKA_GATEWAY_NORMALIZATIONS_TOPIC"
+      },
+      {
+        "name": "gateway.normalizations.dlq",
+        "env": "KAFKA_GATEWAY_NORMALIZATIONS_DLQ"
       }
     ],
     "acls": [
@@ -44,6 +60,10 @@
           "gateway.events.dlq",
           "gateway.dispatch",
           "gateway.dispatch.dlq",
+          "gateway.interactions",
+          "gateway.interactions.dlq",
+          "gateway.normalizations",
+          "gateway.normalizations.dlq",
           "partner.events.dlq"
         ]
       },
@@ -53,6 +73,38 @@
         "group": {
           "name": "gateway",
           "env": "KAFKA_GATEWAY_GROUP"
+        }
+      },
+      {
+        "operations": ["read", "describe"],
+        "topics": ["gateway.events"],
+        "group": {
+          "name": "gateway.events",
+          "env": "KAFKA_GATEWAY_EVENTS_GROUP"
+        }
+      },
+      {
+        "operations": ["read", "describe"],
+        "topics": ["gateway.dispatch"],
+        "group": {
+          "name": "gateway.dispatch",
+          "env": "KAFKA_GATEWAY_DISPATCH_GROUP"
+        }
+      },
+      {
+        "operations": ["read", "describe"],
+        "topics": ["gateway.interactions"],
+        "group": {
+          "name": "gateway.interactions",
+          "env": "KAFKA_GATEWAY_INTERACTIONS_GROUP"
+        }
+      },
+      {
+        "operations": ["read", "describe"],
+        "topics": ["gateway.normalizations"],
+        "group": {
+          "name": "gateway.normalizations",
+          "env": "KAFKA_GATEWAY_NORMALIZATIONS_GROUP"
         }
       }
     ]

@@ -24,15 +24,29 @@ var edgeOperations = []application.Operation{
 	application.FindQueryAuthorizationByOrganization{},
 	application.FindExternalCommand{}, application.FindExternalCommandsByBusinessKey{},
 	application.FindExternalCommandsByStatus{},
+	application.ReprocessInteraction{}, application.LinkExternalReference{},
+	application.FindExternalInteraction{}, application.FindExternalInteractionByPartnerEvent{},
+	application.FindExternalInteractionsByCommand{}, application.FindExternalReference{},
+	application.FindExternalReferencesBySubject{},
+	application.ReceivePartnerInteraction{}, application.ReadExternal{},
 }
 
 // internalSteps have no method: the sweep and the consumer run them under the
 // execution of their own call, so they answer for the caller's permission.
 var internalSteps = map[application.Operation]port.Permission{
-	application.RequestResend{}:              "gateway:sweep-external-commands",
-	application.ExpireAmbiguity{}:            "gateway:sweep-external-commands",
-	application.ConsumeCapabilityEnabled{}:   "gateway:consume",
-	application.ConsumeCapabilitySuspended{}: "gateway:consume",
+	application.RequestResend{}:                 "gateway:sweep-external-commands",
+	application.ExpireAmbiguity{}:               "gateway:sweep-external-commands",
+	application.QueryExternalState{}:            "gateway:sweep-external-commands",
+	application.ConsumeCapabilityEnabled{}:      "gateway:consume",
+	application.ConsumeCapabilitySuspended{}:    "gateway:consume",
+	application.ConsumeSchemaMismatchDetected{}: "gateway:consume",
+	application.HoldDispatch{}:                  "gateway:consume",
+	application.RecordExternalInteraction{}:     "gateway:consume",
+	application.ConcludeInteraction{}:           "gateway:consume",
+	application.LinkInteractionReference{}:      "gateway:consume",
+	application.DispatchExternalCommand{}:       "gateway:consume",
+	application.ConsumeResponseCaptured{}:       "gateway:consume",
+	application.ConsumeInteractionStored{}:      "gateway:consume",
 }
 
 func TestEveryEdgeOperationDeclaresItsPermission(t *testing.T) {
@@ -63,6 +77,18 @@ func TestEveryEdgeOperationDeclaresItsPermission(t *testing.T) {
 		"FindExternalCommand":               {application.FindExternalCommand{}, "gateway:find-external-command"},
 		"FindExternalCommandsByBusinessKey": {application.FindExternalCommandsByBusinessKey{}, "gateway:find-external-commands-by-business-key"},
 		"FindExternalCommandsByStatus":      {application.FindExternalCommandsByStatus{}, "gateway:find-external-commands-by-status"},
+
+		"ReprocessInteraction":  {application.ReprocessInteraction{}, "gateway:reprocess-interaction"},
+		"LinkExternalReference": {application.LinkExternalReference{}, "gateway:link-external-reference"},
+
+		"FindExternalInteraction":               {application.FindExternalInteraction{}, "gateway:find-external-interaction"},
+		"FindExternalInteractionByPartnerEvent": {application.FindExternalInteractionByPartnerEvent{}, "gateway:find-external-interaction-by-partner-event"},
+		"FindExternalInteractionsByCommand":     {application.FindExternalInteractionsByCommand{}, "gateway:find-external-interactions-by-command"},
+		"FindExternalReference":                 {application.FindExternalReference{}, "gateway:find-external-reference"},
+		"FindExternalReferencesBySubject":       {application.FindExternalReferencesBySubject{}, "gateway:find-external-references-by-subject"},
+
+		"ReceivePartnerInteraction": {application.ReceivePartnerInteraction{}, "gateway:receive-partner-interaction"},
+		"ReadExternal":              {application.ReadExternal{}, "gateway:read-external"},
 	}
 	if len(cases) != len(edgeOperations) {
 		t.Fatalf("%d cases for %d edge operations: an operation lacks its expected permission", len(cases), len(edgeOperations))

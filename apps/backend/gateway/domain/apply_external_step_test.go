@@ -263,3 +263,41 @@ func TestApplyExternalStepRejectsACommandNotInFlight(t *testing.T) {
 		tb.RequireRejected(t, acc, rej, domain.CodeExternalCommandNotInFlight)
 	})
 }
+
+func TestApplyExternalStepFailsAnAbsenceThatSpentTheResendBudget(t *testing.T) {
+	c := newCreated(t)
+	for n := 1; ; n++ {
+		apply(t, c, submitted(domain.StepQuery, domain.CategoryUnknownSent))
+		if n == commandProfile().MaxSubmissions {
+			break
+		}
+		apply(t, c, observed(domain.StepRetry, domain.FindingAbsent, at+second))
+		if _, rej := c.RequestResend(domain.RequestResend{At: c.Snapshot().ResendAfter}); rej != nil {
+			t.Fatalf("RequestResend rejected: %v", rej)
+		}
+	}
+
+	events := apply(t, c, observed(domain.StepRetry, domain.FindingAbsent, at+2*second))
+
+	s := c.Snapshot()
+	if s.Status != domain.StatusFinalFailure || s.FailureCategory != domain.CategoryResendBudgetExhausted || s.ResendAfter != 0 ||
+		s.Submissions != 3 || s.WaitingSince != 0 {
+		t.Fatalf("Snapshot() = %+v, want a final failure with the resend budget spent and no resend", s)
+	}
+	tb.RequireSameEvents(t, events, []kernel.DomainEvent{domain.ExternalCommandFailed{
+		CommandHeader: header(), Category: domain.CategoryResendBudgetExhausted, InteractionID: "int-2", At: at + 2*second,
+	}})
+}
+
+func TestApplyExternalStepClearsTheHoldOnSubmit(t *testing.T) {
+	c := newCreated(t)
+	if _, rej := c.HoldDispatch(domain.HoldDispatch{At: at}); rej != nil {
+		t.Fatalf("HoldDispatch rejected: %v", rej)
+	}
+
+	apply(t, c, submitted(domain.StepAwait, domain.CategoryNone))
+
+	if s := c.Snapshot(); s.DispatchHeldSince != 0 || s.Submissions != 1 {
+		t.Fatalf("Snapshot() = %+v, want the hold cleared by the send", s)
+	}
+}

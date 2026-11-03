@@ -32,6 +32,9 @@ const (
 	FailureCategory_FAILURE_CATEGORY_UNKNOWN_SENT        FailureCategory = 4
 	FailureCategory_FAILURE_CATEGORY_UNKNOWN_AMBIGUOUS   FailureCategory = 5
 	FailureCategory_FAILURE_CATEGORY_SCHEMA_MISMATCH     FailureCategory = 6
+	// The partner confirmed it never received the command and the resend
+	// budget of the operation was spent: a new command is the only way on.
+	FailureCategory_FAILURE_CATEGORY_RESEND_BUDGET_EXHAUSTED FailureCategory = 7
 )
 
 // Enum value maps for FailureCategory.
@@ -44,15 +47,17 @@ var (
 		4: "FAILURE_CATEGORY_UNKNOWN_SENT",
 		5: "FAILURE_CATEGORY_UNKNOWN_AMBIGUOUS",
 		6: "FAILURE_CATEGORY_SCHEMA_MISMATCH",
+		7: "FAILURE_CATEGORY_RESEND_BUDGET_EXHAUSTED",
 	}
 	FailureCategory_value = map[string]int32{
-		"FAILURE_CATEGORY_UNSPECIFIED":         0,
-		"FAILURE_CATEGORY_FINAL_VALIDATION":    1,
-		"FAILURE_CATEGORY_FINAL_BUSINESS":      2,
-		"FAILURE_CATEGORY_FINAL_AUTHORIZATION": 3,
-		"FAILURE_CATEGORY_UNKNOWN_SENT":        4,
-		"FAILURE_CATEGORY_UNKNOWN_AMBIGUOUS":   5,
-		"FAILURE_CATEGORY_SCHEMA_MISMATCH":     6,
+		"FAILURE_CATEGORY_UNSPECIFIED":             0,
+		"FAILURE_CATEGORY_FINAL_VALIDATION":        1,
+		"FAILURE_CATEGORY_FINAL_BUSINESS":          2,
+		"FAILURE_CATEGORY_FINAL_AUTHORIZATION":     3,
+		"FAILURE_CATEGORY_UNKNOWN_SENT":            4,
+		"FAILURE_CATEGORY_UNKNOWN_AMBIGUOUS":       5,
+		"FAILURE_CATEGORY_SCHEMA_MISMATCH":         6,
+		"FAILURE_CATEGORY_RESEND_BUDGET_EXHAUSTED": 7,
 	}
 )
 
@@ -190,11 +195,348 @@ func (WaitingStatus) EnumDescriptor() ([]byte, []int) {
 	return file_company_gateway_event_v1_types_proto_rawDescGZIP(), []int{2}
 }
 
+type Environment int32
+
+const (
+	Environment_ENVIRONMENT_UNSPECIFIED  Environment = 0
+	Environment_ENVIRONMENT_DEVELOPMENT  Environment = 1
+	Environment_ENVIRONMENT_INTEGRATION  Environment = 2
+	Environment_ENVIRONMENT_HOMOLOGATION Environment = 3
+	Environment_ENVIRONMENT_PRODUCTION   Environment = 4
+)
+
+// Enum value maps for Environment.
+var (
+	Environment_name = map[int32]string{
+		0: "ENVIRONMENT_UNSPECIFIED",
+		1: "ENVIRONMENT_DEVELOPMENT",
+		2: "ENVIRONMENT_INTEGRATION",
+		3: "ENVIRONMENT_HOMOLOGATION",
+		4: "ENVIRONMENT_PRODUCTION",
+	}
+	Environment_value = map[string]int32{
+		"ENVIRONMENT_UNSPECIFIED":  0,
+		"ENVIRONMENT_DEVELOPMENT":  1,
+		"ENVIRONMENT_INTEGRATION":  2,
+		"ENVIRONMENT_HOMOLOGATION": 3,
+		"ENVIRONMENT_PRODUCTION":   4,
+	}
+)
+
+func (x Environment) Enum() *Environment {
+	p := new(Environment)
+	*p = x
+	return p
+}
+
+func (x Environment) String() string {
+	return protoimpl.X.EnumStringOf(x.Descriptor(), protoreflect.EnumNumber(x))
+}
+
+func (Environment) Descriptor() protoreflect.EnumDescriptor {
+	return file_company_gateway_event_v1_types_proto_enumTypes[3].Descriptor()
+}
+
+func (Environment) Type() protoreflect.EnumType {
+	return &file_company_gateway_event_v1_types_proto_enumTypes[3]
+}
+
+func (x Environment) Number() protoreflect.EnumNumber {
+	return protoreflect.EnumNumber(x)
+}
+
+// Deprecated: Use Environment.Descriptor instead.
+func (Environment) EnumDescriptor() ([]byte, []int) {
+	return file_company_gateway_event_v1_types_proto_rawDescGZIP(), []int{3}
+}
+
+// What broke the contract of an operation. An unknown enumeration value is no
+// mismatch (04 §5).
+type MismatchKind int32
+
+const (
+	MismatchKind_MISMATCH_KIND_UNSPECIFIED   MismatchKind = 0
+	MismatchKind_MISMATCH_KIND_STRUCTURE     MismatchKind = 1
+	MismatchKind_MISMATCH_KIND_MISSING_FIELD MismatchKind = 2
+	MismatchKind_MISMATCH_KIND_TYPE          MismatchKind = 3
+	MismatchKind_MISMATCH_KIND_VERSION       MismatchKind = 4
+)
+
+// Enum value maps for MismatchKind.
+var (
+	MismatchKind_name = map[int32]string{
+		0: "MISMATCH_KIND_UNSPECIFIED",
+		1: "MISMATCH_KIND_STRUCTURE",
+		2: "MISMATCH_KIND_MISSING_FIELD",
+		3: "MISMATCH_KIND_TYPE",
+		4: "MISMATCH_KIND_VERSION",
+	}
+	MismatchKind_value = map[string]int32{
+		"MISMATCH_KIND_UNSPECIFIED":   0,
+		"MISMATCH_KIND_STRUCTURE":     1,
+		"MISMATCH_KIND_MISSING_FIELD": 2,
+		"MISMATCH_KIND_TYPE":          3,
+		"MISMATCH_KIND_VERSION":       4,
+	}
+)
+
+func (x MismatchKind) Enum() *MismatchKind {
+	p := new(MismatchKind)
+	*p = x
+	return p
+}
+
+func (x MismatchKind) String() string {
+	return protoimpl.X.EnumStringOf(x.Descriptor(), protoreflect.EnumNumber(x))
+}
+
+func (MismatchKind) Descriptor() protoreflect.EnumDescriptor {
+	return file_company_gateway_event_v1_types_proto_enumTypes[4].Descriptor()
+}
+
+func (MismatchKind) Type() protoreflect.EnumType {
+	return &file_company_gateway_event_v1_types_proto_enumTypes[4]
+}
+
+func (x MismatchKind) Number() protoreflect.EnumNumber {
+	return protoreflect.EnumNumber(x)
+}
+
+// Deprecated: Use MismatchKind.Descriptor instead.
+func (MismatchKind) EnumDescriptor() ([]byte, []int) {
+	return file_company_gateway_event_v1_types_proto_rawDescGZIP(), []int{4}
+}
+
+// The reading a normalization concluded an interaction with.
+type InteractionOutcome int32
+
+const (
+	InteractionOutcome_INTERACTION_OUTCOME_UNSPECIFIED     InteractionOutcome = 0
+	InteractionOutcome_INTERACTION_OUTCOME_NORMALIZED      InteractionOutcome = 1
+	InteractionOutcome_INTERACTION_OUTCOME_UNCORRELATED    InteractionOutcome = 2
+	InteractionOutcome_INTERACTION_OUTCOME_SCHEMA_MISMATCH InteractionOutcome = 3
+)
+
+// Enum value maps for InteractionOutcome.
+var (
+	InteractionOutcome_name = map[int32]string{
+		0: "INTERACTION_OUTCOME_UNSPECIFIED",
+		1: "INTERACTION_OUTCOME_NORMALIZED",
+		2: "INTERACTION_OUTCOME_UNCORRELATED",
+		3: "INTERACTION_OUTCOME_SCHEMA_MISMATCH",
+	}
+	InteractionOutcome_value = map[string]int32{
+		"INTERACTION_OUTCOME_UNSPECIFIED":     0,
+		"INTERACTION_OUTCOME_NORMALIZED":      1,
+		"INTERACTION_OUTCOME_UNCORRELATED":    2,
+		"INTERACTION_OUTCOME_SCHEMA_MISMATCH": 3,
+	}
+)
+
+func (x InteractionOutcome) Enum() *InteractionOutcome {
+	p := new(InteractionOutcome)
+	*p = x
+	return p
+}
+
+func (x InteractionOutcome) String() string {
+	return protoimpl.X.EnumStringOf(x.Descriptor(), protoreflect.EnumNumber(x))
+}
+
+func (InteractionOutcome) Descriptor() protoreflect.EnumDescriptor {
+	return file_company_gateway_event_v1_types_proto_enumTypes[5].Descriptor()
+}
+
+func (InteractionOutcome) Type() protoreflect.EnumType {
+	return &file_company_gateway_event_v1_types_proto_enumTypes[5]
+}
+
+func (x InteractionOutcome) Number() protoreflect.EnumNumber {
+	return protoreflect.EnumNumber(x)
+}
+
+// Deprecated: Use InteractionOutcome.Descriptor instead.
+func (InteractionOutcome) EnumDescriptor() ([]byte, []int) {
+	return file_company_gateway_event_v1_types_proto_rawDescGZIP(), []int{5}
+}
+
+type InteractionDirection int32
+
+const (
+	InteractionDirection_INTERACTION_DIRECTION_UNSPECIFIED InteractionDirection = 0
+	InteractionDirection_INTERACTION_DIRECTION_OUTBOUND    InteractionDirection = 1
+	InteractionDirection_INTERACTION_DIRECTION_INBOUND     InteractionDirection = 2
+)
+
+// Enum value maps for InteractionDirection.
+var (
+	InteractionDirection_name = map[int32]string{
+		0: "INTERACTION_DIRECTION_UNSPECIFIED",
+		1: "INTERACTION_DIRECTION_OUTBOUND",
+		2: "INTERACTION_DIRECTION_INBOUND",
+	}
+	InteractionDirection_value = map[string]int32{
+		"INTERACTION_DIRECTION_UNSPECIFIED": 0,
+		"INTERACTION_DIRECTION_OUTBOUND":    1,
+		"INTERACTION_DIRECTION_INBOUND":     2,
+	}
+)
+
+func (x InteractionDirection) Enum() *InteractionDirection {
+	p := new(InteractionDirection)
+	*p = x
+	return p
+}
+
+func (x InteractionDirection) String() string {
+	return protoimpl.X.EnumStringOf(x.Descriptor(), protoreflect.EnumNumber(x))
+}
+
+func (InteractionDirection) Descriptor() protoreflect.EnumDescriptor {
+	return file_company_gateway_event_v1_types_proto_enumTypes[6].Descriptor()
+}
+
+func (InteractionDirection) Type() protoreflect.EnumType {
+	return &file_company_gateway_event_v1_types_proto_enumTypes[6]
+}
+
+func (x InteractionDirection) Number() protoreflect.EnumNumber {
+	return protoreflect.EnumNumber(x)
+}
+
+// Deprecated: Use InteractionDirection.Descriptor instead.
+func (InteractionDirection) EnumDescriptor() ([]byte, []int) {
+	return file_company_gateway_event_v1_types_proto_rawDescGZIP(), []int{6}
+}
+
+type InteractionSource int32
+
+const (
+	InteractionSource_INTERACTION_SOURCE_UNSPECIFIED     InteractionSource = 0
+	InteractionSource_INTERACTION_SOURCE_SUBMIT_RESPONSE InteractionSource = 1
+	InteractionSource_INTERACTION_SOURCE_STATE_QUERY     InteractionSource = 2
+	InteractionSource_INTERACTION_SOURCE_CALLBACK        InteractionSource = 3
+	InteractionSource_INTERACTION_SOURCE_FILE            InteractionSource = 4
+	InteractionSource_INTERACTION_SOURCE_EXTERNAL_READ   InteractionSource = 5
+)
+
+// Enum value maps for InteractionSource.
+var (
+	InteractionSource_name = map[int32]string{
+		0: "INTERACTION_SOURCE_UNSPECIFIED",
+		1: "INTERACTION_SOURCE_SUBMIT_RESPONSE",
+		2: "INTERACTION_SOURCE_STATE_QUERY",
+		3: "INTERACTION_SOURCE_CALLBACK",
+		4: "INTERACTION_SOURCE_FILE",
+		5: "INTERACTION_SOURCE_EXTERNAL_READ",
+	}
+	InteractionSource_value = map[string]int32{
+		"INTERACTION_SOURCE_UNSPECIFIED":     0,
+		"INTERACTION_SOURCE_SUBMIT_RESPONSE": 1,
+		"INTERACTION_SOURCE_STATE_QUERY":     2,
+		"INTERACTION_SOURCE_CALLBACK":        3,
+		"INTERACTION_SOURCE_FILE":            4,
+		"INTERACTION_SOURCE_EXTERNAL_READ":   5,
+	}
+)
+
+func (x InteractionSource) Enum() *InteractionSource {
+	p := new(InteractionSource)
+	*p = x
+	return p
+}
+
+func (x InteractionSource) String() string {
+	return protoimpl.X.EnumStringOf(x.Descriptor(), protoreflect.EnumNumber(x))
+}
+
+func (InteractionSource) Descriptor() protoreflect.EnumDescriptor {
+	return file_company_gateway_event_v1_types_proto_enumTypes[7].Descriptor()
+}
+
+func (InteractionSource) Type() protoreflect.EnumType {
+	return &file_company_gateway_event_v1_types_proto_enumTypes[7]
+}
+
+func (x InteractionSource) Number() protoreflect.EnumNumber {
+	return protoreflect.EnumNumber(x)
+}
+
+// Deprecated: Use InteractionSource.Descriptor instead.
+func (InteractionSource) EnumDescriptor() ([]byte, []int) {
+	return file_company_gateway_event_v1_types_proto_rawDescGZIP(), []int{7}
+}
+
+// The step of the kernel's external cycle a submission was applied with.
+type Step int32
+
+const (
+	Step_STEP_UNSPECIFIED Step = 0
+	Step_STEP_CONFIRM     Step = 1
+	Step_STEP_AWAIT       Step = 2
+	Step_STEP_RETRY       Step = 3
+	Step_STEP_FAIL        Step = 4
+	Step_STEP_QUERY       Step = 5
+	Step_STEP_RECONCILE   Step = 6
+	Step_STEP_SUSPEND     Step = 7
+)
+
+// Enum value maps for Step.
+var (
+	Step_name = map[int32]string{
+		0: "STEP_UNSPECIFIED",
+		1: "STEP_CONFIRM",
+		2: "STEP_AWAIT",
+		3: "STEP_RETRY",
+		4: "STEP_FAIL",
+		5: "STEP_QUERY",
+		6: "STEP_RECONCILE",
+		7: "STEP_SUSPEND",
+	}
+	Step_value = map[string]int32{
+		"STEP_UNSPECIFIED": 0,
+		"STEP_CONFIRM":     1,
+		"STEP_AWAIT":       2,
+		"STEP_RETRY":       3,
+		"STEP_FAIL":        4,
+		"STEP_QUERY":       5,
+		"STEP_RECONCILE":   6,
+		"STEP_SUSPEND":     7,
+	}
+)
+
+func (x Step) Enum() *Step {
+	p := new(Step)
+	*p = x
+	return p
+}
+
+func (x Step) String() string {
+	return protoimpl.X.EnumStringOf(x.Descriptor(), protoreflect.EnumNumber(x))
+}
+
+func (Step) Descriptor() protoreflect.EnumDescriptor {
+	return file_company_gateway_event_v1_types_proto_enumTypes[8].Descriptor()
+}
+
+func (Step) Type() protoreflect.EnumType {
+	return &file_company_gateway_event_v1_types_proto_enumTypes[8]
+}
+
+func (x Step) Number() protoreflect.EnumNumber {
+	return protoreflect.EnumNumber(x)
+}
+
+// Deprecated: Use Step.Descriptor instead.
+func (Step) EnumDescriptor() ([]byte, []int) {
+	return file_company_gateway_event_v1_types_proto_rawDescGZIP(), []int{8}
+}
+
 var File_company_gateway_event_v1_types_proto protoreflect.FileDescriptor
 
 const file_company_gateway_event_v1_types_proto_rawDesc = "" +
 	"\n" +
-	"$company/gateway/event/v1/types.proto\x12\x18company.gateway.event.v1*\x9a\x02\n" +
+	"$company/gateway/event/v1/types.proto\x12\x18company.gateway.event.v1*\xc8\x02\n" +
 	"\x0fFailureCategory\x12 \n" +
 	"\x1cFAILURE_CATEGORY_UNSPECIFIED\x10\x00\x12%\n" +
 	"!FAILURE_CATEGORY_FINAL_VALIDATION\x10\x01\x12#\n" +
@@ -202,7 +544,8 @@ const file_company_gateway_event_v1_types_proto_rawDesc = "" +
 	"$FAILURE_CATEGORY_FINAL_AUTHORIZATION\x10\x03\x12!\n" +
 	"\x1dFAILURE_CATEGORY_UNKNOWN_SENT\x10\x04\x12&\n" +
 	"\"FAILURE_CATEGORY_UNKNOWN_AMBIGUOUS\x10\x05\x12$\n" +
-	" FAILURE_CATEGORY_SCHEMA_MISMATCH\x10\x06*\xe6\x01\n" +
+	" FAILURE_CATEGORY_SCHEMA_MISMATCH\x10\x06\x12,\n" +
+	"(FAILURE_CATEGORY_RESEND_BUDGET_EXHAUSTED\x10\a*\xe6\x01\n" +
 	"\x12ConfirmationSource\x12#\n" +
 	"\x1fCONFIRMATION_SOURCE_UNSPECIFIED\x10\x00\x12'\n" +
 	"#CONFIRMATION_SOURCE_SUBMIT_RESPONSE\x10\x01\x12#\n" +
@@ -213,7 +556,47 @@ const file_company_gateway_event_v1_types_proto_rawDesc = "" +
 	"\rWaitingStatus\x12\x1e\n" +
 	"\x1aWAITING_STATUS_UNSPECIFIED\x10\x00\x12\x1f\n" +
 	"\x1bWAITING_STATUS_ACKNOWLEDGED\x10\x01\x12\"\n" +
-	"\x1eWAITING_STATUS_UNKNOWN_OUTCOME\x10\x02B\x9c\x02\n" +
+	"\x1eWAITING_STATUS_UNKNOWN_OUTCOME\x10\x02*\x9e\x01\n" +
+	"\vEnvironment\x12\x1b\n" +
+	"\x17ENVIRONMENT_UNSPECIFIED\x10\x00\x12\x1b\n" +
+	"\x17ENVIRONMENT_DEVELOPMENT\x10\x01\x12\x1b\n" +
+	"\x17ENVIRONMENT_INTEGRATION\x10\x02\x12\x1c\n" +
+	"\x18ENVIRONMENT_HOMOLOGATION\x10\x03\x12\x1a\n" +
+	"\x16ENVIRONMENT_PRODUCTION\x10\x04*\x9e\x01\n" +
+	"\fMismatchKind\x12\x1d\n" +
+	"\x19MISMATCH_KIND_UNSPECIFIED\x10\x00\x12\x1b\n" +
+	"\x17MISMATCH_KIND_STRUCTURE\x10\x01\x12\x1f\n" +
+	"\x1bMISMATCH_KIND_MISSING_FIELD\x10\x02\x12\x16\n" +
+	"\x12MISMATCH_KIND_TYPE\x10\x03\x12\x19\n" +
+	"\x15MISMATCH_KIND_VERSION\x10\x04*\xac\x01\n" +
+	"\x12InteractionOutcome\x12#\n" +
+	"\x1fINTERACTION_OUTCOME_UNSPECIFIED\x10\x00\x12\"\n" +
+	"\x1eINTERACTION_OUTCOME_NORMALIZED\x10\x01\x12$\n" +
+	" INTERACTION_OUTCOME_UNCORRELATED\x10\x02\x12'\n" +
+	"#INTERACTION_OUTCOME_SCHEMA_MISMATCH\x10\x03*\x84\x01\n" +
+	"\x14InteractionDirection\x12%\n" +
+	"!INTERACTION_DIRECTION_UNSPECIFIED\x10\x00\x12\"\n" +
+	"\x1eINTERACTION_DIRECTION_OUTBOUND\x10\x01\x12!\n" +
+	"\x1dINTERACTION_DIRECTION_INBOUND\x10\x02*\xe7\x01\n" +
+	"\x11InteractionSource\x12\"\n" +
+	"\x1eINTERACTION_SOURCE_UNSPECIFIED\x10\x00\x12&\n" +
+	"\"INTERACTION_SOURCE_SUBMIT_RESPONSE\x10\x01\x12\"\n" +
+	"\x1eINTERACTION_SOURCE_STATE_QUERY\x10\x02\x12\x1f\n" +
+	"\x1bINTERACTION_SOURCE_CALLBACK\x10\x03\x12\x1b\n" +
+	"\x17INTERACTION_SOURCE_FILE\x10\x04\x12$\n" +
+	" INTERACTION_SOURCE_EXTERNAL_READ\x10\x05*\x93\x01\n" +
+	"\x04Step\x12\x14\n" +
+	"\x10STEP_UNSPECIFIED\x10\x00\x12\x10\n" +
+	"\fSTEP_CONFIRM\x10\x01\x12\x0e\n" +
+	"\n" +
+	"STEP_AWAIT\x10\x02\x12\x0e\n" +
+	"\n" +
+	"STEP_RETRY\x10\x03\x12\r\n" +
+	"\tSTEP_FAIL\x10\x04\x12\x0e\n" +
+	"\n" +
+	"STEP_QUERY\x10\x05\x12\x12\n" +
+	"\x0eSTEP_RECONCILE\x10\x06\x12\x10\n" +
+	"\fSTEP_SUSPEND\x10\aB\x9c\x02\n" +
 	"\x1ccom.company.gateway.event.v1B\n" +
 	"TypesProtoP\x01Zmgithub.com/mateusmacedo/antecipa-market/apps/backend/gateway/contract/gen/go/company/gateway/event/v1;eventv1\xa2\x02\x03CGE\xaa\x02\x18Company.Gateway.Event.V1\xca\x02\x18Company\\Gateway\\Event\\V1\xe2\x02$Company\\Gateway\\Event\\V1\\GPBMetadata\xea\x02\x1bCompany::Gateway::Event::V1b\x06proto3"
 
@@ -229,11 +612,17 @@ func file_company_gateway_event_v1_types_proto_rawDescGZIP() []byte {
 	return file_company_gateway_event_v1_types_proto_rawDescData
 }
 
-var file_company_gateway_event_v1_types_proto_enumTypes = make([]protoimpl.EnumInfo, 3)
+var file_company_gateway_event_v1_types_proto_enumTypes = make([]protoimpl.EnumInfo, 9)
 var file_company_gateway_event_v1_types_proto_goTypes = []any{
-	(FailureCategory)(0),    // 0: company.gateway.event.v1.FailureCategory
-	(ConfirmationSource)(0), // 1: company.gateway.event.v1.ConfirmationSource
-	(WaitingStatus)(0),      // 2: company.gateway.event.v1.WaitingStatus
+	(FailureCategory)(0),      // 0: company.gateway.event.v1.FailureCategory
+	(ConfirmationSource)(0),   // 1: company.gateway.event.v1.ConfirmationSource
+	(WaitingStatus)(0),        // 2: company.gateway.event.v1.WaitingStatus
+	(Environment)(0),          // 3: company.gateway.event.v1.Environment
+	(MismatchKind)(0),         // 4: company.gateway.event.v1.MismatchKind
+	(InteractionOutcome)(0),   // 5: company.gateway.event.v1.InteractionOutcome
+	(InteractionDirection)(0), // 6: company.gateway.event.v1.InteractionDirection
+	(InteractionSource)(0),    // 7: company.gateway.event.v1.InteractionSource
+	(Step)(0),                 // 8: company.gateway.event.v1.Step
 }
 var file_company_gateway_event_v1_types_proto_depIdxs = []int32{
 	0, // [0:0] is the sub-list for method output_type
@@ -253,7 +642,7 @@ func file_company_gateway_event_v1_types_proto_init() {
 		File: protoimpl.DescBuilder{
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_company_gateway_event_v1_types_proto_rawDesc), len(file_company_gateway_event_v1_types_proto_rawDesc)),
-			NumEnums:      3,
+			NumEnums:      9,
 			NumMessages:   0,
 			NumExtensions: 0,
 			NumServices:   0,

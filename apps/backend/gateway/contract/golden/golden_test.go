@@ -30,6 +30,8 @@ var specs = []tb.Spec[proto.Message]{
 	externalCommandSubmittedSpec, externalCommandAcknowledgedSpec, externalCommandConfirmedSpec,
 	externalCommandFailedSpec, externalOutcomeUnknownSpec, externalCommandAmbiguityExpiredSpec,
 	externalCommandDispatchRequestedSpec,
+	externalSchemaMismatchDetectedSpec, externalInteractionUncorrelatedSpec, externalInteractionReprocessedSpec,
+	externalResponseCapturedSpec, externalInteractionStoredSpec,
 }
 
 // tb.GoldenSuite and tb.UpdateGolden resolve fixtures under tb.RepoRoot, the go.work

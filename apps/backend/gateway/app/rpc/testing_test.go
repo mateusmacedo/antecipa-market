@@ -41,6 +41,8 @@ var (
 	profilesTable       = memory.Table[domain.ProfileKey, domain.CapabilityProfileSnapshot]{Name: "capability_profiles"}
 	authorizationsTable = memory.Table[domain.ConsentID, domain.QueryAuthorizationSnapshot]{Name: "query_authorizations"}
 	commandsTable       = memory.Table[domain.IdempotencyKey, domain.ExternalCommandSnapshot]{Name: "external_commands"}
+	interactionsTable   = memory.Table[domain.InteractionID, domain.ExternalInteractionSnapshot]{Name: "external_interactions"}
+	referencesTable     = memory.Table[domain.ReferenceKey, domain.ExternalReferenceSnapshot]{Name: "external_references"}
 )
 
 // written remembers the ids a table received, so a relation reads them back
@@ -102,6 +104,8 @@ type relations struct {
 	profiles       *written[domain.ProfileKey]
 	authorizations *written[domain.ConsentID]
 	commands       *written[domain.IdempotencyKey]
+	interactions   *written[domain.InteractionID]
+	references     *written[domain.ReferenceKey]
 }
 
 type profilesOf struct {
@@ -140,15 +144,35 @@ func (c commandsOf) LoadByOutboundKey(ctx context.Context, key port.OutboundKey)
 	return filtered(ctx, c.r.commands, c.reader, func(s domain.ExternalCommandSnapshot) bool { return s.OutboundKey == string(key) }), nil
 }
 
-type harness struct {
-	store *memory.Store
-	conn  *grpc.ClientConn
+type interactionsOf struct{ r relations }
+
+func (i interactionsOf) LoadByPartnerEvent(ctx context.Context, event string) ([]domain.ExternalInteractionSnapshot, error) {
+	return filtered(ctx, i.r.interactions, interactionsTable.Reader(i.r.store), func(s domain.ExternalInteractionSnapshot) bool { return s.PartnerEventID == event }), nil
 }
 
-func newHarness(t *testing.T) *harness {
+func (i interactionsOf) LoadByCommand(ctx context.Context, command domain.IdempotencyKey) ([]domain.ExternalInteractionSnapshot, error) {
+	return filtered(ctx, i.r.interactions, interactionsTable.Reader(i.r.store), func(s domain.ExternalInteractionSnapshot) bool { return s.CommandID == command }), nil
+}
+
+type referencesOf struct{ r relations }
+
+func (x referencesOf) LoadBySubject(ctx context.Context, subject domain.SubjectID) ([]domain.ExternalReferenceSnapshot, error) {
+	return filtered(ctx, x.r.references, referencesTable.Reader(x.r.store), func(s domain.ExternalReferenceSnapshot) bool { return s.SubjectID == subject }), nil
+}
+
+type harness struct {
+	store   *memory.Store
+	conn    *grpc.ClientConn
+	service application.Service
+}
+
+// newHarness serves the use cases over memory; configure sets what a test
+// adds to the service, such as the raw store and the partner adapters.
+func newHarness(t *testing.T, configure ...func(*application.Service)) *harness {
 	t.Helper()
 	store := memory.New()
-	r := relations{store: store, profiles: &written[domain.ProfileKey]{}, authorizations: &written[domain.ConsentID]{}, commands: &written[domain.IdempotencyKey]{}}
+	r := relations{store: store, profiles: &written[domain.ProfileKey]{}, authorizations: &written[domain.ConsentID]{}, commands: &written[domain.IdempotencyKey]{},
+		interactions: &written[domain.InteractionID]{}, references: &written[domain.ReferenceKey]{}}
 	policy, err := kernelapp.IdempotencyPolicy(time.Second, time.Hour)
 	if err != nil {
 		t.Fatalf("IdempotencyPolicy() = %v", err)
@@ -159,10 +183,16 @@ func newHarness(t *testing.T) *harness {
 			profiles := profilesTable.Repository(tx)
 			commands := commandsTable.Repository(tx)
 			return application.Resources{
-				Connectors:          connectorsTable.Repository(tx),
-				Profiles:            tracked[domain.ProfileKey, domain.CapabilityProfileSnapshot]{Repository: profiles, ids: r.profiles},
-				Authorizations:      tracked[domain.ConsentID, domain.QueryAuthorizationSnapshot]{Repository: authorizationsTable.Repository(tx), ids: r.authorizations},
-				ExternalCommands:    tracked[domain.IdempotencyKey, domain.ExternalCommandSnapshot]{Repository: commands, ids: r.commands},
+				Connectors:       connectorsTable.Repository(tx),
+				Profiles:         tracked[domain.ProfileKey, domain.CapabilityProfileSnapshot]{Repository: profiles, ids: r.profiles},
+				Authorizations:   tracked[domain.ConsentID, domain.QueryAuthorizationSnapshot]{Repository: authorizationsTable.Repository(tx), ids: r.authorizations},
+				ExternalCommands: tracked[domain.IdempotencyKey, domain.ExternalCommandSnapshot]{Repository: commands, ids: r.commands},
+				ExternalInteractions: tracked[domain.InteractionID, domain.ExternalInteractionSnapshot]{
+					Repository: interactionsTable.Repository(tx), ids: r.interactions,
+				},
+				ExternalReferences: tracked[domain.ReferenceKey, domain.ExternalReferenceSnapshot]{
+					Repository: referencesTable.Repository(tx), ids: r.references,
+				},
 				ProfilesByConnector: profilesOf{r: r, reader: profiles},
 				CommandsBySeries:    commandsOf{r: r, reader: commands},
 				Ledger:              tx.AttemptLedger(),
@@ -179,12 +209,21 @@ func newHarness(t *testing.T) *harness {
 		CommandsByBusinessKey:        commandsOf{r: r, reader: commandReader},
 		CommandsByStatus:             commandsOf{r: r, reader: commandReader},
 		CommandsByOutboundKey:        commandsOf{r: r, reader: commandReader},
+		InteractionReader:            interactionsTable.Reader(store),
+		InteractionsByPartnerEvent:   interactionsOf{r: r},
+		InteractionsByCommand:        interactionsOf{r: r},
+		ReferenceReader:              referencesTable.Reader(store),
+		ReferencesBySubject:          referencesOf{r: r},
 		Clock:                        memory.FixedClock{At: occurred},
 		IDs:                          &memory.SequenceIDs{Prefix: "m-"},
 		Authorize:                    usecase.AllowAll[application.Operation](),
 		Idempotency:                  policy,
 		OutboundKeys:                 usecase.OutboundKeyPolicy{Digest: func(c []byte) port.Fingerprint { return sha256.Sum256(c) }},
+		DerivedKeys:                  application.DerivedKeyPolicy{Digest: func(c []byte) port.Fingerprint { return sha256.Sum256(c) }},
 		Consumer:                     "gateway",
+	}
+	for _, apply := range configure {
+		apply(&service)
 	}
 
 	ctrl, err := admission.New(admission.Config{Limits: kernelgrpc.MethodLimits(rpc.ServiceName, rpc.Methods(), unlimited), MaxKeys: 16, Clock: obsclock.System()})
@@ -215,7 +254,7 @@ func newHarness(t *testing.T) *harness {
 		t.Fatalf("NewClient() = %v", err)
 	}
 	t.Cleanup(func() { _ = conn.Close() })
-	return &harness{store: store, conn: conn}
+	return &harness{store: store, conn: conn, service: service}
 }
 
 func (h *harness) invoke(ctx context.Context, method string, req, resp proto.Message) error {

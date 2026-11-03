@@ -197,6 +197,7 @@ func operationFromTheWire(o *servicev1.OperationCapability) (domain.OperationCap
 		Quiescence: o.GetQuiescence(), AuthoritativeAbsence: o.GetAuthoritativeAbsence(), MaxQueries: int(o.GetMaxQueries()),
 		KeyAlphabet: o.GetKeyAlphabet(), KeyMaxLength: int(o.GetKeyMaxLength()),
 		QueryInterval: int(o.GetQueryInterval()), AmbiguityDeadline: int(o.GetAmbiguityDeadline()),
+		MaxSubmissions: int(o.GetMaxSubmissions()),
 	}, nil
 }
 

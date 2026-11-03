@@ -14,7 +14,7 @@ título, que começa com `Bounded context —`, e pela seção **Identidade**.
 A spec preenchida vive em `docs/specs/`, como as demais.
 
 Preencha as instruções entre colchetes e apague os colchetes. Regras e limiares
-citam a norma (`https://github.com/mateusmacedo/dmpf/blob/ddd3d0c4202879f168c7f6bfafaefadd94a3a621/docs/dmpf/`, ADRs) — nunca são reescritos aqui. Exemplo
+citam a norma (`https://github.com/mateusmacedo/dmpf/blob/25f0fda1e3ecab29582e1c85cb4df4e35478e154/docs/dmpf/`, ADRs) — nunca são reescritos aqui. Exemplo
 preenchido: a spec do golden `bookings`.
 
 ```markdown

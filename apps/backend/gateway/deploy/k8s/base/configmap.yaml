@@ -1,6 +1,10 @@
-# Valores não sensíveis dos três papéis: o relay publica em gateway.events e
-# gateway.dispatch, o consumer lê partner.events. Os opt-outs de TLS nascem
+# Valores não sensíveis dos três papéis: o relay publica em gateway.events,
+# gateway.dispatch, gateway.interactions e gateway.normalizations, o consumer lê
+# partner.events no grupo KAFKA_GROUP e esses quatro canais, cada um no seu
+# grupo. Os opt-outs de TLS nascem
 # desligados e o transporte gRPC não tem default: o overlay declara um dos dois modos.
+# O bucket do bruto (S3_BUCKET, AWS_REGION e, com KMS, S3_KMS_KEY_ARN) é do
+# ambiente; as credenciais vêm da cadeia padrão do SDK (a identidade do pod).
 apiVersion: v1
 kind: ConfigMap
 metadata:
@@ -11,10 +15,20 @@ data:
   KAFKA_GATEWAY_DLQ: gateway.events.dlq
   KAFKA_GATEWAY_DISPATCH_TOPIC: gateway.dispatch
   KAFKA_GATEWAY_DISPATCH_DLQ: gateway.dispatch.dlq
+  KAFKA_GATEWAY_INTERACTIONS_TOPIC: gateway.interactions
+  KAFKA_GATEWAY_INTERACTIONS_DLQ: gateway.interactions.dlq
+  KAFKA_GATEWAY_NORMALIZATIONS_TOPIC: gateway.normalizations
+  KAFKA_GATEWAY_NORMALIZATIONS_DLQ: gateway.normalizations.dlq
   KAFKA_PARTNER_TOPIC: partner.events
   KAFKA_PARTNER_DLQ: partner.events.dlq
   KAFKA_GROUP: gateway
+  KAFKA_GATEWAY_EVENTS_GROUP: gateway.events
+  KAFKA_GATEWAY_DISPATCH_GROUP: gateway.dispatch
+  KAFKA_GATEWAY_INTERACTIONS_GROUP: gateway.interactions
+  KAFKA_GATEWAY_NORMALIZATIONS_GROUP: gateway.normalizations
   KAFKA_INSECURE: 'false'
+  S3_INSECURE: 'false'
+  S3_PATH_STYLE: 'false'
   OTEL_SERVICE_NAME: gateway
   OTEL_EXPORTER_OTLP_PROTOCOL: grpc
   OTEL_EXPORTER_OTLP_ENDPOINT: http://otel-collector:4317

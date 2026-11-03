@@ -155,6 +155,36 @@ func (s Service) RequestResend(ctx context.Context, cmd RequestResend) (usecase.
 	})
 }
 
+// HoldDispatch is run by the dispatch handler when the operation of the command
+// is suspended at the send: nothing goes out, and the sweep resends once the
+// suspension lifts (decision 14).
+func (s Service) HoldDispatch(ctx context.Context, cmd HoldDispatch) (usecase.Outcome[domain.CommandResponse], error) {
+	// WHY: the command key and the message id together may exceed the 128
+	// characters of IDM-02, so the policy shortens them like any derived key.
+	key, err := s.DerivedKeys.key("hold", string(cmd.IdempotencyKey), string(cmd.MessageID))
+	if err != nil {
+		return usecase.Outcome[domain.CommandResponse]{}, fmt.Errorf("application: hold dispatch %s: %w", cmd.IdempotencyKey, err)
+	}
+	return usecase.Execute(port.WithIdempotencyKey(ctx, key), s.executor(), command[domain.CommandResponse]{
+		Operation:   OperationHoldDispatch,
+		Object:      string(cmd.IdempotencyKey),
+		Input:       cmd,
+		Fingerprint: usecase.NewFingerprint(OperationHoldDispatch).String(string(cmd.IdempotencyKey)).String(string(cmd.MessageID)),
+		Codec:       commandCodec,
+		Run: func(ctx context.Context, res Resources, identity usecase.Identity) (usecase.Outcome[domain.CommandResponse], error) {
+			outcome, err := usecase.Decide(ctx, res.ExternalCommands, res.Outbox, origin(AggregateTypeExternalCommand, string(cmd.IdempotencyKey)), cmd.IdempotencyKey, identity,
+				loadExistingCommand,
+				func(c *domain.ExternalCommand) (kernel.Accepted[domain.CommandResponse], *kernel.Rejection) {
+					return c.HoldDispatch(domain.HoldDispatch{At: identity.OccurredAt})
+				})
+			if err != nil {
+				return outcome, fmt.Errorf("application: hold dispatch %s: %w", cmd.IdempotencyKey, err)
+			}
+			return outcome, nil
+		},
+	})
+}
+
 // ExpireAmbiguity is called by SweepExternalCommands; the connector is read in
 // the unit of work for the partner the escalation event carries.
 func (s Service) ExpireAmbiguity(ctx context.Context, cmd ExpireAmbiguity) (usecase.Outcome[domain.CommandResponse], error) {

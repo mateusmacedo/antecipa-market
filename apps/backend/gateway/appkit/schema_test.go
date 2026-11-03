@@ -17,7 +17,8 @@ func TestTheDatabaseHoldsExactlyTheTablesOfThisContext(t *testing.T) {
 	got := pg.Tables(t, appkit.OpenPool(t))
 
 	want := []string{
-		"capability_profiles", "connectors", "external_attempt", "external_commands", "inbox", "outbox", "quarantine", "query_authorizations",
+		"capability_profiles", "connectors", "external_attempt", "external_commands", "external_interactions", "external_references",
+		"inbox", "outbox", "quarantine", "query_authorizations",
 	}
 	if !slices.Equal(got, want) {
 		t.Fatalf("tables = %v, want %v", got, want)
@@ -25,7 +26,9 @@ func TestTheDatabaseHoldsExactlyTheTablesOfThisContext(t *testing.T) {
 }
 
 func TestTheHarnessResetsEveryTableOfThisContext(t *testing.T) {
-	for _, table := range []string{"connectors", "capability_profiles", "query_authorizations", "external_commands"} {
+	for _, table := range []string{
+		"connectors", "capability_profiles", "query_authorizations", "external_commands", "external_interactions", "external_references",
+	} {
 		if !slices.Contains(appkit.Tables, table) {
 			t.Fatalf("Tables = %v, want %s reset between cases", appkit.Tables, table)
 		}

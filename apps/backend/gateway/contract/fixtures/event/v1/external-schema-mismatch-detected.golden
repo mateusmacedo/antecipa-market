@@ -1,0 +1,159 @@
+{
+  "format_version": "1",
+  "identity": {
+    "fixture": "gateway/event/v1/external-schema-mismatch-detected",
+    "contract": {
+      "package": "company.gateway.event.v1",
+      "message": "ExternalSchemaMismatchDetected"
+    },
+    "type": "com.company.gateway.external-schema-mismatch-detected.v1",
+    "dataschema": "type.googleapis.com/company.gateway.event.v1.ExternalSchemaMismatchDetected"
+  },
+  "covers": {
+    "profile_major": "1",
+    "contract_major": "v1"
+  },
+  "cases": [
+    {
+      "name": "all-conditionals-present",
+      "doc": "Caminho típico com os três atributos condicionais presentes (aggregateversion, tenantid, tracestate).",
+      "envelope": {
+        "aggregateversion": "7",
+        "causationid": "evt-0001",
+        "correlationid": "corr-0001",
+        "datacontenttype": "application/protobuf",
+        "dataschema": "type.googleapis.com/company.gateway.event.v1.ExternalSchemaMismatchDetected",
+        "id": "evt-0001",
+        "partitionkey": "c-42",
+        "source": "urn:dmpf:reference-gateway",
+        "specversion": "1.0",
+        "subject": "int-1001",
+        "tenantid": "tenant-a",
+        "time": "2026-09-02T12:00:00Z",
+        "traceparent": "00-0af7651916cd43dd8448eb211c80319c-b7ad6b7169203331-01",
+        "tracestate": "vendor=1",
+        "type": "com.company.gateway.external-schema-mismatch-detected.v1"
+      },
+      "payload": {
+        "asset_type": "duplicata",
+        "at": "2026-09-02T12:00:00Z",
+        "command_id": "prt-1:production:submitEffect:eff-1",
+        "connector_id": "prt-1:production",
+        "connector_key": "prt-1:production",
+        "environment": "ENVIRONMENT_PRODUCTION",
+        "interaction_id": "int-1001",
+        "mismatch_detail": "root is not an object",
+        "mismatch_kind": "MISMATCH_KIND_STRUCTURE",
+        "operation": "submitEffect",
+        "partner_declared_version": "2.1",
+        "partner_id": "prt-1"
+      },
+      "payload_bytes_hex": "0a08696e742d3130303112107072742d313a70726f64756374696f6e1a107072742d313a70726f64756374696f6e22057072742d312804320c7375626d69744566666563743a096475706c696361746142237072742d313a70726f64756374696f6e3a7375626d69744566666563743a6566662d3148015215726f6f74206973206e6f7420616e206f626a6563745a03322e31620608c09fe0d406",
+      "payload_hash": "3980a2f630f69181524a8dc2eff881fb2d30255743016f992f2bc0e471e5a3df"
+    },
+    {
+      "name": "all-conditionals-absent",
+      "doc": "Os três condicionais ausentes: nenhum entra no mapa de atributos (ENV-12, sem valor de preenchimento).",
+      "envelope": {
+        "causationid": "evt-0001",
+        "correlationid": "corr-0001",
+        "datacontenttype": "application/protobuf",
+        "dataschema": "type.googleapis.com/company.gateway.event.v1.ExternalSchemaMismatchDetected",
+        "id": "evt-0002",
+        "partitionkey": "c-42",
+        "source": "urn:dmpf:reference-gateway",
+        "specversion": "1.0",
+        "subject": "int-1001",
+        "time": "2026-09-02T12:00:00Z",
+        "traceparent": "00-0af7651916cd43dd8448eb211c80319c-b7ad6b7169203331-01",
+        "type": "com.company.gateway.external-schema-mismatch-detected.v1"
+      },
+      "payload": {
+        "asset_type": "",
+        "at": "2026-09-02T12:00:01Z",
+        "command_id": "",
+        "connector_id": "prt-1:production",
+        "connector_key": "prt-1:production",
+        "environment": "ENVIRONMENT_PRODUCTION",
+        "interaction_id": "int-1002",
+        "mismatch_detail": "campo obrigatório ausente: titular",
+        "mismatch_kind": "MISMATCH_KIND_MISSING_FIELD",
+        "operation": "queryAsset",
+        "partner_declared_version": "",
+        "partner_id": "prt-1"
+      },
+      "payload_bytes_hex": "0a08696e742d3130303212107072742d313a70726f64756374696f6e1a107072742d313a70726f64756374696f6e22057072742d312804320a717565727941737365744802522363616d706f206f627269676174c3b372696f20617573656e74653a20746974756c6172620608c19fe0d406",
+      "payload_hash": "e2def31c4444a799777f7b641c8b5905af735fe9f920f51de29a34a16aa1c0d2"
+    }
+  ],
+  "discriminators": [
+    {
+      "name": "unknown-field",
+      "doc": "Bytes canônicos mais um campo de número 99 (varint 42) que o contrato não conhece: a desserialização o preserva (PTB-10) e o hash o cobre (ENV-17).",
+      "envelope": {
+        "causationid": "evt-0001",
+        "correlationid": "corr-0001",
+        "datacontenttype": "application/protobuf",
+        "dataschema": "type.googleapis.com/company.gateway.event.v1.ExternalSchemaMismatchDetected",
+        "id": "evt-2001",
+        "partitionkey": "c-42",
+        "source": "urn:dmpf:reference-gateway",
+        "specversion": "1.0",
+        "subject": "int-1001",
+        "time": "2026-09-02T12:00:00Z",
+        "traceparent": "00-0af7651916cd43dd8448eb211c80319c-b7ad6b7169203331-01",
+        "type": "com.company.gateway.external-schema-mismatch-detected.v1"
+      },
+      "payload": {
+        "asset_type": "cartao",
+        "at": "2026-09-02T12:00:02Z",
+        "command_id": "prt-2:homologation:submitEffect:eff-3",
+        "connector_id": "prt-2:homologation",
+        "connector_key": "prt-2:homologation",
+        "environment": "ENVIRONMENT_HOMOLOGATION",
+        "interaction_id": "int-2001",
+        "mismatch_detail": "amount is a string",
+        "mismatch_kind": "MISMATCH_KIND_TYPE",
+        "operation": "submitEffect",
+        "partner_declared_version": "1.0",
+        "partner_id": "prt-2"
+      },
+      "payload_bytes_hex": "0a08696e742d3230303112127072742d323a686f6d6f6c6f676174696f6e1a127072742d323a686f6d6f6c6f676174696f6e22057072742d322803320c7375626d69744566666563743a0663617274616f42257072742d323a686f6d6f6c6f676174696f6e3a7375626d69744566666563743a6566662d3348035212616d6f756e74206973206120737472696e675a03312e30620608c29fe0d40698062a",
+      "payload_hash": "2b9dfc9cbcee1bcfd9d0680b03159abad194c29290f3367a30c699d0841d47ee"
+    },
+    {
+      "name": "non-canonical-field-order",
+      "doc": "Campos em ordem decrescente de número, o instante como sub-mensagem: decodifica no mesmo valor, mas o hash é o dos bytes transportados e difere do hash de uma reserialização (ENV-18). Campo repetido fica vazio e booleano fica falso, porque o codificador não canônico do kit cobre só strings, inteiros, enums e mensagens.",
+      "envelope": {
+        "causationid": "evt-0001",
+        "correlationid": "corr-0001",
+        "datacontenttype": "application/protobuf",
+        "dataschema": "type.googleapis.com/company.gateway.event.v1.ExternalSchemaMismatchDetected",
+        "id": "evt-2002",
+        "partitionkey": "c-42",
+        "source": "urn:dmpf:reference-gateway",
+        "specversion": "1.0",
+        "subject": "int-1001",
+        "time": "2026-09-02T12:00:00Z",
+        "traceparent": "00-0af7651916cd43dd8448eb211c80319c-b7ad6b7169203331-01",
+        "type": "com.company.gateway.external-schema-mismatch-detected.v1"
+      },
+      "payload": {
+        "asset_type": "",
+        "at": "2026-09-02T12:00:03.123456789Z",
+        "command_id": "prt-2:integration:requestRelease:eff-4",
+        "connector_id": "prt-2:integration",
+        "connector_key": "prt-2:integration",
+        "environment": "ENVIRONMENT_INTEGRATION",
+        "interaction_id": "int-2002",
+        "mismatch_detail": "schema 3 is not supported",
+        "mismatch_kind": "MISMATCH_KIND_VERSION",
+        "operation": "requestRelease",
+        "partner_declared_version": "3.0",
+        "partner_id": "prt-2"
+      },
+      "payload_bytes_hex": "620b08c39fe0d40610959aef3a5a03332e305219736368656d612033206973206e6f7420737570706f72746564480442267072742d323a696e746567726174696f6e3a7265717565737452656c656173653a6566662d34320e7265717565737452656c65617365280222057072742d321a117072742d323a696e746567726174696f6e12117072742d323a696e746567726174696f6e0a08696e742d32303032",
+      "payload_hash": "1eb147ba664e0294e5dbb99bdaeec88312b467e7506caf9fb3c757276d76f90e"
+    }
+  ]
+}

@@ -14,6 +14,17 @@ const (
 	StatusCancelled        CommandStatus = "cancelled"
 )
 
+// InFlight tells the statuses a command can still leave: the sets the sweep and
+// the follow-up list, bounded by the volume in flight.
+func (s CommandStatus) InFlight() bool {
+	switch s {
+	case StatusCreated, StatusAcknowledged, StatusRetryableFailure, StatusUnknownOutcome:
+		return true
+	default:
+		return false
+	}
+}
+
 // waits is the episode of 00 §7.2.5: the stay in acknowledged or
 // unknown_outcome, with one deadline however often it moves between the two.
 func (s CommandStatus) waits() bool {
@@ -30,6 +41,10 @@ const (
 	CategoryUnknownSent        FailureCategory = "unknown_sent"
 	CategoryUnknownAmbiguous   FailureCategory = "unknown_ambiguous"
 	CategorySchemaMismatch     FailureCategory = "schema_mismatch"
+
+	// CategoryResendBudgetExhausted is no class of the kernel: the partner
+	// confirmed it never got the command and the operation allows no more sends.
+	CategoryResendBudgetExhausted FailureCategory = "resend_budget_exhausted"
 )
 
 func (c FailureCategory) final() bool {
@@ -38,7 +53,8 @@ func (c FailureCategory) final() bool {
 
 // CommandProfile is the declaration of the operation copied at creation, so a
 // new version of the profile never changes the key of a command in flight.
-// Quiescence is in nanoseconds; QueryInterval and AmbiguityDeadline in seconds.
+// Quiescence is in nanoseconds; QueryInterval and AmbiguityDeadline in seconds;
+// MaxSubmissions counts the sends, the first included.
 type CommandProfile struct {
 	ProfileVersion         int
 	StateQuerySupported    bool
@@ -52,6 +68,7 @@ type CommandProfile struct {
 	KeyMaxLength           int
 	QueryInterval          int
 	AmbiguityDeadline      int
+	MaxSubmissions         int
 }
 
 // CommandProfileOf takes the most restrictive state query between the profile
@@ -70,6 +87,7 @@ func CommandProfileOf(profileVersion int, o OperationCapability, capabilityState
 		KeyMaxLength:           o.KeyMaxLength,
 		QueryInterval:          o.QueryInterval,
 		AmbiguityDeadline:      o.AmbiguityDeadline,
+		MaxSubmissions:         o.MaxSubmissions,
 	}
 }
 
@@ -103,6 +121,7 @@ type ExternalCommand struct {
 	ambiguityExpiredAt     kernel.Instant
 	confirmedAt            kernel.Instant
 	externalReferenceID    ExternalReferenceID
+	dispatchHeldSince      kernel.Instant
 }
 
 func NewExternalCommand(key IdempotencyKey) *ExternalCommand {
@@ -136,6 +155,7 @@ type ExternalCommandSnapshot struct {
 	AmbiguityExpiredAt     kernel.Instant
 	ConfirmedAt            kernel.Instant
 	ExternalReferenceID    ExternalReferenceID
+	DispatchHeldSince      kernel.Instant
 }
 
 func FromExternalCommandSnapshot(s ExternalCommandSnapshot) *ExternalCommand {
@@ -166,6 +186,7 @@ func FromExternalCommandSnapshot(s ExternalCommandSnapshot) *ExternalCommand {
 		ambiguityExpiredAt:     s.AmbiguityExpiredAt,
 		confirmedAt:            s.ConfirmedAt,
 		externalReferenceID:    s.ExternalReferenceID,
+		dispatchHeldSince:      s.DispatchHeldSince,
 	}
 }
 
@@ -197,6 +218,7 @@ func (c *ExternalCommand) Snapshot() ExternalCommandSnapshot {
 		AmbiguityExpiredAt:     c.ambiguityExpiredAt,
 		ConfirmedAt:            c.confirmedAt,
 		ExternalReferenceID:    c.externalReferenceID,
+		DispatchHeldSince:      c.dispatchHeldSince,
 	}
 }
 
@@ -224,13 +246,15 @@ func (c *ExternalCommand) dispatchRequested(at kernel.Instant) ExternalCommandDi
 }
 
 // KeepsSeriesOpen tells whether this command, of another version of the same
-// series, lets a new version be created: only a cancellation or a final
-// validation failure releases the series (00 §7.3).
+// series, lets a new version be created: only a cancellation, a final
+// validation failure or a confirmed absence with the resend budget spent
+// releases the series (00 §7.3).
 func (s ExternalCommandSnapshot) KeepsSeriesOpen(payloadVersion int) bool {
 	if s.PayloadVersion == payloadVersion {
 		return true
 	}
-	return s.Status == StatusCancelled || s.Status == StatusFinalFailure && s.FailureCategory == CategoryFinalValidation
+	releasing := s.FailureCategory == CategoryFinalValidation || s.FailureCategory == CategoryResendBudgetExhausted
+	return s.Status == StatusCancelled || s.Status == StatusFinalFailure && releasing
 }
 
 func seconds(n int) kernel.Instant {

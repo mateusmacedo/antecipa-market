@@ -35,12 +35,27 @@ func permissionOf(op application.Operation) port.Permission {
 		return "gateway:cancel-external-command"
 	case application.ResolveUnknownOutcome:
 		return "gateway:resolve-unknown-outcome"
-	// RequestResend and ExpireAmbiguity have no method of their own: the sweep
-	// runs them under its execution, so they answer for its permission.
-	case application.SweepExternalCommands, application.RequestResend, application.ExpireAmbiguity:
+	// RequestResend, ExpireAmbiguity and the state query have no method of
+	// their own: the sweep runs them under its execution, so they answer for
+	// its permission.
+	case application.SweepExternalCommands, application.RequestResend, application.ExpireAmbiguity, application.QueryExternalState:
 		return "gateway:sweep-external-commands"
-	case application.ConsumeCapabilityEnabled, application.ConsumeCapabilitySuspended:
+	// HoldDispatch has no method either: the dispatch handler runs it while it
+	// consumes the intent. The record, the conclusion and the link a
+	// normalization finds are steps of the interaction cycle, run by its
+	// consumers, the sweep and the edge of a partner interaction.
+	case application.ConsumeCapabilityEnabled, application.ConsumeCapabilitySuspended, application.ConsumeSchemaMismatchDetected, application.HoldDispatch,
+		application.RecordExternalInteraction, application.ConcludeInteraction, application.LinkInteractionReference,
+		application.DispatchExternalCommand, application.ConsumeResponseCaptured, application.ConsumeInteractionStored:
 		return "gateway:consume"
+	case application.ReprocessInteraction:
+		return "gateway:reprocess-interaction"
+	case application.LinkExternalReference:
+		return "gateway:link-external-reference"
+	case application.ReceivePartnerInteraction:
+		return "gateway:receive-partner-interaction"
+	case application.ReadExternal:
+		return "gateway:read-external"
 	case application.FindConnector:
 		return "gateway:find-connector"
 	case application.FindEffectiveCapabilityProfile:
@@ -55,6 +70,16 @@ func permissionOf(op application.Operation) port.Permission {
 		return "gateway:find-external-commands-by-business-key"
 	case application.FindExternalCommandsByStatus:
 		return "gateway:find-external-commands-by-status"
+	case application.FindExternalInteraction:
+		return "gateway:find-external-interaction"
+	case application.FindExternalInteractionByPartnerEvent:
+		return "gateway:find-external-interaction-by-partner-event"
+	case application.FindExternalInteractionsByCommand:
+		return "gateway:find-external-interactions-by-command"
+	case application.FindExternalReference:
+		return "gateway:find-external-reference"
+	case application.FindExternalReferencesBySubject:
+		return "gateway:find-external-references-by-subject"
 	default:
 		return ""
 	}

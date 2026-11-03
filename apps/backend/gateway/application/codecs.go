@@ -34,6 +34,35 @@ var commandCodec = usecase.OutcomeCodec[domain.CommandResponse]{
 	},
 }
 
+var interactionCodec = usecase.OutcomeCodec[domain.InteractionResponse]{
+	Encode: func(e *usecase.Encoder, r domain.InteractionResponse) {
+		e.String(string(r.InteractionID))
+		e.String(string(r.Status))
+	},
+	Decode: func(d *usecase.Decoder) domain.InteractionResponse {
+		id := domain.InteractionID(d.String())
+		return domain.InteractionResponse{InteractionID: id, Status: domain.InteractionStatus(d.String())}
+	},
+}
+
+var reprocessCodec = usecase.OutcomeCodec[domain.ReprocessResponse]{
+	Encode: func(e *usecase.Encoder, r domain.ReprocessResponse) {
+		e.String(string(r.InteractionID))
+		e.Int(int64(r.NormalizationRevision))
+	},
+	Decode: func(d *usecase.Decoder) domain.ReprocessResponse {
+		id := domain.InteractionID(d.String())
+		return domain.ReprocessResponse{InteractionID: id, NormalizationRevision: int(d.Int())}
+	},
+}
+
+var referenceCodec = usecase.OutcomeCodec[domain.ReferenceResponse]{
+	Encode: func(e *usecase.Encoder, r domain.ReferenceResponse) { e.String(string(r.ReferenceKey)) },
+	Decode: func(d *usecase.Decoder) domain.ReferenceResponse {
+		return domain.ReferenceResponse{ReferenceKey: domain.ReferenceKey(d.String())}
+	},
+}
+
 var commandStatusCodec = usecase.OutcomeCodec[domain.CommandStatusResponse]{
 	Encode: func(e *usecase.Encoder, r domain.CommandStatusResponse) {
 		e.String(string(r.IdempotencyKey))

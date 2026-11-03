@@ -17,6 +17,8 @@ var Grants = []postgres.Grant{
 	postgres.Mutable("capability_profiles"),
 	postgres.Mutable("query_authorizations"),
 	postgres.Mutable("external_commands"),
+	postgres.Mutable("external_interactions"),
+	postgres.Mutable("external_references"),
 }
 
 // Uniques is empty because every uniqueness the spec declares in this slice is

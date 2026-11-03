@@ -101,3 +101,42 @@ func TestARelationOfAnotherTenantAnswersAsCrossTenantAccess(t *testing.T) {
 		t.Fatalf("LoadByStatus() = %+v, %v; want nothing and a cross-tenant access", found, err)
 	}
 }
+
+func TestTheInteractionRelationsFilterByTheirColumn(t *testing.T) {
+	ctx := withExecution(t)
+	pool := appkit.OpenPool(t)
+	first, duplicate, other := interaction(1), interaction(1), interaction(1)
+	first.ID, duplicate.ID, other.ID = "int-1", "int-2", "int-3"
+	duplicate.Status, duplicate.DuplicateOf = domain.InteractionDuplicate, "int-1"
+	other.PartnerEventID, other.CommandID = "evt-p-9", "idem-9"
+	for _, i := range []domain.ExternalInteractionSnapshot{first, duplicate, other} {
+		pg.Seed(t, ctx, pool, provider.NewExternalInteractionRepository, i.ID, i)
+	}
+	reader := provider.NewExternalInteractionsReader(postgres.NewReadPool(pool))
+
+	byEvent, err := reader.LoadByPartnerEvent(ctx, "evt-p-1")
+	if err != nil || len(byEvent) != 2 {
+		t.Fatalf("LoadByPartnerEvent(evt-p-1) = %+v, %v; want the first reception and its duplicate", byEvent, err)
+	}
+	byCommand, err := reader.LoadByCommand(ctx, "idem-9")
+	if err != nil || len(byCommand) != 1 || byCommand[0].ID != "int-3" {
+		t.Fatalf("LoadByCommand(idem-9) = %+v, %v", byCommand, err)
+	}
+}
+
+func TestTheReferenceRelationFiltersBySubject(t *testing.T) {
+	ctx := withExecution(t)
+	pool := appkit.OpenPool(t)
+	first, other := reference(1), reference(1)
+	first.Key, other.Key = "prt-1:registry:asset:dup-1", "prt-1:registry:asset:dup-2"
+	other.SubjectID = "ast-2"
+	for _, r := range []domain.ExternalReferenceSnapshot{first, other} {
+		pg.Seed(t, ctx, pool, provider.NewExternalReferenceRepository, r.Key, r)
+	}
+
+	found, err := provider.NewExternalReferencesReader(postgres.NewReadPool(pool)).LoadBySubject(ctx, "ast-2")
+
+	if err != nil || len(found) != 1 || found[0].Key != "prt-1:registry:asset:dup-2" {
+		t.Fatalf("LoadBySubject(ast-2) = %+v, %v", found, err)
+	}
+}

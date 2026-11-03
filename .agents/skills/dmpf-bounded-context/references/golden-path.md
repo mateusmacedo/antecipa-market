@@ -31,7 +31,7 @@ pnpm nx g @mateusmacedo/dmpf-plugin:bounded-context <name> --boundedContext <ctx
   Acrescenta um `use` ao `go.work` (ADR-045). Não há `pnpm install`.
 - `--service-name` define o nome qualificado do serviço gRPC; sem ele, vira
   `company.<name>.service.v1.<Name>Service`.
-- Norma: ADR-012 (classificação declarada), ADR-053; `https://github.com/mateusmacedo/dmpf/blob/ddd3d0c4202879f168c7f6bfafaefadd94a3a621/tools/dmpf-plugin/README.md`.
+- Norma: ADR-012 (classificação declarada), ADR-053; `https://github.com/mateusmacedo/dmpf/blob/25f0fda1e3ecab29582e1c85cb4df4e35478e154/tools/dmpf-plugin/README.md`.
 - O esqueleto é o ponto de partida: preencha os arquivos gerados, não os
   recrie. `project.json`, `go.mod`, `go.work` e `dmpf-units.json` não se
   editam à mão, salvo o `include` por merge no passo 9.
@@ -40,7 +40,7 @@ pnpm nx g @mateusmacedo/dmpf-plugin:bounded-context <name> --boundedContext <ctx
 
 | Peça | Molde |
 | --- | --- |
-| Agregado, `Snapshot`, `From*Snapshot`, `Equal`, `clone` | `https://github.com/mateusmacedo/dmpf/blob/ddd3d0c4202879f168c7f6bfafaefadd94a3a621/apps/backend/bookings/domain/booking.go` |
+| Agregado, `Snapshot`, `From*Snapshot`, `Equal`, `clone` | `https://github.com/mateusmacedo/dmpf/blob/25f0fda1e3ecab29582e1c85cb4df4e35478e154/apps/backend/bookings/domain/booking.go` |
 | UPR de criação | `bookings/domain/reserve.go` |
 | UPR sobre agregado existente | `bookings/domain/cancel.go` |
 | Agregado com chave natural e `initializesOnNotFound` | `bookings/domain/resource.go` |
@@ -66,7 +66,7 @@ pnpm nx g @mateusmacedo/dmpf-plugin:bounded-context <name> --boundedContext <ctx
 
 - Um `Repository` por agregado, `Outbox()`, e `Inbox()` só se consome; `Reader`
   com um método por consulta, `Find<Agregado>By<Campos>`.
-- Molde: `https://github.com/mateusmacedo/dmpf/blob/ddd3d0c4202879f168c7f6bfafaefadd94a3a621/libs/backend/go/ports/{repository,uow,outbox,inbox}.go`. O
+- Molde: `https://github.com/mateusmacedo/dmpf/blob/25f0fda1e3ecab29582e1c85cb4df4e35478e154/libs/backend/go/ports/{repository,uow,outbox,inbox}.go`. O
   módulo `ports` é do kernel e não se duplica — o package `<name>/ports`
   declara só as portas do contexto, sobre os tipos do kernel; onde importa os
   dois, o kernel recebe o alias `port`.
@@ -76,14 +76,14 @@ pnpm nx g @mateusmacedo/dmpf-plugin:bounded-context <name> --boundedContext <ctx
 
 | Peça | Molde |
 | --- | --- |
-| `service.go`: `AggregateType`, `Destination`, `CommandConsumer`, `Resources` (com `Commands`), `Service` (com `Idempotency`), `Operation*`, o `origin` que os casos de uso passam a `usecase.Decide`, o `executor()` e o alias `command[R] = usecase.Command[Resources, Operation, R]` | `https://github.com/mateusmacedo/dmpf/blob/ddd3d0c4202879f168c7f6bfafaefadd94a3a621/apps/backend/bookings/application/service.go` |
+| `service.go`: `AggregateType`, `Destination`, `CommandConsumer`, `Resources` (com `Commands`), `Service` (com `Idempotency`), `Operation*`, o `origin` que os casos de uso passam a `usecase.Decide`, o `executor()` e o alias `command[R] = usecase.Command[Resources, Operation, R]` | `https://github.com/mateusmacedo/dmpf/blob/25f0fda1e3ecab29582e1c85cb4df4e35478e154/apps/backend/bookings/application/service.go` |
 | Codec da resposta, um por operação de comando | `bookings/application/codecs.go` |
 | Caso de uso de criação (`usecase.Execute` + `usecase.Decide` com `usecase.Absent`, ramo `creates`) | `bookings/application/reserve_booking.go`; o `Loader` sem captura é `var` de `service.go` |
 | Caso de uso sobre existente (`usecase.Existing`) | `bookings/application/cancel_booking.go`; `Loader` em `service.go` |
 | Caso de uso que cria quando não acha (`usecase.OrNew`, `initializesOnNotFound`) | `bookings/application/register_resource.go`; `Loader` em `service.go` |
 | Consulta fora da UoW, pelo esqueleto `usecase.Query[Operation]` | `bookings/application/find_booking.go`, `find_booking_by_resource.go` |
-| Caso de uso de consumo (sete disposições) — só se consome | `https://github.com/mateusmacedo/dmpf/blob/ddd3d0c4202879f168c7f6bfafaefadd94a3a621/apps/backend/reservations/application/consume.go` |
-| Realização em memória para teste (`memory.Table[ID, S]` por agregado, com `memory.Unique` de mesmo nome para cada unicidade declarada no provider) | `https://github.com/mateusmacedo/dmpf/blob/ddd3d0c4202879f168c7f6bfafaefadd94a3a621/libs/backend/go/memory/{tx,store,inbox,clock,errors}.go`; `bookings/application/doubles_test.go` |
+| Caso de uso de consumo (sete disposições) — só se consome | `https://github.com/mateusmacedo/dmpf/blob/25f0fda1e3ecab29582e1c85cb4df4e35478e154/apps/backend/reservations/application/consume.go` |
+| Realização em memória para teste (`memory.Table[ID, S]` por agregado, com `memory.Unique` de mesmo nome para cada unicidade declarada no provider) | `https://github.com/mateusmacedo/dmpf/blob/25f0fda1e3ecab29582e1c85cb4df4e35478e154/libs/backend/go/memory/{tx,store,inbox,clock,errors}.go`; `bookings/application/doubles_test.go` |
 | Testes de sequência, instrumentação e caminhos de falha, sobre o `serviceskit` | `bookings/application/{sequence_test,instrumentation_test,failure_test,doubles_test}.go` |
 
 - Norma: FND-04 §3.2 (a sequência canônica), §6.4 (disposições); ADR-035
@@ -108,7 +108,7 @@ pnpm nx g @mateusmacedo/dmpf-plugin:bounded-context <name> --boundedContext <ctx
 
 | Peça | Molde |
 | --- | --- |
-| `schema.sql`: agregado no plural, `tenant_id` à frente da chave, `<agregado>_id`, `version`, `snapshot jsonb`, coluna tipada só para o que uma consulta filtra | `https://github.com/mateusmacedo/dmpf/blob/ddd3d0c4202879f168c7f6bfafaefadd94a3a621/apps/backend/bookings/provider/schema.sql` |
+| `schema.sql`: agregado no plural, `tenant_id` à frente da chave, `<agregado>_id`, `version`, `snapshot jsonb`, coluna tipada só para o que uma consulta filtra | `https://github.com/mateusmacedo/dmpf/blob/25f0fda1e3ecab29582e1c85cb4df4e35478e154/apps/backend/bookings/provider/schema.sql` |
 | `schema.go`: o DDL embutido para o composition root migrar, `Grants` e `Uniques` (um `<var>.Uniques()` por `Table` com `Unique`) | `bookings/provider/schema.go` |
 | Repositório: struct de estado privado com tags JSON estáveis, optimistic locking; `postgres.SnapshotTable` quando o estado inteiro vive no `snapshot`, `Table` à mão quando há coluna tipada | `bookings/provider/resource_repository.go`, `booking_repository.go` |
 | Unicidade de negócio (ADR-066): `CONSTRAINT <tabela>_<colunas>_key UNIQUE (tenant_id, ...)` no `CREATE TABLE`, coluna gerada do `snapshot` quando o campo só vive nele, e `postgres.Unique{Name, Columns, Rejection}` no `Unique` do `Table` | `bookings/provider/{schema.sql,resource_repository.go}` (`withUniqueName`) |
@@ -128,13 +128,13 @@ pnpm nx g @mateusmacedo/dmpf-plugin:bounded-context <name> --boundedContext <ctx
   em tabela particionada, partição ou com herança.
 - Banco de teste: `appkit.OpenPool(t)` abre `<name>_test` no servidor de
   `PG_DSN`, migra as capacidades pedidas e o schema do contexto e trunca as
-  tabelas de `Tables` (`https://github.com/mateusmacedo/dmpf/blob/ddd3d0c4202879f168c7f6bfafaefadd94a3a621/libs/backend/go/testkit/tb/pg/pool.go`).
+  tabelas de `Tables` (`https://github.com/mateusmacedo/dmpf/blob/25f0fda1e3ecab29582e1c85cb4df4e35478e154/libs/backend/go/testkit/tb/pg/pool.go`).
 
 ## 7. `app`
 
 | Peça | Molde |
 | --- | --- |
-| Configuração: `Defaults(role)`, `FromEnv`, `Validate`, variáveis sem `DMPF_`; seções `API kernelgrpc.APIEnv` e `Policies kernelapp.Policies`, e o `requirements()` que compõe os `Missing()` com as variáveis do contexto | `https://github.com/mateusmacedo/dmpf/blob/ddd3d0c4202879f168c7f6bfafaefadd94a3a621/apps/backend/bookings/app/config.go` |
+| Configuração: `Defaults(role)`, `FromEnv`, `Validate`, variáveis sem `DMPF_`; seções `API kernelgrpc.APIEnv` e `Policies kernelapp.Policies`, e o `requirements()` que compõe os `Missing()` com as variáveis do contexto | `https://github.com/mateusmacedo/dmpf/blob/25f0fda1e3ecab29582e1c85cb4df4e35478e154/apps/backend/bookings/app/config.go` |
 | Composition root: `Run`, `RunWith` sobre `serve.ServeAPI` e `serve.RunRelay` do kernel (gRPC, migrate no ready, relay e purga ficam no `app/serve`), `Waits` e `NewService`, e o `serve.API` com o `Register` do serviço; `Commands` ligado a `tx.CommandInbox` e a política por `kernelapp.IdempotencyPolicy` | `bookings/app/wiring.go` |
 | Serviço gRPC: `ServiceDesc` com um `kernelgrpc.Unary(ServiceName, kernelgrpc.Method(descriptor, "<Método>"), <Ctx>Server.<Método>)` por método, `Methods()` e `FullMethod()` delegando ao kernel, `Server` sobre o serviço de aplicação | `bookings/app/rpc/service.go` |
 | Handler de comando pelo `kernelgrpc.Command`: o caso de uso, a recusa e o aceite no oneof da resposta, com `kernelgrpc.StatusOf(err)` na falha; `kernelgrpc.ExecutionOf` quando o handler precisa do contexto de execução. O template não o traz, porque nasce sem handlers | `bookings/app/rpc/service.go` |
@@ -142,7 +142,8 @@ pnpm nx g @mateusmacedo/dmpf-plugin:bounded-context <name> --boundedContext <ctx
 | Canal que o relay drena (`<Ctx>Channel`) | `bookings/app/catalog.go` |
 | Autorização e instrumentação | `bookings/app/{authorization,telemetry}.go` |
 | e2e gRPC por bufconn sobre Postgres | `bookings/app/e2e_test.go` |
-| Consumer adapter (`envelope.Unpack`) — **só se o contexto consome** | `https://github.com/mateusmacedo/dmpf/blob/ddd3d0c4202879f168c7f6bfafaefadd94a3a621/apps/backend/reservations/app/consumer.go` |
+| Consumer adapter (`envelope.Unpack`) — **só se o contexto consome** | `https://github.com/mateusmacedo/dmpf/blob/25f0fda1e3ecab29582e1c85cb4df4e35478e154/apps/backend/reservations/app/consumer.go` |
+| Assinatura do consumidor: canal com os eventos do tópico (`channel.NewKafka(..., events...)`), `Accepts` com os tipos de fio tratados, `Channel.Carries` por `channel.WireTypes` e `kernelapp.Sink` no transporte; o tipo alheio é descartado pelo kernel (`KFK-03c`, ADR-072) — **só se o contexto consome** | `https://github.com/mateusmacedo/dmpf/blob/25f0fda1e3ecab29582e1c85cb4df4e35478e154/apps/backend/reservations/app/wiring.go` |
 
 - Norma: ADR-044 (REST só no `bff`, contextos atrás de gRPC), ADR-053; FND-08
   (as três posições de observabilidade). A cadeia de interceptors é
@@ -155,7 +156,7 @@ pnpm nx g @mateusmacedo/dmpf-plugin:bounded-context <name> --boundedContext <ctx
 - Da mesma forma, o papel `api` recusa com `serve.ErrNoMethods` enquanto o
   `ServiceDesc` não tiver método, e o `Register` só pode registrar o serviço do
   `Desc`: outro serviço passaria sem admissão nem deadline.
-- A borda REST do contexto é do `bff` (`https://github.com/mateusmacedo/dmpf/blob/ddd3d0c4202879f168c7f6bfafaefadd94a3a621/apps/backend/bff/app/api/routes.go`,
+- A borda REST do contexto é do `bff` (`https://github.com/mateusmacedo/dmpf/blob/25f0fda1e3ecab29582e1c85cb4df4e35478e154/apps/backend/bff/app/api/routes.go`,
   `handlers_bookings.go`, `app/rpc/clients.go`), em tarefa própria. Contexto
   com `app/http` reprova no `dmpf-context-check.sh`.
 
@@ -163,11 +164,11 @@ pnpm nx g @mateusmacedo/dmpf-plugin:bounded-context <name> --boundedContext <ctx
 
 1. O serviço em
    `apps/backend/<name>/contract/proto/company/<name>/service/v1/<name>_service.proto`. Molde:
-   `https://github.com/mateusmacedo/dmpf/blob/ddd3d0c4202879f168c7f6bfafaefadd94a3a621/apps/backend/bookings/contract/proto/company/bookings/service/v1/bookings_service.proto`.
+   `https://github.com/mateusmacedo/dmpf/blob/25f0fda1e3ecab29582e1c85cb4df4e35478e154/apps/backend/bookings/contract/proto/company/bookings/service/v1/bookings_service.proto`.
 2. Um `.proto` por evento **publicado**, em
    `apps/backend/<name>/contract/proto/company/<name>/event/v1/<evento>.proto`, package
    `company.<name>.event.v1`, `option go_package`, comentários mínimos para o
-   lint STANDARD. Molde: `https://github.com/mateusmacedo/dmpf/blob/ddd3d0c4202879f168c7f6bfafaefadd94a3a621/apps/backend/bookings/contract/proto/company/bookings/event/v1/booking_reserved.proto`.
+   lint STANDARD. Molde: `https://github.com/mateusmacedo/dmpf/blob/25f0fda1e3ecab29582e1c85cb4df4e35478e154/apps/backend/bookings/contract/proto/company/bookings/event/v1/booking_reserved.proto`.
 3. OpenAPI em `apps/backend/<name>/contract/openapi/v1/openapi.yaml`, com `bearerAuth`;
    é o contrato que o `bff` serve.
 4. Unidade `<ctx>/contract` no `apps/backend/<name>/contract/dmpf-units.json`:
@@ -176,7 +177,7 @@ pnpm nx g @mateusmacedo/dmpf-plugin:bounded-context <name> --boundedContext <ctx
 5. Passo humano: `(cd apps/backend/<name>/contract && bash ../../../../tools/buf.sh generate)`,
    depois `pnpm nx run <name>-contract:tidy`, que põe o `require` do protobuf no
    `go.mod`, e as exceções `reflect` e `unsafe` do gerado no manifesto, pedidas
-   à arquitetura e à plataforma (molde: `https://github.com/mateusmacedo/dmpf/blob/ddd3d0c4202879f168c7f6bfafaefadd94a3a621/apps/backend/bookings/contract/dmpf-units.json`).
+   à arquitetura e à plataforma (molde: `https://github.com/mateusmacedo/dmpf/blob/25f0fda1e3ecab29582e1c85cb4df4e35478e154/apps/backend/bookings/contract/dmpf-units.json`).
 6. Gates: `pnpm nx run <name>-contract:buf-lint`, `buf-pins`,
    `buf-generate-check` e `NX_BASE=<base> buf-breaking`.
 
@@ -188,13 +189,13 @@ pnpm nx g @mateusmacedo/dmpf-plugin:bounded-context <name> --boundedContext <ctx
 - Todo package de produção novo entra no `include` da unidade do seu bloco,
   no `dmpf-units.json` do módulo, por merge; `exceptions` e
   `public_integration_surface` preservados.
-- Norma: ADR-012; `https://github.com/mateusmacedo/dmpf/blob/ddd3d0c4202879f168c7f6bfafaefadd94a3a621/docs/guides/dmpf-manifesto.md`. Package fora do manifesto
+- Norma: ADR-012; `https://github.com/mateusmacedo/dmpf/blob/25f0fda1e3ecab29582e1c85cb4df4e35478e154/docs/guides/dmpf-manifesto.md`. Package fora do manifesto
   reprova com `DMPF-U001`.
 
 ## 10. Classificação — passo humano
 
 ```bash
-go run github.com/mateusmacedo/dmpf/tools/dmpf-conformance/cmd/conformance@v1.0.0-rc.7 --root . --write-baseline
+go run github.com/mateusmacedo/dmpf/tools/dmpf-conformance/cmd/conformance@v1.0.0-rc.8 --root . --write-baseline
 ```
 
 - Norma: ADR-012; sem o baseline regravado, `DMPF-T001`.
@@ -206,7 +207,7 @@ pnpm nx run-many -t fmt-check,vet,build,lint -p <name>
 PG_DSN='postgres://postgres:postgres@localhost:5432/postgres?sslmode=disable' \
   pnpm nx run-many -t test-race,test-distributed -p <name>
 DMPF_APPS_DIR=apps/backend bash node_modules/@mateusmacedo/dmpf-plugin/scripts/dmpf-context-check.sh --context apps/backend/<name>
-go run github.com/mateusmacedo/dmpf/tools/dmpf-conformance/cmd/conformance@v1.0.0-rc.7 --root .
+go run github.com/mateusmacedo/dmpf/tools/dmpf-conformance/cmd/conformance@v1.0.0-rc.8 --root .
 pnpm biome ci .
 ```
 

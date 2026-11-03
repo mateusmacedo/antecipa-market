@@ -141,7 +141,7 @@ func (s Server) SweepExternalCommands(ctx context.Context, _ *servicev1.SweepExt
 		return nil, kernelgrpc.StatusOf(err)
 	}
 	return &servicev1.SweepExternalCommandsResponse{
-		ResendRequested: int32(report.ResendRequested), AmbiguityExpired: int32(report.AmbiguityExpired),
+		ResendRequested: int32(report.ResendRequested), StateQueried: int32(report.StateQueried), AmbiguityExpired: int32(report.AmbiguityExpired),
 		Skipped: int32(report.Skipped), Failed: int32(report.Failed),
 	}, nil
 }

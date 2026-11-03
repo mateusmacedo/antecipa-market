@@ -35,6 +35,7 @@ type commandState struct {
 	AmbiguityExpiredAt     int64        `json:"ambiguityExpiredAt"`
 	ConfirmedAt            int64        `json:"confirmedAt"`
 	ExternalReferenceID    string       `json:"externalReferenceId"`
+	DispatchHeldSince      int64        `json:"dispatchHeldSince"`
 }
 
 type commandShape struct {
@@ -50,6 +51,7 @@ type commandShape struct {
 	KeyMaxLength           int    `json:"keyMaxLength"`
 	QueryInterval          int    `json:"queryInterval"`
 	AmbiguityDeadline      int    `json:"ambiguityDeadline"`
+	MaxSubmissions         int    `json:"maxSubmissions"`
 }
 
 // commandTable guards series_key: CreateExternalCommand reads the series under
@@ -155,13 +157,14 @@ func stateOfCommand(s domain.ExternalCommandSnapshot) commandState {
 			ProfileVersion: p.ProfileVersion, StateQuerySupported: p.StateQuerySupported, IdempotencySupport: string(p.IdempotencySupport),
 			PartialResultSupported: p.PartialResultSupported, Efficacy: string(p.Efficacy), Quiescence: p.Quiescence,
 			AuthoritativeAbsence: p.AuthoritativeAbsence, MaxQueries: p.MaxQueries, KeyAlphabet: p.KeyAlphabet, KeyMaxLength: p.KeyMaxLength,
-			QueryInterval: p.QueryInterval, AmbiguityDeadline: p.AmbiguityDeadline,
+			QueryInterval: p.QueryInterval, AmbiguityDeadline: p.AmbiguityDeadline, MaxSubmissions: p.MaxSubmissions,
 		},
 		FailureCategory: string(s.FailureCategory), CreatedAt: int64(s.CreatedAt), Submissions: s.Submissions,
 		LastSubmittedAt: int64(s.LastSubmittedAt), WaitingSince: int64(s.WaitingSince),
 		AcknowledgedNotified: s.AcknowledgedNotified, UnknownNotified: s.UnknownNotified,
 		NextQueryAt: int64(s.NextQueryAt), ResendAfter: int64(s.ResendAfter), ReconciliationRequired: s.ReconciliationRequired,
 		AmbiguityExpiredAt: int64(s.AmbiguityExpiredAt), ConfirmedAt: int64(s.ConfirmedAt), ExternalReferenceID: string(s.ExternalReferenceID),
+		DispatchHeldSince: int64(s.DispatchHeldSince),
 	}
 }
 
@@ -174,7 +177,7 @@ func commandOf(state commandState) domain.ExternalCommandSnapshot {
 			ProfileVersion: p.ProfileVersion, StateQuerySupported: p.StateQuerySupported, IdempotencySupport: domain.IdempotencySupport(p.IdempotencySupport),
 			PartialResultSupported: p.PartialResultSupported, Efficacy: domain.Efficacy(p.Efficacy), Quiescence: p.Quiescence,
 			AuthoritativeAbsence: p.AuthoritativeAbsence, MaxQueries: p.MaxQueries, KeyAlphabet: p.KeyAlphabet, KeyMaxLength: p.KeyMaxLength,
-			QueryInterval: p.QueryInterval, AmbiguityDeadline: p.AmbiguityDeadline,
+			QueryInterval: p.QueryInterval, AmbiguityDeadline: p.AmbiguityDeadline, MaxSubmissions: p.MaxSubmissions,
 		},
 		FailureCategory: domain.FailureCategory(state.FailureCategory), CreatedAt: kernel.Instant(state.CreatedAt), Submissions: state.Submissions,
 		LastSubmittedAt: kernel.Instant(state.LastSubmittedAt), WaitingSince: kernel.Instant(state.WaitingSince),
@@ -182,5 +185,6 @@ func commandOf(state commandState) domain.ExternalCommandSnapshot {
 		NextQueryAt: kernel.Instant(state.NextQueryAt), ResendAfter: kernel.Instant(state.ResendAfter),
 		ReconciliationRequired: state.ReconciliationRequired, AmbiguityExpiredAt: kernel.Instant(state.AmbiguityExpiredAt),
 		ConfirmedAt: kernel.Instant(state.ConfirmedAt), ExternalReferenceID: domain.ExternalReferenceID(state.ExternalReferenceID),
+		DispatchHeldSince: kernel.Instant(state.DispatchHeldSince),
 	}
 }

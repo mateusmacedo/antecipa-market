@@ -4,6 +4,7 @@ import (
 	"testing"
 
 	kernel "github.com/mateusmacedo/dmpf/libs/backend/go/domain"
+	port "github.com/mateusmacedo/dmpf/libs/backend/go/ports"
 
 	"github.com/mateusmacedo/antecipa-market/apps/backend/gateway/application"
 	"github.com/mateusmacedo/antecipa-market/apps/backend/gateway/domain"
@@ -17,6 +18,7 @@ func simulatorOperation(operation string) domain.OperationCapability {
 		IdempotencySupport: domain.IdempotencyKeyHeader, AssetTypes: []string{"duplicata"},
 		EncumbranceCoverage: domain.CoverageComplete, Efficacy: domain.EfficacyOnSubmit, Quiescence: int64(30 * second),
 		MaxQueries: 3, KeyAlphabet: "0123456789abcdef", KeyMaxLength: 32, QueryInterval: 60, AmbiguityDeadline: 3600,
+		MaxSubmissions: 3,
 	}
 }
 
@@ -50,6 +52,10 @@ func TestDeclareCapabilityProfileRefuses(t *testing.T) {
 	noDeadline.AmbiguityDeadline = 0
 	noInterval := simulatorOperation("submitEffect")
 	noInterval.QueryInterval = 0
+	noBudget := simulatorOperation("submitEffect")
+	noBudget.MaxSubmissions = 0
+	queriesAtTheLedgerCap := simulatorOperation("submitEffect")
+	queriesAtTheLedgerCap.MaxQueries = port.MaxAttemptEntries
 	tests := []struct {
 		name string
 		cmd  application.DeclareCapabilityProfile
@@ -59,6 +65,8 @@ func TestDeclareCapabilityProfileRefuses(t *testing.T) {
 		{"with a key that does not reach 128 bits in its alphabet", declareProfile(shortKey), domain.CodeCapabilityProfileExternalProfileInvalid},
 		{"a write operation without ambiguity deadline", declareProfile(noDeadline), domain.CodeCapabilityProfileAmbiguityDeadlineMissing},
 		{"a write operation with state query and no query interval", declareProfile(noInterval), domain.CodeCapabilityProfileQueryIntervalMissing},
+		{"a write operation without max submissions", declareProfile(noBudget), domain.CodeCapabilityProfileMaxSubmissionsMissing},
+		{"maxQueries equal to the ledger cap", declareProfile(queriesAtTheLedgerCap), domain.CodeCapabilityProfileExternalProfileInvalid},
 	}
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
@@ -97,5 +105,37 @@ func TestFindEffectiveCapabilityProfileReadsTheVersionInForce(t *testing.T) {
 	}
 	if _, err := h.service.FindEffectiveCapabilityProfile(withExecution(t), testConnector, testOccurred-1); err == nil {
 		t.Fatalf("an instant before every version found a profile")
+	}
+}
+
+func TestDeclareCapabilityProfileTakesMaxQueriesBelowTheLedgerCap(t *testing.T) {
+	h := newHarness(t)
+	belowTheCap := simulatorOperation("submitEffect")
+	belowTheCap.MaxQueries = port.MaxAttemptEntries - 1
+
+	must(h.service.DeclareCapabilityProfile(withExecution(t), declareProfile(belowTheCap))).accepted(t)
+
+	profile, err := h.service.FindCapabilityProfile(withExecution(t), testConnector, 2)
+	if err != nil || profile.Operations[0].MaxSubmissions != 3 || profile.Operations[0].MaxQueries != port.MaxAttemptEntries-1 {
+		t.Fatalf("FindCapabilityProfile() = %+v, %v, want the budget and the queries kept", profile, err)
+	}
+}
+
+// The edge takes a gRPC message of 4 MiB at most, which the kernel's serve
+// does not let a context raise: a body no message could carry is no limit to
+// declare.
+func TestDeclareCapabilityProfileRefusesAMaxPayloadBytesNoMessageOfTheEdgeCarries(t *testing.T) {
+	atTheCeiling := simulatorOperation("submitEffect")
+	atTheCeiling.MaxPayloadBytes = application.MaxPayloadBytes
+	aboveTheCeiling := simulatorOperation("queryAsset")
+	aboveTheCeiling.MaxPayloadBytes = application.MaxPayloadBytes + 1
+	h := newHarness(t)
+
+	must(h.service.DeclareCapabilityProfile(withExecution(t), declareProfile(atTheCeiling, aboveTheCeiling))).
+		refused(t, string(domain.CodeCapabilityProfileExternalProfileInvalid))
+	must(h.service.DeclareCapabilityProfile(withExecution(t), declareProfile(atTheCeiling))).accepted(t)
+
+	if application.MaxPayloadBytes+64<<10 != 4<<20 {
+		t.Fatalf("MaxPayloadBytes = %d, want 4 MiB less the envelope", application.MaxPayloadBytes)
 	}
 }

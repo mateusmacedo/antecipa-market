@@ -24,6 +24,8 @@ func Commands() []string {
 		"RegisterConnector", "SuspendOperation", "EnableOperation", "DeclareCapabilityProfile",
 		"GrantQueryAuthorization", "RevokeQueryAuthorization",
 		"CreateExternalCommand", "CancelExternalCommand", "ResolveUnknownOutcome", "SweepExternalCommands",
+		"ReprocessInteraction", "LinkExternalReference",
+		"ReceivePartnerInteraction", "ReadExternal",
 	}
 }
 
@@ -49,6 +51,15 @@ type GatewayServer interface {
 	FindExternalCommand(context.Context, *servicev1.FindExternalCommandRequest) (*servicev1.FindExternalCommandResponse, error)
 	FindExternalCommandsByBusinessKey(context.Context, *servicev1.FindExternalCommandsByBusinessKeyRequest) (*servicev1.FindExternalCommandsByBusinessKeyResponse, error)
 	FindExternalCommandsByStatus(context.Context, *servicev1.FindExternalCommandsByStatusRequest) (*servicev1.FindExternalCommandsByStatusResponse, error)
+	ReprocessInteraction(context.Context, *servicev1.ReprocessInteractionRequest) (*servicev1.ReprocessInteractionResponse, error)
+	LinkExternalReference(context.Context, *servicev1.LinkExternalReferenceRequest) (*servicev1.LinkExternalReferenceResponse, error)
+	FindExternalInteraction(context.Context, *servicev1.FindExternalInteractionRequest) (*servicev1.FindExternalInteractionResponse, error)
+	FindExternalInteractionByPartnerEvent(context.Context, *servicev1.FindExternalInteractionByPartnerEventRequest) (*servicev1.FindExternalInteractionByPartnerEventResponse, error)
+	FindExternalInteractionsByCommand(context.Context, *servicev1.FindExternalInteractionsByCommandRequest) (*servicev1.FindExternalInteractionsByCommandResponse, error)
+	FindExternalReference(context.Context, *servicev1.FindExternalReferenceRequest) (*servicev1.FindExternalReferenceResponse, error)
+	FindExternalReferencesBySubject(context.Context, *servicev1.FindExternalReferencesBySubjectRequest) (*servicev1.FindExternalReferencesBySubjectResponse, error)
+	ReceivePartnerInteraction(context.Context, *servicev1.ReceivePartnerInteractionRequest) (*servicev1.ReceivePartnerInteractionResponse, error)
+	ReadExternal(context.Context, *servicev1.ReadExternalRequest) (*servicev1.ReadExternalResponse, error)
 }
 
 // ServiceDesc binds GatewayService in the app block: protoc-gen-go-grpc would
@@ -74,6 +85,15 @@ var ServiceDesc = grpc.ServiceDesc{
 		kernelgrpc.Unary(ServiceName, kernelgrpc.Method(descriptor, "FindExternalCommand"), GatewayServer.FindExternalCommand),
 		kernelgrpc.Unary(ServiceName, kernelgrpc.Method(descriptor, "FindExternalCommandsByBusinessKey"), GatewayServer.FindExternalCommandsByBusinessKey),
 		kernelgrpc.Unary(ServiceName, kernelgrpc.Method(descriptor, "FindExternalCommandsByStatus"), GatewayServer.FindExternalCommandsByStatus),
+		kernelgrpc.Unary(ServiceName, kernelgrpc.Method(descriptor, "ReprocessInteraction"), GatewayServer.ReprocessInteraction),
+		kernelgrpc.Unary(ServiceName, kernelgrpc.Method(descriptor, "LinkExternalReference"), GatewayServer.LinkExternalReference),
+		kernelgrpc.Unary(ServiceName, kernelgrpc.Method(descriptor, "FindExternalInteraction"), GatewayServer.FindExternalInteraction),
+		kernelgrpc.Unary(ServiceName, kernelgrpc.Method(descriptor, "FindExternalInteractionByPartnerEvent"), GatewayServer.FindExternalInteractionByPartnerEvent),
+		kernelgrpc.Unary(ServiceName, kernelgrpc.Method(descriptor, "FindExternalInteractionsByCommand"), GatewayServer.FindExternalInteractionsByCommand),
+		kernelgrpc.Unary(ServiceName, kernelgrpc.Method(descriptor, "FindExternalReference"), GatewayServer.FindExternalReference),
+		kernelgrpc.Unary(ServiceName, kernelgrpc.Method(descriptor, "FindExternalReferencesBySubject"), GatewayServer.FindExternalReferencesBySubject),
+		kernelgrpc.Unary(ServiceName, kernelgrpc.Method(descriptor, "ReceivePartnerInteraction"), GatewayServer.ReceivePartnerInteraction),
+		kernelgrpc.Unary(ServiceName, kernelgrpc.Method(descriptor, "ReadExternal"), GatewayServer.ReadExternal),
 	},
 	Metadata: descriptor.ParentFile().Path(),
 }

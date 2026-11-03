@@ -1,0 +1,23 @@
+syntax = "proto3";
+
+package company.gateway.event.v1;
+
+import "company/gateway/event/v1/types.proto";
+import "google/protobuf/timestamp.proto";
+
+// An interaction of a partner matches no command nor object of the platform;
+// the Backoffice opens a case from it (04 §7; decision 5).
+// Envelope type: com.company.gateway.external-interaction-uncorrelated.v1 (PTB-03).
+message ExternalInteractionUncorrelated {
+  string interaction_id = 1;
+  string connector_id = 2;
+  string connector_key = 3;
+  string partner_id = 4;
+  Environment environment = 5;
+  string operation = 6;
+  string partner_event_id = 7;
+  // The business date the partner declared, empty when it declared none.
+  string business_date = 8;
+  google.protobuf.Timestamp received_at = 9;
+  google.protobuf.Timestamp at = 10;
+}

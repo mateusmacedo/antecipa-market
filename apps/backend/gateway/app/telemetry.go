@@ -24,7 +24,7 @@ func settings(cfg Config) []slog.Attr {
 	storage := []slog.Attr{slog.Any("postgres", postgres.DescribeDSN(cfg.DSN))}
 	switch cfg.Role {
 	case RoleAPI:
-		return append(storage,
+		return append(append(storage,
 			slog.Bool("migrate", cfg.Migrate),
 			slog.String("migrator", presence(cfg.MigrateDSN)),
 			slog.String("grpc_addr", cfg.API.GRPCAddr),
@@ -34,21 +34,33 @@ func settings(cfg Config) []slog.Attr {
 			slog.String("grpc_client_ca_file", cfg.API.GRPCClientCAFile),
 			slog.String("grpc_trusted_clients", strings.Join(cfg.API.GRPCTrustedClients, ",")),
 			slog.Int("metric_tenants", len(cfg.MetricTenants)),
-		)
+		), cfg.RawStore.settings()...)
 	case RoleRelay:
 		return append(storage, append(kafkaSettings(cfg),
 			slog.String("kafka_gateway_topic", cfg.GatewayTopic),
 			slog.String("kafka_gateway_dlq", cfg.GatewayDLQ),
 			slog.String("kafka_gateway_dispatch_topic", cfg.DispatchTopic),
 			slog.String("kafka_gateway_dispatch_dlq", cfg.DispatchDLQ),
+			slog.String("kafka_gateway_interactions_topic", cfg.InteractionTopic),
+			slog.String("kafka_gateway_interactions_dlq", cfg.InteractionDLQ),
+			slog.String("kafka_gateway_normalizations_topic", cfg.NormalizationTopic),
+			slog.String("kafka_gateway_normalizations_dlq", cfg.NormalizationDLQ),
 		)...)
 	case RoleConsumer:
-		return append(storage, append(kafkaSettings(cfg),
+		return append(append(storage, append(kafkaSettings(cfg),
 			slog.String("kafka_partner_topic", cfg.PartnerTopic),
 			slog.String("kafka_partner_dlq", cfg.PartnerDLQ),
 			slog.String("partner_source", cfg.PartnerSource),
+			slog.String("kafka_gateway_topic", cfg.GatewayTopic),
+			slog.String("kafka_gateway_events_group", cfg.GatewayGroup),
+			slog.String("kafka_gateway_dispatch_topic", cfg.DispatchTopic),
+			slog.String("kafka_gateway_dispatch_group", cfg.DispatchGroup),
+			slog.String("kafka_gateway_interactions_topic", cfg.InteractionTopic),
+			slog.String("kafka_gateway_interactions_group", cfg.InteractionGroup),
+			slog.String("kafka_gateway_normalizations_topic", cfg.NormalizationTopic),
+			slog.String("kafka_gateway_normalizations_group", cfg.NormalizationGroup),
 			slog.Duration("consumer_timeout", cfg.ConsumerTimeout),
-		)...)
+		)...), cfg.RawStore.settings()...)
 	default:
 		return storage
 	}

@@ -31,13 +31,29 @@ func TestDistkitRole(t *testing.T) { distkit.RunRole(t) }
 
 func TestTwoDrainsPublishEveryDispatchIntentExactlyOnce(t *testing.T) {
 	h := dist.New(t, distkit.Spec)
-	events, eventsDLQ := h.Topic+"-events", h.Topic+"-events-dlq"
-	dist.CreateTopics(t, h.Brokers, h.Group, events, eventsDLQ)
-	t.Setenv(distkit.EnvEventsTopic, events)
-	t.Setenv(distkit.EnvEventsDLQ, eventsDLQ)
+	topics := map[string]string{
+		distkit.EnvEventsTopic: h.Topic + "-events", distkit.EnvEventsDLQ: h.Topic + "-events-dlq",
+		distkit.EnvInteractionsTopic: h.Topic + "-interactions", distkit.EnvInteractionsDLQ: h.Topic + "-interactions-dlq",
+		distkit.EnvNormalizationsTopic: h.Topic + "-normalizations", distkit.EnvNormalizationsDLQ: h.Topic + "-normalizations-dlq",
+	}
+	names := make([]string, 0, len(topics))
+	for variable, topic := range topics {
+		names = append(names, topic)
+		t.Setenv(variable, topic)
+	}
+	dist.CreateTopics(t, h.Brokers, h.Group, names...)
 	enqueue(t, h.Pool, records)
 
 	tb.Require(t, dist.RelayVector(t, h, records))
+}
+
+// RES-43 over this context's database: the process killed with its partner
+// call in flight leaves the attempt begun, the sweep closes it as UnknownSent
+// and applies its step once, and neither the sweep nor a redelivery resends.
+func TestACrashBetweenBeginAndFinishIsSweptAsUnknownSentAndNeverResent(t *testing.T) {
+	h := dist.NewPostgres(t, distkit.Spec)
+
+	tb.Require(t, dist.CrashBetweenBeginAndFinishVector(t, h))
 }
 
 // The message context is required: the outbox claim drains only records whose
@@ -60,7 +76,7 @@ func enqueue(t *testing.T, pool *pgxpool.Pool, n int) {
 		ConnectorKey: "prt-distkit:production", Version: 1, EffectiveFrom: 1,
 		Operations: []domain.OperationCapability{{
 			Operation: "submitEffect", Supported: true, IdempotencySupport: domain.IdempotencyKeyHeader, Efficacy: domain.EfficacyOnSubmit,
-			MaxQueries: 3, KeyAlphabet: "0123456789abcdef", KeyMaxLength: 32, AmbiguityDeadline: 3600,
+			MaxQueries: 3, KeyAlphabet: "0123456789abcdef", KeyMaxLength: 32, AmbiguityDeadline: 3600, MaxSubmissions: 3,
 		}},
 	})))
 	for i := range n {

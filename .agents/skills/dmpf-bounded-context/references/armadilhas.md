@@ -26,7 +26,7 @@ golden for regenerado e algo novo morder, a entrada nova vem para cá.
    unidade mora no `contract/dmpf-units.json` do app e o pacote entra antes
    do `generate`.
 7. **`pnpm install` deixou de ser passo do rito.** Enquanto o contexto nascia
-   em `https://github.com/mateusmacedo/dmpf/blob/ddd3d0c4202879f168c7f6bfafaefadd94a3a621/libs/backend/go`, o `package.json` gerado o tornava importer do pnpm e
+   em `https://github.com/mateusmacedo/dmpf/blob/25f0fda1e3ecab29582e1c85cb4df4e35478e154/libs/backend/go`, o `package.json` gerado o tornava importer do pnpm e
    os targets falhavam de forma obscura sem o install. Em `apps/backend/<name>`
    o módulo fica fora dos globs do `pnpm-workspace.yaml` (`apps/*`): o
    `package.json` continua a existir para o Nx, e só ele o lê.
@@ -47,7 +47,7 @@ golden for regenerado e algo novo morder, a entrada nova vem para cá.
 12. **O `tb/pg` só migra e reseta o que recebe.** `pg.OpenPool(t, pg.Options{...})`
     abre o banco `<projeto>_test_<id>` do teste, migra as `Capabilities` e os `Schemas`
     pedidos e trunca só as `Tables` declaradas
-    (`https://github.com/mateusmacedo/dmpf/blob/ddd3d0c4202879f168c7f6bfafaefadd94a3a621/libs/backend/go/testkit/tb/pg/pool.go`). Tabela do contexto fora de
+    (`https://github.com/mateusmacedo/dmpf/blob/25f0fda1e3ecab29582e1c85cb4df4e35478e154/libs/backend/go/testkit/tb/pg/pool.go`). Tabela do contexto fora de
     `appkit.Tables` vaza linhas entre casos; schema fora de `Schemas` deixa o
     teste verde por vacuidade. O `appkit.OpenPool(t)` gerado já passa
     `provider.Schema`; o autor acrescenta as tabelas.
@@ -60,7 +60,7 @@ golden for regenerado e algo novo morder, a entrada nova vem para cá.
     do baseline, `bookings/domain → kernel/domain` reprova com
     `DMPF-D002`. Hoje a designação existe (ARQ-553, dezesseis unidades com o
     `kernel/provider-memory`); o
-    `self-test` do `https://github.com/mateusmacedo/dmpf/blob/ddd3d0c4202879f168c7f6bfafaefadd94a3a621/tools/dmpf-harness-check.sh` sabota a lista para provar
+    `self-test` do `https://github.com/mateusmacedo/dmpf/blob/25f0fda1e3ecab29582e1c85cb4df4e35478e154/tools/dmpf-harness-check.sh` sabota a lista para provar
     que o gate ainda morde.
 15. **Um package por bloco.** O agente tende a criar subpackages por agregado
     (`bookings/`, `resources/`) dentro do bloco. A unidade do manifesto aponta
@@ -70,8 +70,8 @@ golden for regenerado e algo novo morder, a entrada nova vem para cá.
     não um diretório.
 16. **O contexto mora em uma pasta; cada bloco é um subdiretório dela.**
     `apps/<scope>/<ctx>/<bloco>` — não `<ctx>-<bloco>` como módulo irmão, e
-    não em `https://github.com/mateusmacedo/dmpf/blob/ddd3d0c4202879f168c7f6bfafaefadd94a3a621/libs/backend/go`, que só guarda o kernel de reuso. O `dirName` de cada bloco está em
-    `https://github.com/mateusmacedo/dmpf/blob/ddd3d0c4202879f168c7f6bfafaefadd94a3a621/tools/dmpf-plugin/src/generators/bounded-context/blocks.ts` (`LAYOUTS`), e
+    não em `https://github.com/mateusmacedo/dmpf/blob/25f0fda1e3ecab29582e1c85cb4df4e35478e154/libs/backend/go`, que só guarda o kernel de reuso. O `dirName` de cada bloco está em
+    `https://github.com/mateusmacedo/dmpf/blob/25f0fda1e3ecab29582e1c85cb4df4e35478e154/tools/dmpf-plugin/src/generators/bounded-context/blocks.ts` (`LAYOUTS`), e
     é o generator que decide o caminho. O contexto é **um** módulo Go
     (`go.mod` na raiz de `<ctx>`), e o nome do projeto Nx é `<ctx>`, sem
     prefixo nem sufixo (ADR-045).
@@ -96,18 +96,18 @@ golden for regenerado e algo novo morder, a entrada nova vem para cá.
     alcance `gen/go` se conclui **regerando** pelo rito Buf, nunca editando.
 20. **Suíte sem `BaselineStore` precisa declarar o shared kernel.**
     `Input.SharedKernelUnits` só vale quando `Baseline` é nil
-    (`https://github.com/mateusmacedo/dmpf/blob/ddd3d0c4202879f168c7f6bfafaefadd94a3a621/tools/dmpf-conformance/internal/conformance/check.go:30`) — que
+    (`https://github.com/mateusmacedo/dmpf/blob/25f0fda1e3ecab29582e1c85cb4df4e35478e154/tools/dmpf-conformance/internal/conformance/check.go:30`) — que
     é exatamente o caso do `fitness` e do `selfcheck`, por desenho (`FIT-03`:
     a suíte julga a regra de dependência, não a autoridade sobre a
     classificação). Enquanto só existe o kernel, a omissão não aparece; o
     primeiro contexto de negócio a consumi-lo faz brotar um `DMPF-D002` por
     aresta. A correção é ler a designação do baseline governado e passá-la na
     `Input`, sem adotar o store — restar a lista no teste a faria divergir.
-21. **A prova de regressão também envelhece.** O `https://github.com/mateusmacedo/dmpf/blob/ddd3d0c4202879f168c7f6bfafaefadd94a3a621/tools/dmpf-harness-check.sh`
+21. **A prova de regressão também envelhece.** O `https://github.com/mateusmacedo/dmpf/blob/25f0fda1e3ecab29582e1c85cb4df4e35478e154/tools/dmpf-harness-check.sh`
     carrega o layout do golden em `MODULO`, `BLOCOS` e nos caminhos de
     comparação. Depois
     da virada para pasta por contexto, ele seguiu procurando
-    `https://github.com/mateusmacedo/dmpf/blob/ddd3d0c4202879f168c7f6bfafaefadd94a3a621/libs/backend/go/<ctx>-<bloco>` e casando o diagnóstico por `<ctx>-domain`,
+    `https://github.com/mateusmacedo/dmpf/blob/25f0fda1e3ecab29582e1c85cb4df4e35478e154/libs/backend/go/<ctx>-<bloco>` e casando o diagnóstico por `<ctx>-domain`,
     quando o verificador imprime `<ctx>/domain`. Rodar o `self-test` a cada
     mudança de forma é o que expõe isso — foi ele que apontou os dois.
 22. **Template com nome interpolado precisa de seção própria no gofmt.** O
@@ -128,11 +128,21 @@ golden for regenerado e algo novo morder, a entrada nova vem para cá.
     serviço `<app>-api` e do Secret `<app>-migrator`, que só o Deployment
     `<app>-api` referencia (ADR-063), ou o par administrativo `postgres`. Um contexto novo sem entrada no
     `postgres-init` e no job de databases reprova ali.
-10. **O `app/rpc` gerado nasce sem teste.** O mapeamento de erro é o
+25. **Fixture é relativa à raiz do workspace, não ao package.** `tb.ReadFixture`,
+    `tb.LoadProjection`, `GoldenSuite` e `UpdateGolden` resolvem o caminho a
+    partir do diretório do `go.work` (`tb.RepoRoot`): a fixture do contexto é
+    `apps/backend/<ctx>/contract/fixtures/...`, como no golden `bookings`
+    (`https://github.com/mateusmacedo/dmpf/blob/25f0fda1e3ecab29582e1c85cb4df4e35478e154/apps/backend/bookings/contract/fixtures`). Até o kernel 1.0.0-rc.7, o
+    `RepoRoot` subia a partir do arquivo do kit, que no consumidor mora no cache
+    de módulos, e abortava com `tb.RepoRoot: no go.work above`. A versão
+    seguinte à 1.0.0-rc.7 sobe a partir do diretório do teste. Num kernel
+    afetado, a saída é subir de versão, e não copiar a fixture para dentro do
+    teste.
+26. **O `app/rpc` gerado nasce sem teste.** O mapeamento de erro é o
     `kernelgrpc.StatusOf` do kernel, e o generator não emite mais o
     `errors.go` nem o teste dele. Package de produção sem `_test.go` faz o
     `go test -json` emitir `skip`, e a evidência reprova sob CI (ADR-048): o
     autor escreve o `service_test.go` do contexto, como o golden `bookings`.
-11. **`SnapshotTable` grava o que o `to` devolve.** Uma fatia nula no struct
+27. **`SnapshotTable` grava o que o `to` devolve.** Uma fatia nula no struct
     de estado vira `null` no `jsonb`, e não `[]`: o `to` monta a fatia com
     `make(..., 0, len)` para as linhas já gravadas continuarem iguais.

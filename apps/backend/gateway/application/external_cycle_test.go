@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"slices"
+	"strconv"
 	"testing"
 
 	usecase "github.com/mateusmacedo/dmpf/libs/backend/go/application"
@@ -406,5 +407,138 @@ func TestTheSweepExpiresEachEpisodeOnceFromItsOwnStart(t *testing.T) {
 	}
 	if len(expiries) != 2 || expiries[1].WaitingSince != reopened {
 		t.Fatalf("expiries = %+v, want a second one counted from %d", expiries, reopened)
+	}
+}
+
+func withBudget(n int) func(*domain.OperationCapability) {
+	return func(o *domain.OperationCapability) {
+		o.Efficacy, o.MaxSubmissions = domain.EfficacyOnSubmit, n
+	}
+}
+
+func TestAnAbsenceThatSpentTheResendBudgetFailsTheCommand(t *testing.T) {
+	c := newCycle(t, withBudget(1), false).script(serviceskit.Reply{Class: port.ClassUnknownAmbiguous})
+	c.dispatched(t, "m-1")
+
+	got := c.resolve(t, "r-1", domain.ResolutionNotReceived).accepted(t)
+
+	s := c.h.command(t, testCommand)
+	if got.Status != domain.StatusFinalFailure || s.FailureCategory != domain.CategoryResendBudgetExhausted || s.ResendAfter != 0 {
+		t.Fatalf("command = %+v, want a final failure with the resend budget spent and no resend", s)
+	}
+	failed, ok := c.events()[len(c.events())-1].(domain.ExternalCommandFailed)
+	if !ok || failed.Category != domain.CategoryResendBudgetExhausted {
+		t.Fatalf("events = %v, want ExternalCommandFailed by resend_budget_exhausted last", names(c.events()))
+	}
+	c.h.clock.advance(3600 * second)
+	if report := c.sweep(t); report.ResendRequested != 0 || len(c.intents()) != 1 {
+		t.Fatalf("SweepExternalCommands() = %+v with %d intents, want nothing resent", report, len(c.intents()))
+	}
+}
+
+func TestASpentResendBudgetReopensTheSeries(t *testing.T) {
+	c := newCycle(t, withBudget(1), false).script(serviceskit.Reply{Class: port.ClassUnknownAmbiguous})
+	c.dispatched(t, "m-1")
+	c.resolve(t, "r-1", domain.ResolutionNotReceived).accepted(t)
+
+	got := must(c.h.service.CreateExternalCommand(withExecution(t), createCommand("idem-2", 2))).accepted(t)
+
+	if got.Status != domain.StatusCreated {
+		t.Fatalf("CreateExternalCommand() = %+v, want the new version created", got)
+	}
+	if intents := c.intents(); len(intents) != 2 || intents[1].IdempotencyKey != "idem-2" {
+		t.Fatalf("dispatch intents = %+v, want the new version's", intents)
+	}
+}
+
+// observeDirectly records an observation in the ledger outside any step, as
+// another path of the cycle did before the human resolution arrived.
+func (c *cycle) observeDirectly(t *testing.T, id string, finding port.Finding) {
+	t.Helper()
+	observed, err := memory.NewAttemptStore(c.h.store).Observe(withExecution(t), port.Observation{
+		Key: c.key, Finding: finding, SourceAt: c.h.clock.Now(), Provider: "registry", ID: id,
+	}, c.h.clock.Now())
+	if err != nil || observed.Result != port.ObserveRecorded {
+		t.Fatalf("Observe(%s) = %+v, %v, want it recorded", id, observed, err)
+	}
+}
+
+func TestAnObservationConflictIsARefusalTheKeyReplays(t *testing.T) {
+	c := newCycle(t, onSubmit, false).script(serviceskit.Reply{Class: port.ClassUnknownAmbiguous})
+	c.dispatched(t, "m-1")
+	c.observeDirectly(t, "obs-applied", port.FindingApplied)
+	before := c.h.command(t, testCommand)
+
+	c.resolve(t, "r-1", domain.ResolutionFinalFailure).refused(t, string(domain.CodeExternalCommandObservationConflict))
+	c.resolve(t, "r-1", domain.ResolutionFinalFailure).refused(t, string(domain.CodeExternalCommandObservationConflict))
+
+	if after := c.h.command(t, testCommand); !after.Equal(before) {
+		t.Fatalf("command = %+v, want it unchanged by a conflict (decision 7)", after)
+	}
+}
+
+func TestASaturatedObservationIsARefusalThatLeavesTheCommand(t *testing.T) {
+	c := newCycle(t, onSubmit, false).script(serviceskit.Reply{Class: port.ClassUnknownAmbiguous})
+	c.dispatched(t, "m-1")
+	for i := range port.MaxAttemptEntries {
+		c.observeDirectly(t, "obs-"+strconv.Itoa(i), port.FindingPending)
+	}
+	before := c.h.command(t, testCommand)
+
+	c.resolve(t, "r-1", domain.ResolutionNotReceived).refused(t, string(domain.CodeExternalCommandObservationSaturated))
+
+	if after := c.h.command(t, testCommand); !after.Equal(before) {
+		t.Fatalf("command = %+v, want it unchanged", after)
+	}
+}
+
+// The observation of the resolution is already in the ledger, so the kernel
+// applies no step and the answer is the status the command holds.
+func TestADuplicateObservationAnswersTheCurrentStatus(t *testing.T) {
+	c := newCycle(t, onSubmit, false).script(serviceskit.Reply{Class: port.ClassUnknownAmbiguous})
+	c.dispatched(t, "m-1")
+	c.observeDirectly(t, "resolution.r-1", port.FindingAbsent)
+	before := c.h.command(t, testCommand)
+
+	got := c.resolve(t, "r-1", domain.ResolutionNotReceived).accepted(t)
+
+	if got.Status != domain.StatusUnknownOutcome || !c.h.command(t, testCommand).Equal(before) {
+		t.Fatalf("ResolveUnknownOutcome() = %+v, want the current status and no step", got)
+	}
+}
+
+func TestTheSweepReleasesAHeldDispatchOnceTheOperationIsAllowedAgain(t *testing.T) {
+	h := ready(t)
+	h.created(t, testCommand, 1)
+	must(h.service.SuspendOperation(withExecution(t), application.SuspendOperation{
+		ConnectorKey: testConnector, Operation: "submitEffect", Cause: domain.CauseSchemaMismatch,
+	})).accepted(t)
+	must(h.service.HoldDispatch(withExecution(t), application.HoldDispatch{IdempotencyKey: testCommand, MessageID: "m-1"})).accepted(t)
+	heldSince := h.command(t, testCommand).DispatchHeldSince
+
+	suspended, err := h.service.SweepExternalCommands(withExecution(t))
+	if err != nil || suspended.ResendRequested != 0 || h.command(t, testCommand).DispatchHeldSince != heldSince {
+		t.Fatalf("sweep while suspended = %+v, %v, want the dispatch still held", suspended, err)
+	}
+
+	h.enabled(t, "submitEffect", true, 2)
+	h.clock.advance(second)
+	released, err := h.service.SweepExternalCommands(withExecution(t))
+	again, _ := h.service.SweepExternalCommands(withExecution(t))
+
+	if err != nil || released.ResendRequested != 1 || again.ResendRequested != 0 {
+		t.Fatalf("sweeps = %+v then %+v, %v, want one release", released, again, err)
+	}
+	if s := h.command(t, testCommand); s.DispatchHeldSince != 0 || s.Status != domain.StatusCreated {
+		t.Fatalf("command = %+v, want the hold cleared and the command created", s)
+	}
+	var intents []domain.ExternalCommandDispatchRequested
+	for _, entry := range h.entries() {
+		if intent, ok := entry.Event.(domain.ExternalCommandDispatchRequested); ok {
+			intents = append(intents, intent)
+		}
+	}
+	if len(intents) != 2 || intents[1].IdempotencyKey != testCommand {
+		t.Fatalf("dispatch intents = %+v, want the release under the same IntentID", intents)
 	}
 }

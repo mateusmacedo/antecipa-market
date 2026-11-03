@@ -22,6 +22,7 @@ var externalOutcomeUnknownSpec = tb.Spec[proto.Message]{
 	Enum: tb.Enum{Field: "failure_category", Values: []string{
 		"FAILURE_CATEGORY_FINAL_VALIDATION", "FAILURE_CATEGORY_FINAL_BUSINESS", "FAILURE_CATEGORY_FINAL_AUTHORIZATION",
 		"FAILURE_CATEGORY_UNKNOWN_SENT", "FAILURE_CATEGORY_UNKNOWN_AMBIGUOUS", "FAILURE_CATEGORY_SCHEMA_MISMATCH",
+		"FAILURE_CATEGORY_RESEND_BUDGET_EXHAUSTED",
 	}},
 	New:        func() proto.Message { return &eventv1.ExternalOutcomeUnknown{} },
 	FromFields: func(fields map[string]string) (proto.Message, error) { return externalOutcomeUnknown(fields) },
@@ -42,8 +43,10 @@ var externalOutcomeUnknownSpec = tb.Spec[proto.Message]{
 			"FAILURE_CATEGORY_FINAL_BUSINESS", "1", "2026-09-02T11:59:00Z", "true", "false", "2026-09-02T12:00:05Z"),
 		externalOutcomeUnknownFields("prt-3:production:submitEffect:eff-7", "tnt-3001", "prt-3:production", "submitEffect", "eff-7",
 			"FAILURE_CATEGORY_FINAL_AUTHORIZATION", "1", "2026-09-02T11:59:00Z", "true", "false", "2026-09-02T12:00:06Z"),
+		externalOutcomeUnknownFields("prt-3:production:submitEffect:eff-8", "tnt-3001", "prt-3:production", "submitEffect", "eff-8",
+			"FAILURE_CATEGORY_RESEND_BUDGET_EXHAUSTED", "2", "2026-09-02T11:59:00Z", "true", "false", "2026-09-02T12:00:07Z"),
 	),
-	WantCases:          5,
+	WantCases:          6,
 	WantDiscriminators: 2,
 }
 

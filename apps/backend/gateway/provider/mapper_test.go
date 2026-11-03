@@ -95,6 +95,92 @@ func TestTheMapperPublishesEachEventUnderItsContract(t *testing.T) {
 	}
 }
 
+func TestTheMapperPublishesEachInteractionMessageUnderItsContract(t *testing.T) {
+	request := domain.RawPayload{Ref: "interactions/prt-1:production/int-1/request", VersionID: "vq", Hash: "hq"}
+	response := domain.RawPayload{Ref: "interactions/prt-1:production/int-1/response", VersionID: "vs", Hash: "hs"}
+	broken := domain.Mismatch{Kind: domain.MismatchVersion, Detail: "schema 3", PartnerDeclaredVersion: "3.0"}
+	tests := []struct {
+		event    kernel.DomainEvent
+		want     proto.Message
+		wantType string
+	}{
+		{
+			domain.ExternalResponseCaptured{
+				InteractionID: "int-1", CommandID: "idem-1", ConnectorKey: "prt-1:production", Operation: "submitEffect",
+				Request: request, Response: response, ContentType: "application/json", Step: domain.StepSuspend, Mismatch: broken, At: mapped,
+			},
+			&eventv1.ExternalResponseCaptured{
+				InteractionId: "int-1", CommandId: "idem-1", ConnectorId: "prt-1:production", Operation: "submitEffect",
+				RequestRef: request.Ref, RequestVersionId: "vq", RequestHash: "hq", ResponseRef: response.Ref, ResponseVersionId: "vs", ResponseHash: "hs",
+				ContentType: "application/json", Step: eventv1.Step_STEP_SUSPEND, MismatchKind: eventv1.MismatchKind_MISMATCH_KIND_VERSION, MismatchDetail: "schema 3",
+				PartnerDeclaredVersion: "3.0", At: stamp,
+			},
+			"com.company.gateway.external-response-captured.v1",
+		},
+		{
+			domain.ExternalInteractionStored{
+				InteractionID: "int-1", ConnectorKey: "prt-1:production", Operation: "submitEffect", Direction: domain.DirectionInbound,
+				Source: domain.InteractionCallback, CommandID: "idem-1", NormalizationRevision: 2, At: mapped,
+			},
+			&eventv1.ExternalInteractionStored{
+				InteractionId: "int-1", ConnectorId: "prt-1:production", Operation: "submitEffect",
+				Direction: eventv1.InteractionDirection_INTERACTION_DIRECTION_INBOUND, Source: eventv1.InteractionSource_INTERACTION_SOURCE_CALLBACK,
+				CommandId: "idem-1", NormalizationRevision: 2, At: stamp,
+			},
+			"com.company.gateway.external-interaction-stored.v1",
+		},
+		{
+			domain.ExternalSchemaMismatchDetected{
+				InteractionID: "int-1", ConnectorKey: "prt-1:production", PartnerID: "prt-1", Environment: domain.EnvironmentProduction,
+				Operation: "submitEffect", AssetType: "duplicata", CommandID: "idem-1", Mismatch: broken, At: mapped,
+			},
+			&eventv1.ExternalSchemaMismatchDetected{
+				InteractionId: "int-1", ConnectorId: "prt-1:production", ConnectorKey: "prt-1:production", PartnerId: "prt-1",
+				Environment: eventv1.Environment_ENVIRONMENT_PRODUCTION, Operation: "submitEffect", AssetType: "duplicata", CommandId: "idem-1",
+				MismatchKind: eventv1.MismatchKind_MISMATCH_KIND_VERSION, MismatchDetail: "schema 3", PartnerDeclaredVersion: "3.0", At: stamp,
+			},
+			"com.company.gateway.external-schema-mismatch-detected.v1",
+		},
+		{
+			domain.ExternalInteractionUncorrelated{
+				InteractionID: "int-1", ConnectorKey: "prt-1:homologation", PartnerID: "prt-1", Environment: domain.EnvironmentHomologation,
+				Operation: "submitEffect", PartnerEventID: "evt-p-1", BusinessDate: "2026-09-02", ReceivedAt: mapped, At: mapped,
+			},
+			&eventv1.ExternalInteractionUncorrelated{
+				InteractionId: "int-1", ConnectorId: "prt-1:homologation", ConnectorKey: "prt-1:homologation", PartnerId: "prt-1",
+				Environment: eventv1.Environment_ENVIRONMENT_HOMOLOGATION, Operation: "submitEffect", PartnerEventId: "evt-p-1",
+				BusinessDate: "2026-09-02", ReceivedAt: stamp, At: stamp,
+			},
+			"com.company.gateway.external-interaction-uncorrelated.v1",
+		},
+		{
+			domain.ExternalInteractionReprocessed{
+				InteractionID: "int-1", ConnectorKey: "prt-1:production", PartnerID: "prt-1", Operation: "submitEffect", CommandID: "idem-1",
+				PreviousRevision: 1, NormalizationRevision: 2, PreviousOutcome: domain.InteractionUncorrelated, Outcome: domain.InteractionNormalized,
+				OutcomeChanged: true, TerminalCommandAffected: true, At: mapped,
+			},
+			&eventv1.ExternalInteractionReprocessed{
+				InteractionId: "int-1", ConnectorId: "prt-1:production", PartnerId: "prt-1", Operation: "submitEffect", CommandId: "idem-1",
+				PreviousRevision: 1, NormalizationRevision: 2, PreviousOutcome: eventv1.InteractionOutcome_INTERACTION_OUTCOME_UNCORRELATED,
+				Outcome: eventv1.InteractionOutcome_INTERACTION_OUTCOME_NORMALIZED, OutcomeChanged: true, TerminalCommandAffected: true, At: stamp,
+			},
+			"com.company.gateway.external-interaction-reprocessed.v1",
+		},
+	}
+	for _, tc := range tests {
+		t.Run(tc.event.EventName(), func(t *testing.T) {
+			got, err := provider.Mapper{}.Map(tc.event)
+
+			if err != nil {
+				t.Fatalf("Map() = %v", err)
+			}
+			if !proto.Equal(got.Message, tc.want) || got.Type != tc.wantType {
+				t.Fatalf("Map() = %v %q, want %v %q", got.Message, got.Type, tc.want, tc.wantType)
+			}
+		})
+	}
+}
+
 func TestTheMapperLeavesAnAbsentInstantAbsent(t *testing.T) {
 	got, err := provider.Mapper{}.Map(domain.ExternalOutcomeUnknown{CommandHeader: header(), UnknownSince: mapped})
 
@@ -106,5 +192,13 @@ func TestTheMapperLeavesAnAbsentInstantAbsent(t *testing.T) {
 func TestTheMapperRefusesAnEventWithoutContract(t *testing.T) {
 	if _, err := (provider.Mapper{}).Map(strayEvent{}); !errors.Is(err, postgres.ErrUnmappedEvent) {
 		t.Fatalf("Map(stray) = %v, want ErrUnmappedEvent", err)
+	}
+}
+
+func TestTheMapperPublishesTheSpentResendBudgetUnderItsWireValue(t *testing.T) {
+	got, err := provider.Mapper{}.Map(domain.ExternalCommandFailed{CommandHeader: header(), Category: domain.CategoryResendBudgetExhausted, At: mapped})
+
+	if err != nil || got.Message.(*eventv1.ExternalCommandFailed).GetCategory() != eventv1.FailureCategory_FAILURE_CATEGORY_RESEND_BUDGET_EXHAUSTED {
+		t.Fatalf("Map() = %v, %v; want FAILURE_CATEGORY_RESEND_BUDGET_EXHAUSTED", got.Message, err)
 	}
 }

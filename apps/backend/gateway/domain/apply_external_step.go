@@ -56,6 +56,7 @@ func (c *ExternalCommand) ApplyExternalStep(cmd ApplyExternalStep) (kernel.Accep
 		if cmd.Origin == OriginSubmit {
 			next.submissions++
 			next.lastSubmittedAt = cmd.At
+			next.dispatchHeldSince = 0
 			events = append(events, ExternalCommandSubmitted{CommandHeader: next.header(), Submission: next.submissions, At: cmd.At})
 		}
 		wasWaiting := next.status.waits()
@@ -95,6 +96,14 @@ func (c *ExternalCommand) take(cmd ApplyExternalStep) {
 			c.nextQueryAt = cmd.At + queryInterval
 		}
 	case StepRetry:
+		// INVARIANT: the absence is confirmed, so stopping leaves no effect
+		// pending; a send past the budget would be a new command.
+		if c.submissions >= c.profile.MaxSubmissions {
+			c.status = StatusFinalFailure
+			c.failureCategory = CategoryResendBudgetExhausted
+			c.resendAfter = 0
+			break
+		}
 		c.status = StatusRetryableFailure
 		c.failureCategory = CategoryNone
 		c.resendAfter = cmd.At + kernel.Instant(c.profile.Quiescence)

@@ -1,6 +1,10 @@
 # Processos do gateway na topologia local (ADR-044): api gRPC, que aplica o
-# schema (MIGRATE=true), relay da própria outbox, com os canais gateway.events
-# e gateway.dispatch, e consumer de partner.events.
+# schema (MIGRATE=true), relay da própria outbox, com os canais gateway.events,
+# gateway.dispatch, gateway.interactions e gateway.normalizations, e consumer de
+# partner.events e desses quatro canais, cada um com o seu grupo, além da
+# varredura de tentativas do kernel. O api e o consumer guardam o bruto das interações no S3 do
+# floci, num bucket versionado, com Object Lock e sem retenção padrão, que nesta
+# topologia o gateway-s3-init cria; sem ele os dois papéis recusam a partida.
 x-image: &image
   build:
     context: ../../../..
@@ -11,12 +15,52 @@ x-env: &env
   OTEL_SERVICE_NAME: gateway
   PG_DSN: postgres://gateway:${GATEWAY_PG_PASSWORD:-gateway-local}@postgres:5432/gateway?sslmode=disable
 
+x-s3: &s3
+  S3_ENDPOINT: http://floci:4566
+  S3_BUCKET: ${GATEWAY_S3_BUCKET:-gateway-interactions}
+  AWS_REGION: us-east-1
+  AWS_ACCESS_KEY_ID: ${FLOCI_ACCESS_KEY_ID:-test}
+  AWS_SECRET_ACCESS_KEY: ${FLOCI_SECRET_ACCESS_KEY:-test}
+  S3_INSECURE: 'true'
+  S3_PATH_STYLE: 'true'
+
 x-kafka: &kafka
   KAFKA_SASL_USERNAME: gateway
   KAFKA_SASL_PASSWORD: ${KAFKA_GATEWAY_PASSWORD:-gateway-local}
   KAFKA_GROUP: gateway
 
 services:
+  # Object Lock só se concede na criação, e liga o versionamento. Bucket que já
+  # existe fica como está: o Ready do api e do consumer recusa o que não for
+  # versionado e travado. O endereçamento é por caminho, como o S3_PATH_STYLE,
+  # porque o bucket não resolve como subdomínio de floci. O profile floci serve
+  # aos processos que rodam no host.
+  gateway-s3-init:
+    image: amazon/aws-cli:2.38.1@sha256:733d5be1015825e4038c6016f3fa9954868ddee1f611b73be795a9cc2e706bfd
+    profiles: [dmpf, floci]
+    restart: 'no'
+    depends_on:
+      floci:
+        condition: service_healthy
+    environment:
+      <<: *s3
+    entrypoint: ['/bin/sh', '-c']
+    command:
+      - |
+        set -eu
+        aws configure set default.s3.addressing_style path
+        s3api() { aws --endpoint-url "$$S3_ENDPOINT" s3api "$$@"; }
+        if s3api head-bucket --bucket "$$S3_BUCKET" >/dev/null 2>&1; then
+          echo "gateway-s3-init: o bucket $$S3_BUCKET já existe"
+          exit 0
+        fi
+        s3api create-bucket --bucket "$$S3_BUCKET" --object-lock-enabled-for-bucket >/dev/null
+        echo "gateway-s3-init: bucket $$S3_BUCKET criado com Object Lock"
+    deploy:
+      resources:
+        limits: { cpus: '0.25', memory: 128M }
+        reservations: { cpus: '0.01', memory: 32M }
+
   dmpf-gateway-api:
     <<: *image
     extends:
@@ -24,7 +68,7 @@ services:
       service: dmpf-grpc-api
     stop_grace_period: 30s
     environment:
-      <<: *env
+      <<: [*env, *s3]
       OTEL_RESOURCE_ATTRIBUTES: ${OTEL_RESOURCE_ATTRIBUTES:-service.version=local,deployment.environment.name=local},service.instance.id=gateway-api,dmpf.process.role=api
       PG_MIGRATE_DSN: postgres://gateway_migrator:${GATEWAY_PG_MIGRATOR_PASSWORD:-gateway-migrator-local}@postgres:5432/gateway?sslmode=disable
       GRPC_TLS_CERT_FILE: /pki/dmpf-gateway-api.crt
@@ -33,6 +77,8 @@ services:
       pki-init:
         condition: service_completed_successfully
       postgres-init:
+        condition: service_completed_successfully
+      gateway-s3-init:
         condition: service_completed_successfully
       otel-collector:
         condition: service_started
@@ -51,6 +97,10 @@ services:
       KAFKA_GATEWAY_DLQ: ${KAFKA_GATEWAY_DLQ:-gateway.events.dlq}
       KAFKA_GATEWAY_DISPATCH_TOPIC: ${KAFKA_GATEWAY_DISPATCH_TOPIC:-gateway.dispatch}
       KAFKA_GATEWAY_DISPATCH_DLQ: ${KAFKA_GATEWAY_DISPATCH_DLQ:-gateway.dispatch.dlq}
+      KAFKA_GATEWAY_INTERACTIONS_TOPIC: ${KAFKA_GATEWAY_INTERACTIONS_TOPIC:-gateway.interactions}
+      KAFKA_GATEWAY_INTERACTIONS_DLQ: ${KAFKA_GATEWAY_INTERACTIONS_DLQ:-gateway.interactions.dlq}
+      KAFKA_GATEWAY_NORMALIZATIONS_TOPIC: ${KAFKA_GATEWAY_NORMALIZATIONS_TOPIC:-gateway.normalizations}
+      KAFKA_GATEWAY_NORMALIZATIONS_DLQ: ${KAFKA_GATEWAY_NORMALIZATIONS_DLQ:-gateway.normalizations.dlq}
     depends_on:
       redpanda-init:
         condition: service_completed_successfully
@@ -65,12 +115,26 @@ services:
     stop_grace_period: 30s
     command: ['--role', 'consumer']
     environment:
-      <<: [*env, *kafka]
+      <<: [*env, *kafka, *s3]
       OTEL_RESOURCE_ATTRIBUTES: ${OTEL_RESOURCE_ATTRIBUTES:-service.version=local,deployment.environment.name=local},service.instance.id=gateway-consumer,dmpf.process.role=consumer
       KAFKA_PARTNER_TOPIC: ${KAFKA_PARTNER_TOPIC:-partner.events}
       KAFKA_PARTNER_DLQ: ${KAFKA_PARTNER_DLQ:-partner.events.dlq}
+      KAFKA_GATEWAY_TOPIC: ${KAFKA_GATEWAY_TOPIC:-gateway.events}
+      KAFKA_GATEWAY_DLQ: ${KAFKA_GATEWAY_DLQ:-gateway.events.dlq}
+      KAFKA_GATEWAY_EVENTS_GROUP: ${KAFKA_GATEWAY_EVENTS_GROUP:-gateway.events}
+      KAFKA_GATEWAY_DISPATCH_TOPIC: ${KAFKA_GATEWAY_DISPATCH_TOPIC:-gateway.dispatch}
+      KAFKA_GATEWAY_DISPATCH_DLQ: ${KAFKA_GATEWAY_DISPATCH_DLQ:-gateway.dispatch.dlq}
+      KAFKA_GATEWAY_DISPATCH_GROUP: ${KAFKA_GATEWAY_DISPATCH_GROUP:-gateway.dispatch}
+      KAFKA_GATEWAY_INTERACTIONS_TOPIC: ${KAFKA_GATEWAY_INTERACTIONS_TOPIC:-gateway.interactions}
+      KAFKA_GATEWAY_INTERACTIONS_DLQ: ${KAFKA_GATEWAY_INTERACTIONS_DLQ:-gateway.interactions.dlq}
+      KAFKA_GATEWAY_INTERACTIONS_GROUP: ${KAFKA_GATEWAY_INTERACTIONS_GROUP:-gateway.interactions}
+      KAFKA_GATEWAY_NORMALIZATIONS_TOPIC: ${KAFKA_GATEWAY_NORMALIZATIONS_TOPIC:-gateway.normalizations}
+      KAFKA_GATEWAY_NORMALIZATIONS_DLQ: ${KAFKA_GATEWAY_NORMALIZATIONS_DLQ:-gateway.normalizations.dlq}
+      KAFKA_GATEWAY_NORMALIZATIONS_GROUP: ${KAFKA_GATEWAY_NORMALIZATIONS_GROUP:-gateway.normalizations}
     depends_on:
       redpanda-init:
+        condition: service_completed_successfully
+      gateway-s3-init:
         condition: service_completed_successfully
       dmpf-gateway-api:
         condition: service_started

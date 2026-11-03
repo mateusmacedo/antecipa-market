@@ -144,6 +144,38 @@
       },
       "payload_bytes_hex": "0a237072742d333a70726f64756374696f6e3a7375626d69744566666563743a6566662d361208746e742d333030311a107072742d333a70726f64756374696f6e220c7375626d69744566666563742a056566662d3630053a04453530304210636f6e6e656374696f6e2072657365744a08696e742d33303032520608c59fe0d406",
       "payload_hash": "91c28b1d15ff3910efdf5a6fb493152e1aef642552587e88c69f91630e5059bb"
+    },
+    {
+      "name": "enum-coverage-3",
+      "doc": "Caso empacotado que cobre o valor FAILURE_CATEGORY_RESEND_BUDGET_EXHAUSTED do campo category, que os quatro casos da fixture enxuta não alcançam.",
+      "envelope": {
+        "causationid": "evt-0001",
+        "correlationid": "corr-0001",
+        "datacontenttype": "application/protobuf",
+        "dataschema": "type.googleapis.com/company.gateway.event.v1.ExternalCommandFailed",
+        "id": "evt-0005",
+        "partitionkey": "c-42",
+        "source": "urn:dmpf:reference-gateway",
+        "specversion": "1.0",
+        "subject": "prt-1:production:submitEffect:eff-1",
+        "time": "2026-09-02T12:00:00Z",
+        "traceparent": "00-0af7651916cd43dd8448eb211c80319c-b7ad6b7169203331-01",
+        "type": "com.company.gateway.external-command-failed.v1"
+      },
+      "payload": {
+        "at": "2026-09-02T12:00:06Z",
+        "business_key": "eff-7",
+        "category": "FAILURE_CATEGORY_RESEND_BUDGET_EXHAUSTED",
+        "connector_id": "prt-3:production",
+        "idempotency_key": "prt-3:production:submitEffect:eff-7",
+        "interaction_id": "int-3003",
+        "operation": "submitEffect",
+        "partner_code": "",
+        "partner_message": "",
+        "tenant_id": "tnt-3001"
+      },
+      "payload_bytes_hex": "0a237072742d333a70726f64756374696f6e3a7375626d69744566666563743a6566662d371208746e742d333030311a107072742d333a70726f64756374696f6e220c7375626d69744566666563742a056566662d3730074a08696e742d33303033520608c69fe0d406",
+      "payload_hash": "51aca9df91cbdb31d3cf1cd6f2ae8fb230eac6f750deeb4a84520ef0757064a3"
     }
   ],
   "discriminators": [

@@ -182,7 +182,7 @@ func withdrawnProfile(version int32) *servicev1.DeclareCapabilityProfileRequest 
 		Operations: []*servicev1.OperationCapability{{
 			Operation: "submitEffect", Supported: false, IdempotencySupport: servicev1.IdempotencySupport_IDEMPOTENCY_SUPPORT_KEY_HEADER,
 			Efficacy: servicev1.Efficacy_EFFICACY_ON_SUBMIT, Quiescence: 1, MaxQueries: 3, KeyAlphabet: "0123456789abcdef",
-			KeyMaxLength: 32, AmbiguityDeadline: 3600, Protocol: servicev1.Protocol_PROTOCOL_SYNC_HTTP,
+			KeyMaxLength: 32, AmbiguityDeadline: 3600, MaxSubmissions: 3, Protocol: servicev1.Protocol_PROTOCOL_SYNC_HTTP,
 			EncumbranceCoverage: servicev1.EncumbranceCoverage_ENCUMBRANCE_COVERAGE_UNAVAILABLE,
 		}},
 	}

@@ -16,6 +16,8 @@ import (
 	"github.com/mateusmacedo/dmpf/libs/backend/go/observability/envconfig"
 	"github.com/mateusmacedo/dmpf/libs/backend/go/transport/admission"
 	semconv "go.opentelemetry.io/otel/semconv/v1.43.0"
+
+	gatewayports "github.com/mateusmacedo/antecipa-market/apps/backend/gateway/ports"
 )
 
 // Role selects which of the three processes the binary becomes (BLK-02: the
@@ -50,9 +52,19 @@ const (
 	envGatewayDLQ    = "KAFKA_GATEWAY_DLQ"
 	envDispatchTopic = "KAFKA_GATEWAY_DISPATCH_TOPIC"
 	envDispatchDLQ   = "KAFKA_GATEWAY_DISPATCH_DLQ"
-	envPartnerTopic  = "KAFKA_PARTNER_TOPIC"
-	envPartnerDLQ    = "KAFKA_PARTNER_DLQ"
-	envPartnerSource = "PARTNER_SOURCE"
+
+	envInteractionTopic   = "KAFKA_GATEWAY_INTERACTIONS_TOPIC"
+	envInteractionDLQ     = "KAFKA_GATEWAY_INTERACTIONS_DLQ"
+	envNormalizationTopic = "KAFKA_GATEWAY_NORMALIZATIONS_TOPIC"
+	envNormalizationDLQ   = "KAFKA_GATEWAY_NORMALIZATIONS_DLQ"
+
+	envGatewayGroup       = "KAFKA_GATEWAY_EVENTS_GROUP"
+	envDispatchGroup      = "KAFKA_GATEWAY_DISPATCH_GROUP"
+	envInteractionGroup   = "KAFKA_GATEWAY_INTERACTIONS_GROUP"
+	envNormalizationGroup = "KAFKA_GATEWAY_NORMALIZATIONS_GROUP"
+	envPartnerTopic       = "KAFKA_PARTNER_TOPIC"
+	envPartnerDLQ         = "KAFKA_PARTNER_DLQ"
+	envPartnerSource      = "PARTNER_SOURCE"
 
 	envMetricTenants = "METRIC_TENANTS"
 )
@@ -78,14 +90,28 @@ type Config struct {
 	KafkaAuth kafka.ClientAuth
 	Group     string
 
-	// GatewayTopic and DispatchTopic address the two channels the relay
-	// publishes to; PartnerTopic the one the consumer reads.
-	GatewayTopic  string
-	GatewayDLQ    string
-	DispatchTopic string
-	DispatchDLQ   string
-	PartnerTopic  string
-	PartnerDLQ    string
+	// GatewayTopic, DispatchTopic, InteractionTopic and NormalizationTopic
+	// address the four channels the relay publishes to, which the consumer
+	// reads back besides PartnerTopic.
+	GatewayTopic       string
+	GatewayDLQ         string
+	DispatchTopic      string
+	DispatchDLQ        string
+	InteractionTopic   string
+	InteractionDLQ     string
+	NormalizationTopic string
+	NormalizationDLQ   string
+	PartnerTopic       string
+	PartnerDLQ         string
+
+	// GatewayGroup, DispatchGroup, InteractionGroup and NormalizationGroup
+	// are the consumer groups of the four channels of this context the
+	// consumer reads, one per channel, so the rebalance of one never pauses
+	// the others; Group stays the one of partner.events.
+	GatewayGroup       string
+	DispatchGroup      string
+	InteractionGroup   string
+	NormalizationGroup string
 
 	// PartnerSource is the producer the consumer admits on partner.events, by
 	// the envelope's source attribute (CTX-27, IDN-04).
@@ -103,6 +129,14 @@ type Config struct {
 	ConsumerTimeout time.Duration
 
 	Policies kernelapp.Policies
+
+	// RawStore is the bucket the api and the consumer keep the raw payloads in;
+	// the relay never opens it.
+	RawStore RawStoreEnv
+
+	// partners stays nil outside the suites: the runtime has no partner
+	// adapter until the providers are mapped (decision 21).
+	partners gatewayports.PartnerAdapters
 }
 
 // Defaults are the values a role runs with when the environment says nothing.
@@ -135,6 +169,7 @@ func Defaults(role Role) Config {
 			PurgeInterval:        15 * time.Minute,
 			PurgeBatch:           1000,
 		},
+		RawStore: RawStoreEnv{ReadyAttempts: 5, ReadyInterval: 2 * time.Second},
 	}
 }
 
@@ -155,10 +190,21 @@ func FromEnv(role Role, lookup func(string) string) (Config, error) {
 	cfg.GatewayDLQ = lookup(envGatewayDLQ)
 	cfg.DispatchTopic = lookup(envDispatchTopic)
 	cfg.DispatchDLQ = lookup(envDispatchDLQ)
+	cfg.InteractionTopic = lookup(envInteractionTopic)
+	cfg.InteractionDLQ = lookup(envInteractionDLQ)
+	cfg.NormalizationTopic = lookup(envNormalizationTopic)
+	cfg.NormalizationDLQ = lookup(envNormalizationDLQ)
 	cfg.PartnerTopic = lookup(envPartnerTopic)
 	cfg.PartnerDLQ = lookup(envPartnerDLQ)
 	cfg.PartnerSource = envconfig.OrDefault(lookup(envPartnerSource), cfg.PartnerSource)
 	cfg.Group = lookup(envGroup)
+	cfg.GatewayGroup = lookup(envGatewayGroup)
+	cfg.DispatchGroup = lookup(envDispatchGroup)
+	cfg.InteractionGroup = lookup(envInteractionGroup)
+	cfg.NormalizationGroup = lookup(envNormalizationGroup)
+	if cfg.RawStore, err = readRawStoreEnv(lookup, cfg.RawStore); err != nil {
+		return Config{}, err
+	}
 
 	flags := []struct {
 		variable string
@@ -208,8 +254,17 @@ func (c Config) Validate() error {
 	}
 	// INB-14: an entry purged before the broker stops redelivering its message
 	// would let that message through as new.
-	if window := PartnerChannel(c).Redelivery.UpperBound; c.Role == RoleConsumer && c.Policies.InboxRetention < window {
-		return fmt.Errorf("%w: InboxRetention %v is below the redelivery window %v (INB-14)", ErrInvalidPolicy, c.Policies.InboxRetention, window)
+	if c.Role == RoleConsumer {
+		for _, ch := range consumedChannels(c).all() {
+			if window := ch.Redelivery.UpperBound; c.Policies.InboxRetention < window {
+				return fmt.Errorf("%w: InboxRetention %v is below the redelivery window %v of %s (INB-14)", ErrInvalidPolicy, c.Policies.InboxRetention, window, ch.Name)
+			}
+		}
+	}
+	if c.opensRawStore() {
+		if err := c.RawStore.Validate(); err != nil {
+			return err
+		}
 	}
 	return c.Relay.Validate()
 }
@@ -225,13 +280,18 @@ func (c Config) requirements() ([]string, error) {
 	switch c.Role {
 	case RoleAPI:
 		require(envMigrateDSN, c.Migrate && c.MigrateDSN == "")
-		return append(missing, c.API.Missing()...), nil
+		missing = append(missing, c.API.Missing()...)
+		return append(missing, c.RawStore.Missing()...), nil
 	case RoleRelay:
 		require(envBrokers, len(c.Brokers) == 0)
 		require(envGatewayTopic, c.GatewayTopic == "")
 		require(envGatewayDLQ, c.GatewayDLQ == "")
 		require(envDispatchTopic, c.DispatchTopic == "")
 		require(envDispatchDLQ, c.DispatchDLQ == "")
+		require(envInteractionTopic, c.InteractionTopic == "")
+		require(envInteractionDLQ, c.InteractionDLQ == "")
+		require(envNormalizationTopic, c.NormalizationTopic == "")
+		require(envNormalizationDLQ, c.NormalizationDLQ == "")
 		require(envGroup, c.Group == "")
 		return append(missing, c.KafkaAuth.Missing(c.KafkaInsecure)...), nil
 	case RoleConsumer:
@@ -239,11 +299,28 @@ func (c Config) requirements() ([]string, error) {
 		require(envPartnerTopic, c.PartnerTopic == "")
 		require(envPartnerDLQ, c.PartnerDLQ == "")
 		require(envGroup, c.Group == "")
-		return append(missing, c.KafkaAuth.Missing(c.KafkaInsecure)...), nil
+		require(envGatewayTopic, c.GatewayTopic == "")
+		require(envGatewayDLQ, c.GatewayDLQ == "")
+		require(envGatewayGroup, c.GatewayGroup == "")
+		require(envDispatchTopic, c.DispatchTopic == "")
+		require(envDispatchDLQ, c.DispatchDLQ == "")
+		require(envDispatchGroup, c.DispatchGroup == "")
+		require(envInteractionTopic, c.InteractionTopic == "")
+		require(envInteractionDLQ, c.InteractionDLQ == "")
+		require(envInteractionGroup, c.InteractionGroup == "")
+		require(envNormalizationTopic, c.NormalizationTopic == "")
+		require(envNormalizationDLQ, c.NormalizationDLQ == "")
+		require(envNormalizationGroup, c.NormalizationGroup == "")
+		missing = append(missing, c.KafkaAuth.Missing(c.KafkaInsecure)...)
+		return append(missing, c.RawStore.Missing()...), nil
 	default:
 		return nil, fmt.Errorf("%w: %q (use one of %s)", ErrUnknownRole, c.Role, roleList())
 	}
 }
+
+// opensRawStore tells the roles that keep raw payloads: the relay only
+// publishes the outbox.
+func (c Config) opensRawStore() bool { return c.Role == RoleAPI || c.Role == RoleConsumer }
 
 func roleList() string {
 	names := make([]string, len(Roles))

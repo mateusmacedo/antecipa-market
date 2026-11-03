@@ -37,7 +37,7 @@ func seedCreatedCommand(t *testing.T, store *memory.Store) {
 	operation := domain.OperationCapability{
 		Operation: "submitEffect", Supported: true, StateQuerySupported: true, IdempotencySupport: domain.IdempotencyKeyHeader,
 		Efficacy: domain.EfficacyOnSubmit, Quiescence: 1, MaxQueries: 3, KeyAlphabet: "0123456789abcdef", KeyMaxLength: 32,
-		QueryInterval: 60, AmbiguityDeadline: 3600,
+		QueryInterval: 60, AmbiguityDeadline: 3600, MaxSubmissions: 3,
 	}
 	if _, rej := command.Create(domain.CreateExternalCommand{
 		TenantID: "tnt-1", ConnectorKey: "prt-1:production", Operation: "submitEffect", BusinessKey: "eff-1", PayloadVersion: 1,

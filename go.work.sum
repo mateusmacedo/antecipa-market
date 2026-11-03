@@ -49,6 +49,7 @@ github.com/mateusmacedo/dmpf/tools/dmpf-conformance v1.0.0-rc.4 h1:cyOrxmk1sD9Q/
 github.com/mateusmacedo/dmpf/tools/dmpf-conformance v1.0.0-rc.4/go.mod h1:j9HKd9BLwreFsatjS7GBhtiJKdb6r2r/K6750TJxE6g=
 github.com/mateusmacedo/dmpf/tools/dmpf-conformance v1.0.0-rc.5/go.mod h1:j9HKd9BLwreFsatjS7GBhtiJKdb6r2r/K6750TJxE6g=
 github.com/mateusmacedo/dmpf/tools/dmpf-conformance v1.0.0-rc.7/go.mod h1:vOo3ehT829I8iCy9NtUYLcInnYM7oMswdaVSkPOrGOE=
+github.com/mateusmacedo/dmpf/tools/dmpf-conformance v1.0.0-rc.8/go.mod h1:vOo3ehT829I8iCy9NtUYLcInnYM7oMswdaVSkPOrGOE=
 github.com/modern-go/concurrent v0.0.0-20180306012644-bacd9c7ef1dd/go.mod h1:6dJC0mAP4ikYIbvyc7fijjWJddQyLn8Ig3JB5CqoB9Q=
 github.com/modern-go/reflect2 v1.0.2/go.mod h1:yWuevngMOJpCy52FWWMvUC8ws7m/LJsjYzDa0/r8luk=
 github.com/mwitkow/go-conntrack v0.0.0-20190716064945-2f068394615f/go.mod h1:qRWi+5nqEBWmkhHvq77mSJWrCKwh8bxhgT7d/eI7P4U=
