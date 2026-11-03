@@ -3,9 +3,9 @@ module github.com/mateusmacedo/antecipa-market/apps/backend/gateway/contract
 go 1.26.10
 
 require (
-	github.com/mateusmacedo/dmpf/libs/backend/go/contracts v1.0.0-rc.7
-	github.com/mateusmacedo/dmpf/libs/backend/go/testkit v1.0.0-rc.7
+	github.com/mateusmacedo/dmpf/libs/backend/go/contracts v1.0.0-rc.8
+	github.com/mateusmacedo/dmpf/libs/backend/go/testkit v1.0.0-rc.8
 	google.golang.org/protobuf v1.36.12
 )
 
-require github.com/mateusmacedo/dmpf/libs/backend/go/domain v1.0.0-rc.7 // indirect
+require github.com/mateusmacedo/dmpf/libs/backend/go/domain v1.0.0-rc.8 // indirect
