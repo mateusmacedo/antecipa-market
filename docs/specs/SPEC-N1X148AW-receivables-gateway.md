@@ -116,6 +116,7 @@ Seis agregados. As tentativas de entrega não são do domínio: o kernel as regi
   - Um perfil declara ao menos uma operação - `receivables-gateway/capability-profile/operations-empty`.
   - Uma versão não é redeclarada - `receivables-gateway/capability-profile/already-declared`.
   - A declaração do parceiro de cada operação passa em `application.ValidateExternalProfile` e declara `maxQueries` menor que `ports.MaxAttemptEntries` (decisão 13) - `receivables-gateway/capability-profile/external-profile-invalid`.
+  - Nenhuma operação declara `maxPayloadBytes` acima de 4.128.768 bytes - `receivables-gateway/capability-profile/external-profile-invalid`. Nota: a borda recebe mensagem gRPC de até 4 MiB, o padrão que o `serve.ServeAPI` do kernel não deixa o contexto subir, e 64 KiB ficam para o envelope de `ReceivePartnerInteraction` ao lado do corpo; acima disso o corpo nunca chegaria ao handler.
   - Operação de escrita (`activateOptIn`, `revokeOptIn`, `submitEffect`, `requestRelease`) declara `ambiguityDeadline` maior que zero - `receivables-gateway/capability-profile/ambiguity-deadline-missing` -, `maxSubmissions` maior que zero - `receivables-gateway/capability-profile/max-submissions-missing` - e, com `stateQuerySupported`, `queryInterval` maior que zero - `receivables-gateway/capability-profile/query-interval-missing`.
   - O perfil vigente em um instante é o de maior `version` com `effectiveFrom` menor ou igual a ele.
 
@@ -222,7 +223,7 @@ O tempo do ciclo é de quem chama, não do kernel (ADR-070 do DMPF, item 6: quie
 - **Pré-condições**:
   - `operations` não vazio → `receivables-gateway/capability-profile/operations-empty`
   - versão ainda não declarada → `receivables-gateway/capability-profile/already-declared`
-  - declaração do parceiro de cada operação válida em `application.ValidateExternalProfile`, com `maxQueries` menor que `ports.MaxAttemptEntries` → `receivables-gateway/capability-profile/external-profile-invalid`
+  - declaração do parceiro de cada operação válida em `application.ValidateExternalProfile`, com `maxQueries` menor que `ports.MaxAttemptEntries` e `maxPayloadBytes` de no máximo 4.128.768 bytes (teto da borda gRPC, ver as invariantes do perfil) → `receivables-gateway/capability-profile/external-profile-invalid`
   - operação de escrita com `ambiguityDeadline` maior que zero → `receivables-gateway/capability-profile/ambiguity-deadline-missing`
   - operação de escrita com `maxSubmissions` maior que zero → `receivables-gateway/capability-profile/max-submissions-missing`
   - operação de escrita com `stateQuerySupported` e `queryInterval` maior que zero → `receivables-gateway/capability-profile/query-interval-missing`
